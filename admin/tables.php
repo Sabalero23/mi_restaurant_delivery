@@ -1163,3 +1163,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         lastTouchEnd = now;
     }, false);
 </script>
+
+<?php include 'footer.php'; ?>
+</body>
+</html>

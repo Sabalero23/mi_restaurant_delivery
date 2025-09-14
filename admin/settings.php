@@ -1315,5 +1315,7 @@ $restaurant_name = $current_settings['restaurant_name'] ?? 'Mi Restaurante';
             }
         });
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

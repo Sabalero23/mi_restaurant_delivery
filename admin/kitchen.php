@@ -1094,5 +1094,7 @@ function playCompletionSound() {
 setInterval(loadKitchenOrders, 15000); // Refresh every 15 seconds
 setInterval(updateCurrentTime, 1000);  // Update time every second
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

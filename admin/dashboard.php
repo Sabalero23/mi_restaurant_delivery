@@ -2232,5 +2232,7 @@ console.log('- debugDashboard.toggleSounds() : Activar/desactivar sonidos');
 console.log('- debugDashboard.checkOnline() : Verificar pedidos online manualmente');
 console.log('====================================================');
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

@@ -2615,5 +2615,7 @@ function formatPrice(price) {
     return '$' + parseFloat(price).toFixed(2);
 }
 </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

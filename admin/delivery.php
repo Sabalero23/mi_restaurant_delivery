@@ -851,5 +851,7 @@ function generateMapLink($address) {
             });
         }, 10000);
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

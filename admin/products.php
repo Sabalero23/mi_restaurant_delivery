@@ -1129,5 +1129,7 @@ function toggleAvailability() {
             lastTouchEnd = now;
         }, false);
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

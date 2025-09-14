@@ -220,28 +220,82 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        :root {
+            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            --sidebar-width: 280px;
+            --sidebar-mobile-width: 100%;
         }
-        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--primary-gradient);
+            color: white;
+            z-index: 1030;
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1020;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
         .sidebar .nav-link {
             color: rgba(255, 255, 255, 0.8);
             padding: 0.75rem 1rem;
             border-radius: 8px;
             margin-bottom: 0.25rem;
             transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
         }
-        
+
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background: rgba(255, 255, 255, 0.1);
             color: white;
         }
+
+        /* Close button for mobile sidebar */
+        .sidebar-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
         
         .content-area {
-            background: #f8f9fa;
+            padding: 2rem;
             min-height: 100vh;
+            transition: margin-left 0.3s ease-in-out;
         }
         
         .permissions-section {
@@ -755,5 +809,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
             });
         });
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

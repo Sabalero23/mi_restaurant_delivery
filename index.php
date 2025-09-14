@@ -100,6 +100,7 @@ $current_time = date('H:i');
 $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_time);
 
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -109,153 +110,521 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .hero-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #ff6b6b;
+            --success-color: #28a745;
+            --text-dark: #2c3e50;
+            --text-muted: #6c757d;
+            --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            --hover-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+        
+        /* Header mejorado */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 60px 0;
-        }
-        
-        .product-card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-            margin-bottom: 20px;
-        }
-        
-        .product-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .product-image {
-            height: 400px;
-            object-fit: cover;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .category-nav {
-            background: #f8f9fa;
-            padding: 20px 0;
+            padding: 2rem 0;
+            text-align: center;
             position: sticky;
             top: 0;
             z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
-        
-        .cart-floating {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1050;
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
-        
-        .cart-item {
-            border-bottom: 1px solid #eee;
-            padding: 10px 0;
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
         }
-        
-        .price {
-            color: #28a745;
-            font-weight: bold;
-            font-size: 1.2em;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            line-height: 1.6;
+            color: var(--text-dark);
         }
-        
-        .btn-add-to-cart {
-            background: #ff6b6b;
-            border: none;
-            color: white;
+
+        /* Navbar mejorado */
+        .navbar {
+            background: linear-gradient(135deg, #212529 0%, #343a40 100%) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .status-indicator {
             padding: 8px 16px;
-            border-radius: 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
             transition: all 0.3s ease;
         }
-        
-        .btn-add-to-cart:hover {
-            background: #ff5252;
-            transform: scale(1.05);
+
+        .status-open {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            box-shadow: 0 2px 10px rgba(21, 87, 36, 0.2);
         }
 
-        .btn-add-to-cart:disabled {
-            background: #6c757d;
-            transform: none;
-            cursor: not-allowed;
+        .status-closed {
+            background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+            color: #721c24;
+            box-shadow: 0 2px 10px rgba(114, 28, 36, 0.2);
         }
 
+        /* Hero Section mejorado */
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><defs><radialGradient id="a" cx="50%" cy="50%"><stop offset="0%" style="stop-color:rgba(255,255,255,0.1)"/><stop offset="100%" style="stop-color:rgba(255,255,255,0)"/></radialGradient></defs><circle cx="10" cy="10" r="10" fill="url(%23a)"/><circle cx="50" cy="5" r="5" fill="url(%23a)"/><circle cx="80" cy="15" r="8" fill="url(%23a)"/></svg>') repeat;
+            opacity: 0.1;
+        }
+
+        .hero-section .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-section .lead {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Banners de estado */
         .closed-banner {
             background: linear-gradient(45deg, #dc3545, #c82333);
             color: white;
             padding: 15px 0;
             text-align: center;
             font-weight: bold;
+            box-shadow: 0 2px 10px rgba(220, 53, 69, 0.3);
         }
 
-        .status-indicator {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .status-open {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-closed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .order-status-modal .modal-content {
-            border-radius: 15px;
+        .alert {
             border: none;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        .success-icon {
-            color: #28a745;
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-
-        .loading-overlay {
-            position: fixed;
+        /* Navegación de categorías mejorada */
+        .category-nav {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 2rem 0;
+            position: sticky;
             top: 0;
-            left: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .category-filter {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+            color: var(--text-dark);
+            padding: 0.75rem 1.5rem;
+            margin: 0.25rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-filter::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
         }
 
-        .loading-spinner {
+        .category-filter:hover::before {
+            left: 100%;
+        }
+
+        .category-filter:hover {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-color: var(--primary-color);
             color: white;
-            font-size: 2rem;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
+        .category-filter.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Tarjetas de productos mejoradas */
+        .product-card {
+            background: white;
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s ease;
+            margin-bottom: 2rem;
+            overflow: hidden;
+            height: 100%;
+            position: relative;
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .product-image {
+            height: 250px;
+            width: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+
+        .product-placeholder {
+            height: 250px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 3rem;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .card-body {
+            padding: 1.75rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+            line-height: 1.3;
+        }
+
+        .card-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.25rem;
+            line-height: 1.6;
+        }
+
+        .price {
+            color: var(--success-color);
+            font-weight: 700;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 2px rgba(40, 167, 69, 0.2);
+        }
+
+        /* Botones mejorados */
+        .btn-add-to-cart {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #ff5252 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-add-to-cart::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .btn-add-to-cart:hover::before {
+            left: 100%;
+        }
+
+        .btn-add-to-cart:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e63946 100%);
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-add-to-cart:disabled {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .btn-add-to-cart:disabled::before {
+            display: none;
+        }
+
+        /* Badge estados */
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+
+        .badge.bg-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%) !important;
+        }
+
+        .badge.bg-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+        }
+
+        /* Botón flotante del carrito mejorado */
+        .cart-floating {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1050;
+        }
+
+        .cart-floating .btn {
+            background: linear-gradient(135deg, var(--success-color) 0%, #20c997 100%);
+            border: none;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cart-floating .btn:hover {
+            background: linear-gradient(135deg, #20c997 0%, #1e7e34 100%);
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(40, 167, 69, 0.6);
+        }
+
+        .cart-floating .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: linear-gradient(135deg, var(--accent-color) 0%, #ff4040 100%);
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.5);
+            min-width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        /* Animación pulse mejorada */
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% { transform: scale(1); box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 12px 35px rgba(40, 167, 69, 0.6); }
+            100% { transform: scale(1); box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4); }
         }
 
         .pulse {
             animation: pulse 2s infinite;
         }
 
-        /* Google Maps autocomplete styling */
+        /* Modales mejorados */
+        .modal-content {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            padding: 1.5rem 2rem;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            border: none;
+            padding: 1.5rem 2rem;
+            background: #f8f9fa;
+        }
+
+        /* Cart items styling */
+        .cart-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 1rem 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .cart-item:hover {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin: 0 -1rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* Form improvements */
+        .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .input-group-text {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e9ecef;
+            color: var(--text-muted);
+        }
+
+        /* Loading overlay mejorado */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(33, 37, 41, 0.8) 100%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success modal styling */
+        .order-status-modal .modal-content {
+            border-radius: 25px;
+            overflow: hidden;
+        }
+
+        .success-icon {
+            color: var(--success-color);
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(40, 167, 69, 0.3);
+        }
+
+        /* Google Maps styling */
         .pac-container {
             z-index: 10000 !important;
-            border-radius: 8px;
+            border-radius: 10px;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
         }
 
         .pac-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
+            transition: background-color 0.2s ease;
         }
 
         .pac-item:hover {
@@ -263,22 +632,173 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
         }
 
         .pac-item-selected {
-            background-color: #e3f2fd;
+            background-color: rgba(102, 126, 234, 0.1);
         }
 
+        /* Phone preview animation */
         #phonePreview {
-            animation: slideIn 0.3s ease-out;
+            animation: slideInUp 0.4s ease-out;
         }
 
-        @keyframes slideIn {
+        @keyframes slideInUp {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* Footer mejorado */
+        footer {
+            background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+            margin-top: 4rem;
+        }
+
+        footer h5 {
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        footer p {
+            color: #adb5bd;
+            margin-bottom: 0.5rem;
+        }
+
+        footer a {
+            color: #20c997;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #17a2b8;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header {
+                padding: 1.5rem 0;
+            }
+            .hero-section {
+                padding: 2.5rem 0;
+            }
+
+            .hero-section h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero-section .lead {
+                font-size: 1.1rem;
+            }
+
+            .category-nav {
+                padding: 1.5rem 0;
+            }
+
+            .category-filter {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+                margin: 0.2rem;
+            }
+
+            .product-image,
+            .product-placeholder {
+                height: 200px;
+            }
+
+            .card-body {
+                padding: 1.25rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+
+            .cart-floating .btn {
+                width: 60px;
+                height: 60px;
+            }
+
+            .modal-body {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Estados especiales de productos */
+        .product-unavailable {
+            opacity: 0.7;
+            position: relative;
+        }
+
+        .product-unavailable::after {
+            content: 'No disponible';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.95) 0%, rgba(200, 35, 51, 0.95) 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        /* Animaciones de entrada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .product-card {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .product-item:nth-child(even) .product-card {
+            animation-delay: 0.1s;
+        }
+
+        .product-item:nth-child(odd) .product-card {
+            animation-delay: 0.15s;
+        }
+
+        /* Mejoras en alerts */
+        .alert {
+            border-radius: 15px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            border-color: #97cadb;
+            color: #0c5460;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-color: #f0c674;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: #a3cfbb;
+            color: #155724;
         }
     </style>
 </head>
@@ -286,13 +806,13 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <div class="mt-2">Procesando pedido...</div>
+            <i class="fas fa-spinner"></i>
+            <div class="mt-3">Procesando pedido...</div>
         </div>
     </div>
 
     <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-utensils me-2"></i>
@@ -327,14 +847,14 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
     <?php endif; ?>
 
     <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="container text-center">
-            <h1 class="display-4 mb-4">¡Bienvenido a <?php echo $restaurant_name; ?>!</h1>
-            <p class="lead">Descubre nuestro delicioso menú y haz tu pedido online</p>
-            <p class="mb-4">
-                <i class="fas fa-phone me-2"></i>
+    <div class="header">
+        <div class="container">
+            <h1 class="mb-4">¡Bienvenido a <?php echo $restaurant_name; ?>!</h1>
+            <i class="lead">Descubre nuestro delicioso menú y haz tu pedido online o por Whatsapp</p>
+                <p class="fas fa-phone me-2"></p>
+                
                 <?php echo $settings['restaurant_phone'] ?? 'Teléfono no disponible'; ?>
-            </p>
+            </i>
             <?php if ($is_open && $online_orders_enabled === '1'): ?>
                 <p class="mb-0">
                     <i class="fas fa-truck me-2"></i>
@@ -350,12 +870,12 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
             <div class="row">
                 <div class="col-12">
                     <div class="d-flex flex-wrap justify-content-center">
-                        <button class="btn btn-outline-primary me-2 mb-2 category-filter" data-category="all">
+                        <button class="btn category-filter active" data-category="all">
                             <i class="fas fa-th-large me-1"></i> Todos
                         </button>
                         <?php foreach ($categories as $category): ?>
-                            <button class="btn btn-outline-primary me-2 mb-2 category-filter" data-category="<?php echo $category['id']; ?>">
-                                <i class="fas fa-tag me-1"></i> <?php echo htmlspecialchars($category['name']); ?>
+                            <button class="btn category-filter" data-category="<?php echo $category['id']; ?>">
+                                <i class="fas fa-utensils me-1"></i> <?php echo htmlspecialchars($category['name']); ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -366,23 +886,27 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
 
     <!-- Products Section -->
     <div class="container my-5">
-        <div class="row" id="products-container">
+        <div class="row g-4" id="products-container">
             <?php foreach ($products as $product): ?>
-                <div class="col-md-6 col-lg-4 product-item" data-category="<?php echo $product['category_id']; ?>">
-                    <div class="card product-card">
+                <div class="col-lg-4 col-md-6 col-sm-12 product-item" data-category="<?php echo $product['category_id']; ?>">
+                    <div class="card product-card <?php echo !$product['is_available'] ? 'product-unavailable' : ''; ?>">
                         <?php if ($product['image']): ?>
                             <img src="<?php echo htmlspecialchars($product['image']); ?>" 
-                                 class="card-img-top product-image" 
-                                 alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                 class="product-image" 
+                                 alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                 loading="lazy">
                         <?php else: ?>
-                            <div class="card-img-top product-image bg-light d-flex align-items-center justify-content-center">
-                                <i class="fas fa-image fa-3x text-muted"></i>
+                            <div class="product-placeholder">
+                                <i class="fas fa-utensils"></i>
                             </div>
                         <?php endif; ?>
                         
                         <div class="card-body">
                             <h5 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h5>
-                            <p class="card-text text-muted"><?php echo htmlspecialchars($product['description'] ?? ''); ?></p>
+                            
+                            <?php if (!empty($product['description'])): ?>
+                                <p class="card-text"><?php echo htmlspecialchars($product['description']); ?></p>
+                            <?php endif; ?>
                             
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="price"><?php echo formatPrice($product['price']); ?></span>
@@ -410,11 +934,9 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
     <!-- Cart Floating Button -->
     <?php if ($is_open && $online_orders_enabled === '1'): ?>
         <div class="cart-floating">
-            <button class="btn btn-success rounded-circle p-3 position-relative pulse" data-bs-toggle="modal" data-bs-target="#cartModal">
+            <button class="btn rounded-circle pulse" data-bs-toggle="modal" data-bs-target="#cartModal">
                 <i class="fas fa-shopping-cart fa-lg"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count">
-                    0
-                </span>
+                <span class="badge rounded-pill" id="cart-count">0</span>
             </button>
         </div>
     <?php endif; ?>
@@ -607,7 +1129,7 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
     </div>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
+    <footer class="text-white py-4 mt-5">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
@@ -640,7 +1162,7 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
                 </div>
             </div>
         </div>
-    </div>
+    </footer>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>

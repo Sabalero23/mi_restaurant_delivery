@@ -942,5 +942,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
             });
         }, 5000);
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

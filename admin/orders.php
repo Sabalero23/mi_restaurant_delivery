@@ -1192,5 +1192,7 @@ if ($priorityStatus['is_priority']): ?>
             }
         });
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

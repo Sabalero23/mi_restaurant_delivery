@@ -1736,5 +1736,7 @@ setInterval(updateOrderTimes, 60000);
 // Actualizar al cargar la página
 document.addEventListener('DOMContentLoaded', updateOrderTimes);
 </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>

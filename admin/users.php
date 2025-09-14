@@ -2135,5 +2135,7 @@ $user_name = $_SESSION['full_name'];
             window.history.replaceState(null, null, window.location.href);
         }
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>
