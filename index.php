@@ -131,7 +131,7 @@ $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_
             color: white;
             padding: 2rem 0;
             text-align: center;
-            position: sticky;
+            position: relative;
             top: 0;
             z-index: 1000;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
