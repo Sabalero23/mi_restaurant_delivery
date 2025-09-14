@@ -1,131 +1,131 @@
-# Sistema de Gesti¨®n de Restaurante
+# Sistema de GestiÃ³n de Restaurante
 
-Un sistema completo de gesti¨®n para restaurantes que incluye punto de venta, pedidos online, gesti¨®n de mesas, cocina, delivery y reportes avanzados.
+Un sistema completo de gestiÃ³n para restaurantes que incluye punto de venta, pedidos online, gestiÃ³n de mesas, cocina, delivery y reportes avanzados.
 
-## ?? Caracter¨ªsticas Principales
+## ğŸŒŸ CaracterÃ­sticas Principales
 
-### ?? Panel de Administraci¨®n
-- **Dashboard en tiempo real** con estad¨ªsticas y notificaciones
-- **Gesti¨®n de ¨®rdenes** tradicionales y online
+### ğŸ’» Panel de AdministraciÃ³n
+- **Dashboard en tiempo real** con estadÃ­sticas y notificaciones
+- **GestiÃ³n de Ã³rdenes** tradicionales y online
 - **Control de mesas** con estados visuales
-- **Panel de cocina** con tiempos de preparaci¨®n
-- **Gesti¨®n de delivery** con seguimiento
-- **Reportes avanzados** con gr¨¢ficos y exportaci¨®n
+- **Panel de cocina** con tiempos de preparaciÃ³n
+- **GestiÃ³n de delivery** con seguimiento
+- **Reportes avanzados** con grÃ¡ficos y exportaciÃ³n
 - **Sistema de usuarios** con roles y permisos
-- **Gesti¨®n de productos** y categor¨ªas
-- **Configuraci¨®n del sistema** centralizada
+- **GestiÃ³n de productos** y categorÃ­as
+- **ConfiguraciÃ³n del sistema** centralizada
 
-### ?? Experiencia del Cliente
-- **Men¨² online** responsive con carrito de compras
-- **Men¨² QR** para mesas sin contacto
-- **Pedidos online** con validaci¨®n de direcciones
-- **Integraci¨®n con Google Maps** para delivery
-- **Llamada al mesero** desde c¨®digo QR
-- **Validaci¨®n de horarios** de atenci¨®n
+### ğŸ“± Experiencia del Cliente
+- **MenÃº online** responsive con carrito de compras
+- **MenÃº QR** para mesas sin contacto
+- **Pedidos online** con validaciÃ³n de direcciones
+- **IntegraciÃ³n con Google Maps** para delivery
+- **Llamada al mesero** desde cÃ³digo QR
+- **ValidaciÃ³n de horarios** de atenciÃ³n
 
-### ?? Notificaciones en Tiempo Real
+### ğŸ”” Notificaciones en Tiempo Real
 - **Alertas sonoras** para nuevos pedidos
 - **Notificaciones visuales** con animaciones
 - **Sistema de llamadas** de mesa
-- **Actualizaciones autom¨¢ticas** del estado
+- **Actualizaciones automÃ¡ticas** del estado
 
-## ??? Tecnolog¨ªas Utilizadas
+## ğŸ› ï¸ TecnologÃ­as Utilizadas
 
 - **Backend**: PHP 8.0+
 - **Base de datos**: MySQL 8.0+
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
 - **Framework CSS**: Bootstrap 5.3
 - **Iconos**: Font Awesome 6.0
-- **Gr¨¢ficos**: Chart.js 3.9
+- **GrÃ¡ficos**: Chart.js 3.9
 - **Mapas**: Google Maps API
 - **Tablas**: DataTables
 
-## ?? Estructura del Proyecto
+## ğŸ“‚ Estructura del Proyecto
 
 ```
 mi_restaurant_delivery/
-©À©¤©¤ index.php # P¨¢gina principal del men¨² online
-©À©¤©¤ 404.html # P¨¢gina de error 404
-©À©¤©¤ 502.html # P¨¢gina de error 502
-©À©¤©¤ menu-qr.php # Men¨² accesible por c¨®digo QR
-©À©¤©¤ call_waiter.php # API para generar llamadas de mesero
-©À©¤©¤ install.php # Instalador del sistema
-©À©¤©¤ README.md # Documentaci¨®n del proyecto
-©À©¤©¤ .htaccess # Reglas de Apache (URLs amigables, seguridad, etc.)
-©À©¤©¤ estructura de archivos.txt # Archivo de referencia con la estructura del sistema
-©¦
-©À©¤©¤ models/ # Modelos de datos del sistema
-©¦ ©À©¤©¤ Product.php # Modelo de productos
-©¦ ©À©¤©¤ Table.php # Modelo de mesas
-©¦ ©À©¤©¤ Category.php # Modelo de categor¨ªas
-©¦ ©À©¤©¤ Payment.php # Modelo de pagos
-©¦ ©¸©¤©¤ Order.php # Modelo de ¨®rdenes
-©¦
-©À©¤©¤ config/ # Configuraci¨®n global del sistema
-©¦ ©À©¤©¤ config.php # Configuraci¨®n general (constantes, variables globales)
-©¦ ©À©¤©¤ database.php # Conexi¨®n a la base de datos
-©¦ ©À©¤©¤ auth.php # Sistema de autenticaci¨®n y sesiones
-©¦ ©¸©¤©¤ functions.php # Funciones auxiliares y utilidades
-©¦
-©À©¤©¤ admin/ # Panel de administraci¨®n
-©¦ ©À©¤©¤ api/ # APIs internas para el frontend
-©¦ ©¦ ©À©¤©¤ products.php # API de gesti¨®n de productos
-©¦ ©¦ ©À©¤©¤ update-item-status.php # Actualizaci¨®n del estado de ¨ªtems
-©¦ ©¦ ©À©¤©¤ delivery-stats.php # Estad¨ªsticas de delivery
-©¦ ©¦ ©À©¤©¤ delivery.php # API de gesti¨®n de deliveries
-©¦ ©¦ ©À©¤©¤ online-orders-stats.php # Estad¨ªsticas de pedidos online
-©¦ ©¦ ©À©¤©¤ online-orders.php # API de pedidos online
-©¦ ©¦ ©À©¤©¤ update-delivery.php # Actualizaci¨®n de estado de entregas
-©¦ ©¦ ©À©¤©¤ orders.php # API de ¨®rdenes tradicionales
-©¦ ©¦ ©À©¤©¤ kitchen.php # API del panel de cocina
-©¦ ©¦ ©À©¤©¤ update-order-status.php # Actualizaci¨®n del estado de ¨®rdenes
-©¦ ©¦ ©À©¤©¤ create-order.php # Creaci¨®n de ¨®rdenes desde el sistema
-©¦ ©¦ ©À©¤©¤ tables.php # API de gesti¨®n de mesas
-©¦ ©¦ ©¸©¤©¤ online-orders-recent.php # Listado de pedidos online recientes
-©¦ ©¦
-©¦ ©À©¤©¤ receipts/ # Archivos de recibos generados
-©¦ ©¦ ©¸©¤©¤ customer_ORD-.txt # Ejemplo de recibo de cliente
-©¦ ©¦
-©¦ ©À©¤©¤ tickets/ # Tickets impresos para cocina/delivery
-©¦ ©¦ ©¸©¤©¤ kitchen_ORD-.txt # Ticket de orden en cocina
-©¦ ©¦
-©¦ ©À©¤©¤ pages/ # P¨¢ginas est¨¢ticas del panel
-©¦ ©¦ ©¸©¤©¤ 403.php # P¨¢gina de error 403 (acceso denegado)
-©¦ ©¦
-©¦ ©À©¤©¤ uploads/ # Archivos subidos en el panel
-©¦ ©¦ ©¸©¤©¤ products/ # Im¨¢genes de productos
-©¦ ©¦
-©¦ ©À©¤©¤ products.php # Gesti¨®n de productos
-©¦ ©À©¤©¤ settings.php # Configuraci¨®n general del sistema
-©¦ ©À©¤©¤ permissions.php # Gesti¨®n de permisos y roles
-©¦ ©À©¤©¤ check_calls.php # Verificaci¨®n de llamadas de mesero
-©¦ ©À©¤©¤ delivery.php # Panel de gesti¨®n de deliveries
-©¦ ©À©¤©¤ attend_call.php # Atender llamadas de mesero
-©¦ ©À©¤©¤ online-orders.php # Gesti¨®n de pedidos online
-©¦ ©À©¤©¤ online-order-details.php # Detalle de un pedido online
-©¦ ©À©¤©¤ dashboard.php # Dashboard principal con estad¨ªsticas
-©¦ ©À©¤©¤ reports.php # Reportes avanzados del sistema
-©¦ ©À©¤©¤ orders.php # Gesti¨®n de ¨®rdenes tradicionales
-©¦ ©À©¤©¤ kitchen.php # Panel de cocina
-©¦ ©À©¤©¤ users.php # Gesti¨®n de usuarios y roles
-©¦ ©À©¤©¤ tables.php # Gesti¨®n de mesas
-©¦ ©À©¤©¤ order-create.php # Crear o editar ¨®rdenes
-©¦ ©À©¤©¤ logout.php # Cerrar sesi¨®n
-©¦ ©À©¤©¤ order-details.php # Detalle de una orden
-©¦ ©À©¤©¤ print-order.php # Impresi¨®n de ¨®rdenes
-©¦ ©¸©¤©¤ login.php # P¨¢gina de login
-©¦
-©À©¤©¤ assets/ # Recursos est¨¢ticos
-©¦ ©À©¤©¤ includes/ # Archivos de inclusi¨®n
-©¦ ©À©¤©¤ css/ # Hojas de estilo
-©¦ ©À©¤©¤ images/ # Im¨¢genes del sistema
-©¦ ©¸©¤©¤ js/ # Scripts JavaScript
-©¦
-©¸©¤©¤ database/ # Scripts de base de datos
-©¸©¤©¤ bd.sql # Estructura y datos iniciales
+â”œâ”€â”€ index.php # PÃ¡gina principal del menÃº online
+â”œâ”€â”€ 404.html # PÃ¡gina de error 404
+â”œâ”€â”€ 502.html # PÃ¡gina de error 502
+â”œâ”€â”€ menu-qr.php # MenÃº accesible por cÃ³digo QR
+â”œâ”€â”€ call_waiter.php # API para generar llamadas de mesero
+â”œâ”€â”€ install.php # Instalador del sistema
+â”œâ”€â”€ README.md # DocumentaciÃ³n del proyecto
+â”œâ”€â”€ .htaccess # Reglas de Apache (URLs amigables, seguridad, etc.)
+â”œâ”€â”€ estructura de archivos.txt # Archivo de referencia con la estructura del sistema
+â”‚
+â”œâ”€â”€ models/ # Modelos de datos del sistema
+â”‚ â”œâ”€â”€ Product.php # Modelo de productos
+â”‚ â”œâ”€â”€ Table.php # Modelo de mesas
+â”‚ â”œâ”€â”€ Category.php # Modelo de categorÃ­as
+â”‚ â”œâ”€â”€ Payment.php # Modelo de pagos
+â”‚ â””â”€â”€ Order.php # Modelo de Ã³rdenes
+â”‚
+â”œâ”€â”€ config/ # ConfiguraciÃ³n global del sistema
+â”‚ â”œâ”€â”€ config.php # ConfiguraciÃ³n general (constantes, variables globales)
+â”‚ â”œâ”€â”€ database.php # ConexiÃ³n a la base de datos
+â”‚ â”œâ”€â”€ auth.php # Sistema de autenticaciÃ³n y sesiones
+â”‚ â””â”€â”€ functions.php # Funciones auxiliares y utilidades
+â”‚
+â”œâ”€â”€ admin/ # Panel de administraciÃ³n
+â”‚ â”œâ”€â”€ api/ # APIs internas para el frontend
+â”‚ â”‚ â”œâ”€â”€ products.php # API de gestiÃ³n de productos
+â”‚ â”‚ â”œâ”€â”€ update-item-status.php # ActualizaciÃ³n del estado de Ã­tems
+â”‚ â”‚ â”œâ”€â”€ delivery-stats.php # EstadÃ­sticas de delivery
+â”‚ â”‚ â”œâ”€â”€ delivery.php # API de gestiÃ³n de deliveries
+â”‚ â”‚ â”œâ”€â”€ online-orders-stats.php # EstadÃ­sticas de pedidos online
+â”‚ â”‚ â”œâ”€â”€ online-orders.php # API de pedidos online
+â”‚ â”‚ â”œâ”€â”€ update-delivery.php # ActualizaciÃ³n de estado de entregas
+â”‚ â”‚ â”œâ”€â”€ orders.php # API de Ã³rdenes tradicionales
+â”‚ â”‚ â”œâ”€â”€ kitchen.php # API del panel de cocina
+â”‚ â”‚ â”œâ”€â”€ update-order-status.php # ActualizaciÃ³n del estado de Ã³rdenes
+â”‚ â”‚ â”œâ”€â”€ create-order.php # CreaciÃ³n de Ã³rdenes desde el sistema
+â”‚ â”‚ â”œâ”€â”€ tables.php # API de gestiÃ³n de mesas
+â”‚ â”‚ â””â”€â”€ online-orders-recent.php # Listado de pedidos online recientes
+â”‚ â”‚
+â”‚ â”œâ”€â”€ receipts/ # Archivos de recibos generados
+â”‚ â”‚ â””â”€â”€ customer_ORD-.txt # Ejemplo de recibo de cliente
+â”‚ â”‚
+â”‚ â”œâ”€â”€ tickets/ # Tickets impresos para cocina/delivery
+â”‚ â”‚ â””â”€â”€ kitchen_ORD-.txt # Ticket de orden en cocina
+â”‚ â”‚
+â”‚ â”œâ”€â”€ pages/ # PÃ¡ginas estÃ¡ticas del panel
+â”‚ â”‚ â””â”€â”€ 403.php # PÃ¡gina de error 403 (acceso denegado)
+â”‚ â”‚
+â”‚ â”œâ”€â”€ uploads/ # Archivos subidos en el panel
+â”‚ â”‚ â””â”€â”€ products/ # ImÃ¡genes de productos
+â”‚ â”‚
+â”‚ â”œâ”€â”€ products.php # GestiÃ³n de productos
+â”‚ â”œâ”€â”€ settings.php # ConfiguraciÃ³n general del sistema
+â”‚ â”œâ”€â”€ permissions.php # GestiÃ³n de permisos y roles
+â”‚ â”œâ”€â”€ check_calls.php # VerificaciÃ³n de llamadas de mesero
+â”‚ â”œâ”€â”€ delivery.php # Panel de gestiÃ³n de deliveries
+â”‚ â”œâ”€â”€ attend_call.php # Atender llamadas de mesero
+â”‚ â”œâ”€â”€ online-orders.php # GestiÃ³n de pedidos online
+â”‚ â”œâ”€â”€ online-order-details.php # Detalle de un pedido online
+â”‚ â”œâ”€â”€ dashboard.php # Dashboard principal con estadÃ­sticas
+â”‚ â”œâ”€â”€ reports.php # Reportes avanzados del sistema
+â”‚ â”œâ”€â”€ orders.php # GestiÃ³n de Ã³rdenes tradicionales
+â”‚ â”œâ”€â”€ kitchen.php # Panel de cocina
+â”‚ â”œâ”€â”€ users.php # GestiÃ³n de usuarios y roles
+â”‚ â”œâ”€â”€ tables.php # GestiÃ³n de mesas
+â”‚ â”œâ”€â”€ order-create.php # Crear o editar Ã³rdenes
+â”‚ â”œâ”€â”€ logout.php # Cerrar sesiÃ³n
+â”‚ â”œâ”€â”€ order-details.php # Detalle de una orden
+â”‚ â”œâ”€â”€ print-order.php # ImpresiÃ³n de Ã³rdenes
+â”‚ â””â”€â”€ login.php # PÃ¡gina de login
+â”‚
+â”œâ”€â”€ assets/ # Recursos estÃ¡ticos
+â”‚ â”œâ”€â”€ includes/ # Archivos de inclusiÃ³n
+â”‚ â”œâ”€â”€ css/ # Hojas de estilo
+â”‚ â”œâ”€â”€ images/ # ImÃ¡genes del sistema
+â”‚ â””â”€â”€ js/ # Scripts JavaScript
+â”‚
+â””â”€â”€ database/ # Scripts de base de datos
+â””â”€â”€ bd.sql # Estructura y datos iniciales
 ```
 
-## ?? Instalaci¨®n
+## ğŸš€ InstalaciÃ³n
 
 ### Requisitos del Sistema
 
@@ -135,22 +135,22 @@ mi_restaurant_delivery/
 - **Extensiones PHP**:
   - PDO
   - PDO_MySQL
-  - GD (para im¨¢genes)
+  - GD (para imÃ¡genes)
   - JSON
   - Session
 
-### Instalaci¨®n Autom¨¢tica
+### InstalaciÃ³n AutomÃ¡tica
 
 1. **Clonar o descargar** el proyecto en su servidor web (Solicitar Base de datos)
-2. **Crear base de datos** MySQL vac¨ªa
+2. **Crear base de datos** MySQL vacÃ­a
 3. **Navegar** a `http://su-dominio.com/install.php`
-4. **Seguir el asistente** de instalaci¨®n paso a paso:
-   - Configurar conexi¨®n a base de datos
+4. **Seguir el asistente** de instalaciÃ³n paso a paso:
+   - Configurar conexiÃ³n a base de datos
    - Crear estructura y datos iniciales
    - Configurar datos del restaurante
    - Crear usuario administrador
 
-### Instalaci¨®n Manual
+### InstalaciÃ³n Manual
 
 Si prefiere instalar manualmente:
 
@@ -164,13 +164,13 @@ Si prefiere instalar manualmente:
    mysql -u usuario -p comidasm < database/comidasm.sql
    ```
 
-3. **Configurar archivo de configuraci¨®n**:
+3. **Configurar archivo de configuraciÃ³n**:
    ```php
    // config/config.php
    define('DB_HOST', 'localhost');
    define('DB_NAME', 'comidasm');
    define('DB_USER', 'tu_usuario');
-   define('DB_PASS', 'tu_contrase?a');
+   define('DB_PASS', 'tu_contraseÃ±a');
    ```
 
 4. **Crear carpetas de permisos**:
@@ -179,292 +179,292 @@ Si prefiere instalar manualmente:
    chmod 755 admin/uploads/
    ```
 
-## ?? Usuarios Predefinidos
+## ğŸ‘¥ Usuarios Predefinidos
 
 El sistema incluye usuarios de ejemplo para cada rol:
 
-| Usuario | Contrase?a | Rol | Permisos |
+| Usuario | ContraseÃ±a | Rol | Permisos |
 |---------|------------|-----|----------|
 | admin | password | Administrador | Acceso completo |
-| gerente | password | Gerente | Gesti¨®n completa excepto configuraci¨®n |
-| mostrador | password | Mostrador | ¨®rdenes, mesas, cocina, delivery |
-| mesero | password | Mesero | ¨®rdenes y mesas |
+| gerente | password | Gerente | GestiÃ³n completa excepto configuraciÃ³n |
+| mostrador | password | Mostrador | Ã“rdenes, mesas, cocina, delivery |
+| mesero | password | Mesero | Ã“rdenes y mesas |
 | cocina | password | Cocina | Panel de cocina |
-| delivery | password | Delivery | Gesti¨®n de entregas |
+| delivery | password | Delivery | GestiÃ³n de entregas |
 
-**?? IMPORTANTE**: Cambiar todas las contrase?as despu¨¦s de la instalaci¨®n.
+**âš ï¸ IMPORTANTE**: Cambiar todas las contraseÃ±as despuÃ©s de la instalaciÃ³n.
 
-## ?? Configuraci¨®n
+## ğŸ”§ ConfiguraciÃ³n
 
-### Configuraci¨®n B¨¢sica
+### ConfiguraciÃ³n BÃ¡sica
 
-Acceder a **Admin > Configuraci¨®n** para ajustar:
+Acceder a **Admin > ConfiguraciÃ³n** para ajustar:
 
-- **Datos del restaurante**: Nombre, tel¨¦fono, direcci¨®n
+- **Datos del restaurante**: Nombre, telÃ©fono, direcciÃ³n
 - **Horarios**: Apertura, cierre, cierre de cocina
-- **Delivery**: Costo, distancia m¨¢xima, monto m¨ªnimo
-- **Pagos**: M¨¦todos aceptados, configuraci¨®n de impuestos
-- **Notificaciones**: Sonidos, alertas autom¨¢ticas
+- **Delivery**: Costo, distancia mÃ¡xima, monto mÃ­nimo
+- **Pagos**: MÃ©todos aceptados, configuraciÃ³n de impuestos
+- **Notificaciones**: Sonidos, alertas automÃ¡ticas
 
 ### Google Maps (Opcional)
 
 Para habilitar autocompletado de direcciones:
 
 1. **Obtener API Key** de Google Maps
-2. **Configurar en**: Admin > Configuraci¨®n > Google Maps API Key
+2. **Configurar en**: Admin > ConfiguraciÃ³n > Google Maps API Key
 3. **Habilitar APIs**:
    - Places API
    - Geocoding API
    - Maps JavaScript API
 
-### Configuraci¨®n de Roles
+### ConfiguraciÃ³n de Roles
 
 El sistema incluye roles predefinidos, pero puede:
 
 - **Crear roles personalizados**
-- **Asignar permisos espec¨ªficos**:
+- **Asignar permisos especÃ­ficos**:
   - `all`: Acceso completo
-  - `orders`: Gesti¨®n de ¨®rdenes tradicionales
-  - `online_orders`: Gesti¨®n de pedidos online
-  - `products`: Gesti¨®n de productos
-  - `users`: Gesti¨®n de usuarios
-  - `tables`: Gesti¨®n de mesas
-  - `reports`: Reportes y estad¨ªsticas
+  - `orders`: GestiÃ³n de Ã³rdenes tradicionales
+  - `online_orders`: GestiÃ³n de pedidos online
+  - `products`: GestiÃ³n de productos
+  - `users`: GestiÃ³n de usuarios
+  - `tables`: GestiÃ³n de mesas
+  - `reports`: Reportes y estadÃ­sticas
   - `kitchen`: Panel de cocina
-  - `delivery`: Gesti¨®n de delivery
-  - `settings`: Configuraci¨®n del sistema
+  - `delivery`: GestiÃ³n de delivery
+  - `settings`: ConfiguraciÃ³n del sistema
 
-## ?? M¨®dulos del Sistema
+## ğŸ“Š MÃ³dulos del Sistema
 
-### ?? Dashboard
-- **Estad¨ªsticas en tiempo real**
-- **¨®rdenes recientes** de todos los tipos
+### ğŸ  Dashboard
+- **EstadÃ­sticas en tiempo real**
+- **Ã“rdenes recientes** de todos los tipos
 - **Estado de mesas** visual
-- **Notificaciones autom¨¢ticas**
-- **Accesos r¨¢pidos** seg¨²n el rol
+- **Notificaciones automÃ¡ticas**
+- **Accesos rÃ¡pidos** segÃºn el rol
 
-### ?? Gesti¨®n de ¨®rdenes
-- **¨®rdenes tradicionales**: Mesa, delivery, retiro
-- **Pedidos online**: Integraci¨®n completa
-- **Estados de orden**: Pendiente ¡ú Confirmado ¡ú Preparando ¡ú Listo ¡ú Entregado
-- **Pagos**: M¨²ltiples m¨¦todos (efectivo, tarjeta, transferencia, QR)
+### ğŸ“‹ GestiÃ³n de Ã“rdenes
+- **Ã“rdenes tradicionales**: Mesa, delivery, retiro
+- **Pedidos online**: IntegraciÃ³n completa
+- **Estados de orden**: Pendiente â†’ Confirmado â†’ Preparando â†’ Listo â†’ Entregado
+- **Pagos**: MÃºltiples mÃ©todos (efectivo, tarjeta, transferencia, QR)
 - **Filtros avanzados** por fecha, estado, tipo
 
-### ?? Pedidos Online
+### ğŸŒ Pedidos Online
 - **Sistema completo** de pedidos por internet
-- **Carrito de compras** con validaci¨®n
+- **Carrito de compras** con validaciÃ³n
 - **Autocompletado de direcciones** con Google Maps
-- **Verificaci¨®n de zona** de delivery
-- **Formateo autom¨¢tico** de tel¨¦fonos argentinos
-- **Confirmaci¨®n por WhatsApp**
+- **VerificaciÃ³n de zona** de delivery
+- **Formateo automÃ¡tico** de telÃ©fonos argentinos
+- **ConfirmaciÃ³n por WhatsApp**
 - **Estados en tiempo real**
-- **Panel de gesti¨®n** dedicado con:
-  - Aceptaci¨®n/rechazo de pedidos
-  - Tiempos estimados de preparaci¨®n
+- **Panel de gestiÃ³n** dedicado con:
+  - AceptaciÃ³n/rechazo de pedidos
+  - Tiempos estimados de preparaciÃ³n
   - Seguimiento completo del proceso
-  - Integraci¨®n con WhatsApp autom¨¢tico
+  - IntegraciÃ³n con WhatsApp automÃ¡tico
   - Sistema de pagos integrado
 
-### ??? Gesti¨®n de Mesas
+### ğŸ½ï¸ GestiÃ³n de Mesas
 - **Vista visual** de todas las mesas
 - **Estados**: Libre, ocupada, reservada, mantenimiento
-- **Capacidad** y ubicaci¨®n
-- **Asignaci¨®n autom¨¢tica** de ¨®rdenes
-- **Representaci¨®n gr¨¢fica** con sillas seg¨²n capacidad
-- **Acciones r¨¢pidas** desde cada mesa
+- **Capacidad** y ubicaciÃ³n
+- **AsignaciÃ³n automÃ¡tica** de Ã³rdenes
+- **RepresentaciÃ³n grÃ¡fica** con sillas segÃºn capacidad
+- **Acciones rÃ¡pidas** desde cada mesa
 
-### ????? Panel de Cocina
-- **¨®rdenes por preparar** en tiempo real
-- **Tiempos de preparaci¨®n**
+### ğŸ‘¨â€ğŸ³ Panel de Cocina
+- **Ã“rdenes por preparar** en tiempo real
+- **Tiempos de preparaciÃ³n**
 - **Estados por item**
-- **Priorizaci¨®n autom¨¢tica**
-- **Actualizaci¨®n en vivo**
+- **PriorizaciÃ³n automÃ¡tica**
+- **ActualizaciÃ³n en vivo**
 
-### ??? Gesti¨®n de Delivery
-- **¨®rdenes listas** para entrega
-- **Informaci¨®n del cliente** completa
+### ğŸï¸ GestiÃ³n de Delivery
+- **Ã“rdenes listas** para entrega
+- **InformaciÃ³n del cliente** completa
 - **Direcciones con mapas**
 - **Tiempos de entrega**
 - **Estado de entrega**
 
-### ??? Sistema de Impresi¨®n
+### ğŸ–¨ï¸ Sistema de ImpresiÃ³n
 - **Tickets de venta** personalizables
-- **Impresi¨®n autom¨¢tica** opcional
-- **Formatos m¨²ltiples** (58mm, 80mm)
+- **ImpresiÃ³n automÃ¡tica** opcional
+- **Formatos mÃºltiples** (58mm, 80mm)
 - **Vista previa** antes de imprimir
-- **Informaci¨®n completa** del pedido y pagos
+- **InformaciÃ³n completa** del pedido y pagos
 
-### ?? Reportes Avanzados
-- **Ventas diarias** con gr¨¢ficos
-- **Productos m¨¢s vendidos**
+### ğŸ“Š Reportes Avanzados
+- **Ventas diarias** con grÃ¡ficos
+- **Productos mÃ¡s vendidos**
 - **Rendimiento del personal**
-- **An¨¢lisis de mesas**
-- **M¨¦todos de pago**
-- **Comparaci¨®n de per¨ªodos**
-- **Exportaci¨®n a Excel/CSV**
+- **AnÃ¡lisis de mesas**
+- **MÃ©todos de pago**
+- **ComparaciÃ³n de perÃ­odos**
+- **ExportaciÃ³n a Excel/CSV**
 
-### ?? Men¨² QR
-- **C¨®digo QR** para cada mesa
-- **Men¨² digital** responsive
-- **Filtros por categor¨ªa**
+### ğŸ“± MenÃº QR
+- **CÃ³digo QR** para cada mesa
+- **MenÃº digital** responsive
+- **Filtros por categorÃ­a**
 - **Llamada al mesero** integrada
-- **Sin instalaci¨®n** de apps
+- **Sin instalaciÃ³n** de apps
 
-### ?? Gesti¨®n de Usuarios
+### ğŸ‘¥ GestiÃ³n de Usuarios
 - **Roles y permisos** granulares
-- **Interfaz responsive** optimizada para m¨®vil
-- **Vista de tarjetas** en dispositivos m¨®viles
+- **Interfaz responsive** optimizada para mÃ³vil
+- **Vista de tarjetas** en dispositivos mÃ³viles
 - **Filtros por rol** y estado
-- **Gesti¨®n de contrase?as**
-- **Activaci¨®n/desactivaci¨®n** de usuarios
-- **Interfaz t¨¢ctil** optimizada
+- **GestiÃ³n de contraseÃ±as**
+- **ActivaciÃ³n/desactivaciÃ³n** de usuarios
+- **Interfaz tÃ¡ctil** optimizada
 
-### ?? Configuraci¨®n Avanzada
-- **Configuraci¨®n general** del restaurante
-- **Configuraci¨®n de negocio** (impuestos, delivery)
-- **Configuraci¨®n de pedidos online**
-- **Horarios de atenci¨®n**
-- **Integraci¨®n con Google Maps**
+### âš™ï¸ ConfiguraciÃ³n Avanzada
+- **ConfiguraciÃ³n general** del restaurante
+- **ConfiguraciÃ³n de negocio** (impuestos, delivery)
+- **ConfiguraciÃ³n de pedidos online**
+- **Horarios de atenciÃ³n**
+- **IntegraciÃ³n con Google Maps**
 - **Configuraciones del sistema**
-- **Pruebas de configuraci¨®n** integradas
+- **Pruebas de configuraciÃ³n** integradas
 
-## ?? Sistema de Llamadas de Mesero
+## ğŸ“ Sistema de Llamadas de Mesero
 
 ### Funcionalidades
-- **Llamada desde c¨®digo QR** de mesa
+- **Llamada desde cÃ³digo QR** de mesa
 - **Notificaciones en tiempo real** al personal
 - **Estado de llamadas** (pendiente/atendida)
-- **Hist¨®rico de llamadas**
-- **Integraci¨®n con panel de mesas**
+- **HistÃ³rico de llamadas**
+- **IntegraciÃ³n con panel de mesas**
 
 ### Archivos del Sistema
 - `call_waiter.php`: API para generar llamadas
 - `attend_call.php`: Marcar llamadas como atendidas
 - `check_calls.php`: Verificar llamadas pendientes
 
-## ?? Seguridad
+## ğŸ”’ Seguridad
 
 ### Medidas Implementadas
-- **Autenticaci¨®n** con hash seguro de contrase?as
-- **Autorizaci¨®n** basada en roles y permisos
-- **Protecci¨®n CSRF** en formularios
-- **Validaci¨®n de datos** en servidor y cliente
+- **AutenticaciÃ³n** con hash seguro de contraseÃ±as
+- **AutorizaciÃ³n** basada en roles y permisos
+- **ProtecciÃ³n CSRF** en formularios
+- **ValidaciÃ³n de datos** en servidor y cliente
 - **Escape de HTML** para prevenir XSS
-- **Sesiones seguras** con configuraci¨®n httponly
-- **Validaci¨®n de archivos** subidos
+- **Sesiones seguras** con configuraciÃ³n httponly
+- **ValidaciÃ³n de archivos** subidos
 
 ### Recomendaciones
-- **Cambiar contrase?as** predefinidas
-- **Usar HTTPS** en producci¨®n
+- **Cambiar contraseÃ±as** predefinidas
+- **Usar HTTPS** en producciÃ³n
 - **Backup regular** de la base de datos
 - **Actualizar** PHP y MySQL regularmente
 - **Monitorear logs** de acceso
 
-## ?? Personalizaci¨®n
+## ğŸ¨ PersonalizaciÃ³n
 
 ### Temas y Estilos
 - **Variables CSS** para colores principales
 - **Responsive design** para todos los dispositivos
 - **Iconos personalizables** con Font Awesome
 - **Animaciones suaves** para mejor UX
-- **Interfaz optimizada** para dispositivos t¨¢ctiles
+- **Interfaz optimizada** para dispositivos tÃ¡ctiles
 
 ### Funcionalidades Adicionales
 El sistema es extensible para agregar:
 - **Reservas online**
-- **Programa de fidelizaci¨®n**
-- **Integraci¨®n con redes sociales**
+- **Programa de fidelizaciÃ³n**
+- **IntegraciÃ³n con redes sociales**
 - **Sistemas de pago online**
-- **Facturaci¨®n electr¨®nica**
-- **M¨²ltiples sucursales**
+- **FacturaciÃ³n electrÃ³nica**
+- **MÃºltiples sucursales**
 
-## ?? Optimizaci¨®n
+## ğŸ“ˆ OptimizaciÃ³n
 
 ### Rendimiento
-- **Consultas SQL optimizadas** con ¨ªndices apropiados
+- **Consultas SQL optimizadas** con Ã­ndices apropiados
 - **Caching** de configuraciones
-- **Lazy loading** de im¨¢genes
-- **Minificaci¨®n** de assets
-- **Compresi¨®n** de respuestas
+- **Lazy loading** de imÃ¡genes
+- **MinificaciÃ³n** de assets
+- **CompresiÃ³n** de respuestas
 
 ### Escalabilidad
 - **Arquitectura modular**
-- **APIs REST** para integraci¨®n
+- **APIs REST** para integraciÃ³n
 - **Base de datos normalizada**
-- **C¨®digo reutilizable**
+- **CÃ³digo reutilizable**
 
-## ?? Soluci¨®n de Problemas
+## ğŸ›  SoluciÃ³n de Problemas
 
 ### Problemas Comunes
 
-1. **Error de conexi¨®n a base de datos**:
+1. **Error de conexiÃ³n a base de datos**:
    - Verificar credenciales en `config/config.php`
-   - Comprobar que el servidor MySQL est¨¦ activo
+   - Comprobar que el servidor MySQL estÃ© activo
 
-2. **No aparecen im¨¢genes**:
+2. **No aparecen imÃ¡genes**:
    - Verificar permisos de carpeta `uploads/`
    - Comprobar rutas en la base de datos
 
 3. **Notificaciones no funcionan**:
-   - Verificar configuraci¨®n de JavaScript
+   - Verificar configuraciÃ³n de JavaScript
    - Comprobar permisos del navegador
 
 4. **Google Maps no funciona**:
-   - Verificar API Key v¨¢lida
+   - Verificar API Key vÃ¡lida
    - Comprobar APIs habilitadas en Google Console
 
 5. **Pedidos online no funcionan**:
-   - Verificar configuraci¨®n en Admin > Configuraci¨®n
-   - Comprobar horarios de atenci¨®n
-   - Verificar conexi¨®n a base de datos
+   - Verificar configuraciÃ³n en Admin > ConfiguraciÃ³n
+   - Comprobar horarios de atenciÃ³n
+   - Verificar conexiÃ³n a base de datos
 
-### Logs y Depuraci¨®n
+### Logs y DepuraciÃ³n
 - **Logs de errores**: Activar error_log en PHP
 - **Console del navegador**: Para errores de JavaScript
 - **Network tab**: Para problemas de APIs
 
-## ?? Soporte
+## ğŸ“ Soporte
 
-### Archivos de Configuraci¨®n Importantes
-- `config/config.php`: Configuraci¨®n principal
+### Archivos de ConfiguraciÃ³n Importantes
+- `config/config.php`: ConfiguraciÃ³n principal
 - `admin/api/`: APIs del sistema
 - `database/comidasm.sql`: Estructura de base de datos
 
-### Informaci¨®n del Sistema
-- **Versi¨®n**: 1.0.0
+### InformaciÃ³n del Sistema
+- **VersiÃ³n**: 1.0.0
 - **Licencia**: MIT
-- **PHP m¨ªnimo**: 8.0
-- **MySQL m¨ªnimo**: 8.0
+- **PHP mÃ­nimo**: 8.0
+- **MySQL mÃ­nimo**: 8.0
 
 ### Contacto y Desarrollo
 - **Desarrollador**: Cellcom Technology  
 - **Sitio Web**: [www.cellcomweb.com.ar](http://www.cellcomweb.com.ar)  
-- **Tel¨¦fono / WhatsApp**: +54 3482 549555  
-- **Direcci¨®n**: Calle 9 N¡ã 539, Avellaneda, Santa Fe, Argentina  
-- **Soporte T¨¦cnico**: Disponible v¨ªa WhatsApp y web
+- **TelÃ©fono / WhatsApp**: +54 3482 549555  
+- **DirecciÃ³n**: Calle 9 NÂ° 539, Avellaneda, Santa Fe, Argentina  
+- **Soporte TÃ©cnico**: Disponible vÃ­a WhatsApp y web
 
-## ?? Puesta en Producci¨®n
+## ğŸš€ Puesta en ProducciÃ³n
 
-### Lista de Verificaci¨®n
+### Lista de VerificaciÃ³n
 
-- [ ] Cambiar todas las contrase?as predefinidas
+- [ ] Cambiar todas las contraseÃ±as predefinidas
 - [ ] Configurar datos reales del restaurante
-- [ ] Subir im¨¢genes de productos
+- [ ] Subir imÃ¡genes de productos
 - [ ] Configurar Google Maps API (opcional)
 - [ ] Probar pedidos online completos
-- [ ] Verificar horarios de atenci¨®n
-- [ ] Configurar m¨¦todos de pago
+- [ ] Verificar horarios de atenciÃ³n
+- [ ] Configurar mÃ©todos de pago
 - [ ] Probar notificaciones
 - [ ] Backup de base de datos
 - [ ] Certificado SSL configurado
 - [ ] Probar sistema de llamadas de mesero
-- [ ] Verificar impresi¨®n de tickets
+- [ ] Verificar impresiÃ³n de tickets
 - [ ] Configurar usuarios del personal
 
 ### Variables de Entorno Recomendadas
 
 ```php
-// Producci¨®n
+// ProducciÃ³n
 define('DEBUG_MODE', false);
 define('ENVIRONMENT', 'production');
 
@@ -473,25 +473,25 @@ define('DEBUG_MODE', true);
 define('ENVIRONMENT', 'development');
 ```
 
-## ?? Changelog
+## ğŸ“‹ Changelog
 
-### Versi¨®n 1.0.0
-- Sistema completo de gesti¨®n de restaurante
+### VersiÃ³n 1.0.0
+- Sistema completo de gestiÃ³n de restaurante
 - Pedidos online integrados con panel dedicado
-- Panel de administraci¨®n responsive
-- Reportes con gr¨¢ficos avanzados
+- Panel de administraciÃ³n responsive
+- Reportes con grÃ¡ficos avanzados
 - Sistema de roles y permisos granular
 - Notificaciones en tiempo real
-- Men¨² QR para mesas
-- Integraci¨®n con Google Maps
+- MenÃº QR para mesas
+- IntegraciÃ³n con Google Maps
 - Sistema de llamadas de mesero
-- Gesti¨®n completa de usuarios con interfaz m¨®vil
-- Sistema de impresi¨®n de tickets personalizable
-- Configuraci¨®n avanzada del sistema
-- Interfaz optimizada para dispositivos t¨¢ctiles
+- GestiÃ³n completa de usuarios con interfaz mÃ³vil
+- Sistema de impresiÃ³n de tickets personalizable
+- ConfiguraciÃ³n avanzada del sistema
+- Interfaz optimizada para dispositivos tÃ¡ctiles
 
 ---
 
-**?Bienvenido al futuro de la gesti¨®n de restaurantes!** ???
+**Â¡Bienvenido al futuro de la gestiÃ³n de restaurantes!** ğŸ½ï¸
 
-Para soporte adicional o consultas, revise la documentaci¨®n t¨¦cnica en los comentarios del c¨®digo fuente.# mi_restaurant_delivery
+Para soporte adicional o consultas, revise la documentaciÃ³n tÃ©cnica en los comentarios del cÃ³digo fuente.# mi_restaurant_delivery
