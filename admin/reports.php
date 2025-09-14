@@ -1212,109 +1212,43 @@ foreach ($payment_summary_results as $row) {
                     </div>
                 </div>
 
-                // Payments Report Tab
-<div class="tab-pane fade" id="payments" role="tabpanel">
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="chart-container chart-small">
-                <canvas id="paymentMethodsChart"></canvas>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="report-card">
-                <h5><i class="fas fa-credit-card me-2"></i>Resumen de Pagos</h5>
-                <?php
-                // NUEVO CÁLCULO que incluye pagos online
-                $payment_summary_query = "SELECT 
-                    method,
-                    COUNT(*) as count,
-                    SUM(amount) as total
-                FROM (
-                    SELECT method, amount FROM payments p
-                    JOIN orders o ON p.order_id = o.id
-                    WHERE DATE(p.created_at) BETWEEN :start_date AND :end_date
-                    
-                    UNION ALL
-                    
-                    SELECT method, amount FROM online_orders_payments op
-                    JOIN online_orders oo ON op.online_order_id = oo.id
-                    WHERE DATE(op.created_at) BETWEEN :start_date AND :end_date
-                ) combined_payments
-                GROUP BY method";
-                
-                $payment_summary_stmt = $db->prepare($payment_summary_query);
-                $payment_summary_stmt->execute(['start_date' => $start_date, 'end_date' => $end_date]);
-                $payment_summary_results = $payment_summary_stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $payment_summary = [];
-                foreach ($payment_summary_results as $row) {
-                    $payment_summary[$row['method']] = [
-                        'count' => $row['count'],
-                        'total' => $row['total']
-                    ];
-                }
-                
-                $method_names = [
-                    'cash' => 'Efectivo',
-                    'card' => 'Tarjeta',
-                    'transfer' => 'Transferencia',
-                    'qr' => 'QR/Digital'
-                ];
-                ?>
-                
-                <?php foreach ($payment_summary as $method => $data): ?>
-                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <div>
-                        <strong><?php echo $method_names[$method] ?? $method; ?></strong>
-                        <small class="text-muted d-block"><?php echo $data['count']; ?> transacciones</small>
+                <!-- Payments Report Tab -->
+                <div class="tab-pane fade" id="payments" role="tabpanel">
+                    <div class="row mb-4">
+                        <div class="col-lg-6">
+                            <div class="chart-container chart-small">
+                                <canvas id="paymentMethodsChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="report-card">
+                                <h5><i class="fas fa-credit-card me-2"></i>Resumen de Pagos</h5>
+                                <?php
+                                $method_names = [
+                                    'cash' => 'Efectivo',
+                                    'card' => 'Tarjeta',
+                                    'transfer' => 'Transferencia',
+                                    'qr' => 'QR/Digital'
+                                ];
+                                ?>
+                                
+                                <?php foreach ($payment_summary as $method => $data): ?>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div>
+                                        <strong><?php echo $method_names[$method] ?? $method; ?></strong>
+                                        <small class="text-muted d-block"><?php echo $data['count']; ?> transacciones</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong><?php echo formatPrice($data['total']); ?></strong>
+                                        <small class="text-muted d-block">
+                                            <?php echo formatPrice($data['total'] / max($data['count'], 1)); ?> promedio
+                                        </small>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-end">
-                        <strong><?php echo formatPrice($data['total']); ?></strong>
-                        <small class="text-muted d-block">
-                            <?php echo formatPrice($data['total'] / max($data['count'], 1)); ?> promedio
-                        </small>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-    
-    <div class="table-responsive">
-        <table class="table table-striped" id="paymentsTable">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Método</th>
-                    <th>Origen</th> <!-- NUEVA COLUMNA -->
-                    <th>Transacciones</th>
-                    <th>Monto Total</th>
-                    <th>Monto Promedio</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($payments_report as $payment): ?>
-                <tr>
-                    <td><?php echo date('d/m/Y', strtotime($payment['date'])); ?></td>
-                    <td>
-                        <span class="badge bg-info">
-                            <?php echo $method_names[$payment['method']] ?? $payment['method']; ?>
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge bg-<?php echo isset($payment['payment_type']) && $payment['payment_type'] === 'online' ? 'success' : 'primary'; ?>">
-                            <?php echo isset($payment['payment_type']) && $payment['payment_type'] === 'online' ? 'Online' : 'Tradicional'; ?>
-                        </span>
-                    </td>
-                    <td><?php echo $payment['transaction_count']; ?></td>
-                    <td><strong><?php echo formatPrice($payment['total_amount']); ?></strong></td>
-                    <td><?php echo formatPrice($payment['average_amount']); ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
                     
                     <div class="table-responsive">
                         <table class="table table-striped" id="paymentsTable">
@@ -1322,6 +1256,7 @@ foreach ($payment_summary_results as $row) {
                                 <tr>
                                     <th>Fecha</th>
                                     <th>Método</th>
+                                    <th>Origen</th>
                                     <th>Transacciones</th>
                                     <th>Monto Total</th>
                                     <th>Monto Promedio</th>
@@ -1334,6 +1269,11 @@ foreach ($payment_summary_results as $row) {
                                     <td>
                                         <span class="badge bg-info">
                                             <?php echo $method_names[$payment['method']] ?? $payment['method']; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $payment['payment_type'] === 'online' ? 'success' : 'primary'; ?>">
+                                            <?php echo $payment['payment_type'] === 'online' ? 'Online' : 'Tradicional'; ?>
                                         </span>
                                     </td>
                                     <td><?php echo $payment['transaction_count']; ?></td>
@@ -1833,8 +1773,12 @@ foreach ($payment_summary_results as $row) {
         </div>
     </div>
 
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
@@ -2668,7 +2612,7 @@ window.addEventListener('afterprint', function() {
 
 // Format price function
 function formatPrice(price) {
-    return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return '$' + parseFloat(price).toFixed(2);
 }
 </script>
 </body>
