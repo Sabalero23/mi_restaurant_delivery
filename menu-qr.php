@@ -189,7 +189,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         /* Botón llamar mesero mejorado */
         .btn-call {
             position: fixed;
-            bottom: 25px;
+            bottom: 40px;
             right: 25px;
             background: linear-gradient(135deg, var(--accent-color) 0%, #ff4040 100%);
             color: white;
@@ -626,5 +626,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         `;
         document.head.appendChild(style);
     </script>
+
+<?php include 'footer.php'; ?>
 </body>
 </html>
