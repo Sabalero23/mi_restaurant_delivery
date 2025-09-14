@@ -1,4 +1,4 @@
-# Sistema de Gestión de Restaurante
+# Sistema de Gestión Gastronómica
 
 Un sistema completo de gestión para restaurantes que incluye punto de venta, pedidos online, gestión de mesas, cocina, delivery y reportes avanzados.
 
@@ -475,7 +475,7 @@ define('ENVIRONMENT', 'development');
 
 ## 📋 Changelog
 
-### Versión 1.0.0
+### Versión 2.1.0
 - Sistema completo de gestión de restaurante
 - Pedidos online integrados con panel dedicado
 - Panel de administración responsive
@@ -490,6 +490,14 @@ define('ENVIRONMENT', 'development');
 - Configuración avanzada del sistema
 - Interfaz optimizada para dispositivos táctiles
 
+
+### Próximas Versiones
+- **v2.1.1** (En desarrollo):
+  - Integración completa con Mercado Pago API
+  - Sistema de backup automático de base de datos
+  - Mejoras en la interfaz de pagos
+  - Panel de gestión de transacciones
+  - 
 ---
 
 **¡Bienvenido al futuro de la gestión de restaurantes!** 🍽️
