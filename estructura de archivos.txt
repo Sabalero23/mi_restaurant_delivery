@@ -1,0 +1,80 @@
+mi_restaurant_delivery/
+├── index.php # Página principal del menú online
+├── 404.html # Página de error 404
+├── 502.html # Página de error 502
+├── menu-qr.php # Menú accesible por código QR
+├── call_waiter.php # API para generar llamadas de mesero
+├── install.php # Instalador del sistema
+├── README.md # Documentación del proyecto
+├── .htaccess # Reglas de Apache (URLs amigables, seguridad, etc.)
+├── estructura de archivos.txt # Archivo de referencia con la estructura del sistema
+│
+├── models/ # Modelos de datos del sistema
+│ ├── Product.php # Modelo de productos
+│ ├── Table.php # Modelo de mesas
+│ ├── Category.php # Modelo de categorías
+│ ├── Payment.php # Modelo de pagos
+│ └── Order.php # Modelo de órdenes
+│
+├── config/ # Configuración global del sistema
+│ ├── config.php # Configuración general (constantes, variables globales)
+│ ├── database.php # Conexión a la base de datos
+│ ├── auth.php # Sistema de autenticación y sesiones
+│ └── functions.php # Funciones auxiliares y utilidades
+│
+├── admin/ # Panel de administración
+│ ├── api/ # APIs internas para el frontend
+│ │ ├── products.php # API de gestión de productos
+│ │ ├── update-item-status.php # Actualización del estado de ítems
+│ │ ├── delivery-stats.php # Estadísticas de delivery
+│ │ ├── delivery.php # API de gestión de deliveries
+│ │ ├── online-orders-stats.php # Estadísticas de pedidos online
+│ │ ├── online-orders.php # API de pedidos online
+│ │ ├── update-delivery.php # Actualización de estado de entregas
+│ │ ├── orders.php # API de órdenes tradicionales
+│ │ ├── kitchen.php # API del panel de cocina
+│ │ ├── update-order-status.php # Actualización del estado de órdenes
+│ │ ├── create-order.php # Creación de órdenes desde el sistema
+│ │ ├── tables.php # API de gestión de mesas
+│ │ └── online-orders-recent.php # Listado de pedidos online recientes
+│ │
+│ ├── receipts/ # Archivos de recibos generados
+│ │ └── customer_ORD-.txt # Ejemplo de recibo de cliente
+│ │
+│ ├── tickets/ # Tickets impresos para cocina/delivery
+│ │ └── kitchen_ORD-.txt # Ticket de orden en cocina
+│ │
+│ ├── pages/ # Páginas estáticas del panel
+│ │ └── 403.php # Página de error 403 (acceso denegado)
+│ │
+│ ├── uploads/ # Archivos subidos en el panel
+│ │ └── products/ # Imágenes de productos
+│ │
+│ ├── products.php # Gestión de productos
+│ ├── settings.php # Configuración general del sistema
+│ ├── permissions.php # Gestión de permisos y roles
+│ ├── check_calls.php # Verificación de llamadas de mesero
+│ ├── delivery.php # Panel de gestión de deliveries
+│ ├── attend_call.php # Atender llamadas de mesero
+│ ├── online-orders.php # Gestión de pedidos online
+│ ├── online-order-details.php # Detalle de un pedido online
+│ ├── dashboard.php # Dashboard principal con estadísticas
+│ ├── reports.php # Reportes avanzados del sistema
+│ ├── orders.php # Gestión de órdenes tradicionales
+│ ├── kitchen.php # Panel de cocina
+│ ├── users.php # Gestión de usuarios y roles
+│ ├── tables.php # Gestión de mesas
+│ ├── order-create.php # Crear o editar órdenes
+│ ├── logout.php # Cerrar sesión
+│ ├── order-details.php # Detalle de una orden
+│ ├── print-order.php # Impresión de órdenes
+│ └── login.php # Página de login
+│
+├── assets/ # Recursos estáticos
+│ ├── includes/ # Archivos de inclusión
+│ ├── css/ # Hojas de estilo
+│ ├── images/ # Imágenes del sistema
+│ └── js/ # Scripts JavaScript
+│
+└── database/ # Scripts de base de datos
+└── bd.sql # Estructura y datos iniciales

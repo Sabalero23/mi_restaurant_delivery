@@ -1,0 +1,855 @@
+<?php
+// admin/delivery.php - VERSIÓN LIMPIA Y FUNCIONAL
+require_once '../config/config.php';
+require_once '../config/database.php';
+require_once '../config/auth.php';
+require_once '../config/functions.php';
+require_once '../models/Order.php';
+
+$auth = new Auth();
+$auth->requireLogin();
+$auth->requirePermission('delivery');
+
+$database = new Database();
+$db = $database->getConnection();
+
+// Procesar formularios
+$message = '';
+$error = '';
+
+if ($_POST && isset($_POST['action'])) {
+    $order_id = intval($_POST['order_id']);
+    $order_type = $_POST['order_type'] ?? 'traditional';
+    
+    switch ($_POST['action']) {
+        case 'mark_delivered':
+            try {
+                if ($order_type === 'online') {
+                    $query = "UPDATE online_orders SET status = 'delivered', delivered_at = NOW(), delivered_by = ? WHERE id = ?";
+                    $stmt = $db->prepare($query);
+                    $result = $stmt->execute([$_SESSION['user_id'], $order_id]);
+                } else {
+                    $query = "UPDATE orders SET status = 'delivered', updated_at = NOW() WHERE id = ?";
+                    $stmt = $db->prepare($query);
+                    $result = $stmt->execute([$order_id]);
+                }
+                
+                if ($result) {
+                    $message = 'Orden marcada como entregada exitosamente';
+                } else {
+                    $error = 'Error al marcar la orden como entregada';
+                }
+            } catch (Exception $e) {
+                $error = 'Error: ' . $e->getMessage();
+            }
+            break;
+    }
+}
+
+// Obtener órdenes tradicionales para delivery
+$traditionalQuery = "SELECT o.*, u.full_name as waiter_name 
+                    FROM orders o 
+                    LEFT JOIN users u ON o.waiter_id = u.id 
+                    WHERE o.type = 'delivery' 
+                    AND o.status = 'ready'
+                    AND o.customer_address IS NOT NULL 
+                    AND TRIM(o.customer_address) != ''
+                    AND o.customer_address != 'Sin dirección especificada'
+                    AND (o.order_number NOT LIKE 'WEB-%' OR o.order_number IS NULL)
+                    ORDER BY o.created_at ASC";
+
+$stmt = $db->prepare($traditionalQuery);
+$stmt->execute();
+$traditionalOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Obtener órdenes online para delivery
+$onlineQuery = "SELECT * FROM online_orders 
+               WHERE status = 'ready' 
+               AND customer_address IS NOT NULL 
+               AND TRIM(customer_address) != ''
+               ORDER BY created_at ASC";
+
+$stmt = $db->prepare($onlineQuery);
+$stmt->execute();
+$onlineOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Procesar órdenes tradicionales
+$processedTraditional = [];
+foreach ($traditionalOrders as $order) {
+    $order['order_type'] = 'traditional';
+    $order['delivery_type'] = 'Pedido Local';
+    
+    // Calcular tiempo transcurrido
+    $order_time = new DateTime($order['created_at']);
+    $current_time = new DateTime();
+    $elapsed_seconds = $current_time->getTimestamp() - $order_time->getTimestamp();
+    $elapsed_minutes = max(0, floor($elapsed_seconds / 60));
+    
+    $order['elapsed_minutes'] = $elapsed_minutes;
+    $order['is_urgent'] = $elapsed_minutes > 45;
+    
+    // Validar datos
+    if (empty($order['customer_name'])) $order['customer_name'] = 'Cliente Sin Nombre';
+    if (empty($order['customer_phone'])) $order['customer_phone'] = 'Sin teléfono';
+    
+    // Obtener conteo de items
+    $items_query = "SELECT COUNT(*) as item_count FROM order_items WHERE order_id = ?";
+    $items_stmt = $db->prepare($items_query);
+    $items_stmt->execute([$order['id']]);
+    $items_result = $items_stmt->fetch();
+    $order['item_count'] = $items_result['item_count'] ?? 0;
+    
+    $processedTraditional[] = $order;
+}
+
+// Procesar órdenes online
+$processedOnline = [];
+foreach ($onlineOrders as $order) {
+    $order['order_type'] = 'online';
+    $order['delivery_type'] = 'Pedido Online';
+    $order['type'] = 'delivery'; // Para compatibilidad
+    
+    // Calcular tiempo transcurrido
+    $order_time = new DateTime($order['created_at']);
+    $current_time = new DateTime();
+    $elapsed_seconds = $current_time->getTimestamp() - $order_time->getTimestamp();
+    $elapsed_minutes = max(0, floor($elapsed_seconds / 60));
+    
+    $order['elapsed_minutes'] = $elapsed_minutes;
+    $order['is_urgent'] = $elapsed_minutes > 45;
+    
+    // Procesar items
+    $items = json_decode($order['items'], true) ?: [];
+    $order['item_count'] = count($items);
+    
+    // Campos requeridos
+    $order['waiter_name'] = 'Sistema Online';
+    $order['delivery_fee'] = $order['delivery_fee'] ?? 0;
+    
+    $processedOnline[] = $order;
+}
+
+// Combinar órdenes SIN filtros complejos
+$delivery_orders = array_merge($processedTraditional, $processedOnline);
+
+// Ordenar por urgencia y tiempo
+usort($delivery_orders, function($a, $b) {
+    if ($a['is_urgent'] !== $b['is_urgent']) {
+        return $b['is_urgent'] - $a['is_urgent'];
+    }
+    return strtotime($a['created_at']) - strtotime($b['created_at']);
+});
+
+// Estadísticas simples
+$stats = [
+    'total_orders' => count($delivery_orders),
+    'urgent_orders' => count(array_filter($delivery_orders, fn($o) => $o['is_urgent'])),
+    'online_orders' => count($processedOnline),
+    'traditional_orders' => count($processedTraditional)
+];
+
+// Obtener entregadas hoy
+$today_query = "SELECT 
+    (SELECT COUNT(*) FROM orders WHERE type = 'delivery' AND status = 'delivered' AND DATE(updated_at) = CURDATE()) +
+    (SELECT COUNT(*) FROM online_orders WHERE status = 'delivered' AND DATE(delivered_at) = CURDATE()) as count";
+$today_stmt = $db->prepare($today_query);
+$today_stmt->execute();
+$today_result = $today_stmt->fetch();
+$stats['today_delivered'] = $today_result['count'] ?? 0;
+
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// Funciones auxiliares
+function generateMapLink($address) {
+    return "https://www.google.com/maps/search/?api=1&query=" . urlencode($address . ", Avellaneda, Santa Fe, Argentina");
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery - <?php echo $restaurant_name; ?></title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            --delivery-gradient: linear-gradient(135deg, #28a745, #20c997);
+            --sidebar-width: 280px;
+        }
+
+        body {
+            background: #f8f9fa;
+            overflow-x: hidden;
+        }
+
+        .mobile-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            background: var(--delivery-gradient);
+            color: white;
+            padding: 1rem;
+            display: none;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--primary-gradient);
+            color: white;
+            z-index: 1030;
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1020;
+            display: none;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            transition: transform 0.3s;
+            height: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .delivery-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            border-left: 5px solid #28a745;
+        }
+
+        .delivery-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .delivery-card.urgent {
+            border-left-color: #dc3545;
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { border-left-color: #dc3545; }
+            50% { border-left-color: #ff6b6b; }
+            100% { border-left-color: #dc3545; }
+        }
+
+        .time-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .time-normal {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .time-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .time-urgent {
+            background: #f8d7da;
+            color: #721c24;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .customer-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            gap: 0.5rem;
+        }
+
+        .btn-deliver {
+            background: var(--delivery-gradient);
+            border: none;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .btn-deliver:hover {
+            background: linear-gradient(135deg, #20c997, #28a745);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 991.98px) {
+            .mobile-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                width: 100%;
+                max-width: 350px;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-close {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-top: 5rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            .stat-icon {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.5rem;
+                padding-top: 4.5rem;
+            }
+
+            .page-header {
+                padding: 1rem;
+            }
+
+            .delivery-card {
+                margin-bottom: 1rem;
+            }
+
+            .customer-info {
+                padding: 0.75rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-buttons .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <div class="d-flex align-items-center">
+                <button class="menu-toggle me-3" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5>
+                    <i class="fas fa-motorcycle me-2"></i>
+                    Delivery
+                </h5>
+            </div>
+            <div class="d-flex align-items-center">
+                <small>
+                    <i class="fas fa-clock me-1"></i>
+                    <span id="current-time"><?php echo date('H:i'); ?></span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <button class="sidebar-close" id="sidebarClose">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="text-center mb-4">
+            <h4>
+                <i class="fas fa-utensils me-2"></i>
+                <?php echo $restaurant_name; ?>
+            </h4>
+            <small>Sistema de Delivery</small>
+        </div>
+
+        <div class="mb-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-2">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav flex-column">
+            <a class="nav-link" href="dashboard.php">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard
+            </a>
+            
+            <a class="nav-link active" href="delivery.php">
+                <i class="fas fa-motorcycle me-2"></i>
+                Delivery
+                <?php if ($stats['total_orders'] > 0): ?>
+                    <span class="badge bg-danger ms-auto"><?php echo $stats['total_orders']; ?></span>
+                <?php endif; ?>
+            </a>
+            
+            <?php if ($auth->hasPermission('orders')): ?>
+                <a class="nav-link" href="orders.php">
+                    <i class="fas fa-receipt me-2"></i>
+                    Órdenes
+                </a>
+            <?php endif; ?>
+            
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                </a>
+            <?php endif; ?>
+            
+            <hr class="text-white-50 my-3">
+            <a class="nav-link" href="logout.php">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                Cerrar Sesión
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-motorcycle me-2"></i>
+                        Sistema de Delivery
+                    </h2>
+                    <p class="text-muted mb-0">Gestión de entregas a domicilio</p>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-info me-2" onclick="location.reload()">
+                        <i class="fas fa-sync me-1"></i>
+                        Actualizar
+                    </button>
+                    <div class="text-muted d-none d-lg-block">
+                        <i class="fas fa-clock me-1"></i>
+                        <?php echo date('d/m/Y H:i'); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <?php if ($message): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check me-2"></i>
+                <?php echo $message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <?php echo $error; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Statistics -->
+        <div class="row g-3 g-md-4 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="fas fa-motorcycle"></i>
+                    </div>
+                    <div class="stat-number text-success"><?php echo $stats['total_orders']; ?></div>
+                    <p class="text-muted mb-0 small">Entregas Pendientes</p>
+                    <small class="text-muted" style="font-size: 10px;">
+                        Tradicionales: <?php echo $stats['traditional_orders']; ?> | Online: <?php echo $stats['online_orders']; ?>
+                    </small>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-number text-danger"><?php echo $stats['urgent_orders']; ?></div>
+                    <p class="text-muted mb-0 small">Entregas Urgentes</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-number text-primary"><?php echo $stats['today_delivered']; ?></div>
+                    <p class="text-muted mb-0 small">Entregadas Hoy</p>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="stat-number text-info"><?php echo $stats['online_orders']; ?></div>
+                    <p class="text-muted mb-0 small">Pedidos Online</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Info -->
+        <div class="alert alert-info mb-4">
+            <small>
+                <strong>Atención:</strong> 
+                Órdenes tradicionales encontradas: <?php echo count($traditionalOrders); ?> | 
+                Órdenes online encontradas: <?php echo count($onlineOrders); ?> |
+                Total combinadas: <?php echo count($delivery_orders); ?>
+            </small>
+        </div>
+
+        <!-- Delivery Orders -->
+        <?php if (empty($delivery_orders)): ?>
+            <div class="empty-state">
+                <i class="fas fa-motorcycle"></i>
+                <h4>No hay entregas pendientes</h4>
+                <p>Todas las entregas han sido completadas</p>
+                <button class="btn btn-success" onclick="location.reload()">
+                    <i class="fas fa-sync me-1"></i>
+                    Actualizar
+                </button>
+            </div>
+        <?php else: ?>
+            <div class="row">
+                <?php foreach ($delivery_orders as $order): ?>
+                    <?php
+                    $elapsed_minutes = $order['elapsed_minutes'];
+                    $is_urgent = $order['is_urgent'];
+                    
+                    if ($elapsed_minutes > 60) {
+                        $time_class = 'time-urgent';
+                        $time_text = intval($elapsed_minutes) . ' min (URGENTE)';
+                    } elseif ($elapsed_minutes > 30) {
+                        $time_class = 'time-warning';
+                        $time_text = intval($elapsed_minutes) . ' min';
+                    } else {
+                        $time_class = 'time-normal';
+                        $time_text = intval($elapsed_minutes) . ' min';
+                    }
+                    ?>
+                    
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card delivery-card <?php echo $is_urgent ? 'urgent' : ''; ?>">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-receipt me-1"></i>
+                                        Orden #<?php echo $order['order_number']; ?>
+                                        <span class="badge bg-secondary ms-2 small"><?php echo $order['delivery_type']; ?></span>
+                                    </h6>
+                                    <small class="text-muted"><?php echo formatDateTime($order['created_at']); ?></small>
+                                </div>
+                                <span class="time-badge <?php echo $time_class; ?>">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <?php echo $time_text; ?>
+                                </span>
+                            </div>
+                            
+                            <div class="card-body">
+                                <div class="customer-info">
+                                    <h6 class="mb-2">
+                                        <i class="fas fa-user me-2"></i>
+                                        <?php echo htmlspecialchars($order['customer_name']); ?>
+                                    </h6>
+                                    
+                                    <div class="mb-2">
+                                        <i class="fas fa-phone me-2"></i>
+                                        <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" 
+                                           class="text-decoration-none">
+                                            <?php echo htmlspecialchars($order['customer_phone']); ?>
+                                        </a>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                        <span class="small"><?php echo htmlspecialchars($order['customer_address']); ?></span>
+                                    </div>
+                                    
+                                    <div class="mb-0">
+                                        <i class="fas fa-utensils me-2"></i>
+                                        <small class="text-muted"><?php echo $order['item_count']; ?> item<?php echo $order['item_count'] > 1 ? 's' : ''; ?></small>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <strong class="text-success fs-5">
+                                        Total: <?php echo formatPrice($order['total']); ?>
+                                    </strong>
+                                </div>
+                                
+                                <div class="d-flex action-buttons mb-2">
+                                    <a href="<?php echo generateMapLink($order['customer_address']); ?>" 
+                                       target="_blank" class="btn btn-outline-info flex-fill me-1">
+                                        <i class="fas fa-map me-1"></i>
+                                        Mapa
+                                    </a>
+                                    
+                                    <form method="POST" class="flex-fill">
+                                        <input type="hidden" name="action" value="mark_delivered">
+                                        <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
+                                        <input type="hidden" name="order_type" value="<?php echo $order['order_type']; ?>">
+                                        <button type="submit" class="btn btn-deliver w-100"
+                                                onclick="return confirm('¿Confirmar que la orden fue entregada?')">
+                                            <i class="fas fa-check me-1"></i>
+                                            Entregado
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <div class="btn-group w-100">
+                                        <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-phone"></i>
+                                            Llamar
+                                        </a>
+                                        
+                                        <?php 
+                                        $whatsapp_message = "Hola! Soy el delivery de {$restaurant_name}. Su pedido #{$order['order_number']} está en camino.";
+                                        $clean_phone = preg_replace('/[^0-9]/', '', $order['customer_phone']);
+                                        $whatsapp_url = "https://wa.me/" . $clean_phone . "?text=" . urlencode($whatsapp_message);
+                                        ?>
+                                        <a href="<?php echo $whatsapp_url; ?>" target="_blank" 
+                                           class="btn btn-sm btn-outline-success">
+                                            <i class="fab fa-whatsapp"></i>
+                                            WhatsApp
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMobileMenu();
+            updateTime();
+            setInterval(updateTime, 60000);
+        });
+
+        function initializeMobileMenu() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+            const sidebarClose = document.getElementById('sidebarClose');
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    sidebar.classList.toggle('show');
+                    sidebarBackdrop.classList.toggle('show');
+                    document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : '';
+                });
+            }
+
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeSidebar();
+                });
+            }
+
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeSidebar();
+                });
+            }
+
+            document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 992) {
+                        setTimeout(closeSidebar, 100);
+                    }
+                });
+            });
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 992) {
+                    closeSidebar();
+                }
+            });
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+            
+            if (sidebar) sidebar.classList.remove('show');
+            if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+
+=== TICKET DE COCINA ===
+Orden: #ORD-20250830-0001
+Mesa Mesa 1
+Tipo: Dine_in
+Fecha: 01/09/2025 22:30
+Mozo: Carlos López - Mesero
+
+--- PRODUCTOS ---
+2x Empanadas de Carne
+1x Milanesa Napolitana
+2x Coca Cola
+
+========================

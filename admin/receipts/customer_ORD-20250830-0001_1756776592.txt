@@ -1,0 +1,37 @@
+
+
+
+
+
+
+================================
+         RECIBO
+================================
+
+Orden: #ORD-20250830-0001
+Fecha: 01/09/2025 22:29
+Mesa Mesa 1
+
+Cliente: Mesa 1
+
+Atendido por: Carlos López - Mesero
+
+--------------------------------
+Empanadas de Carne    2x $150,00
+                       $300,00
+Milanesa Napolitana   1x $980,00
+                       $980,00
+Coca Cola             2x $180,00
+                       $360,00
+
+--------------------------------
+Subtotal:        $1.640,00
+Impuestos:       $178,50
+
+TOTAL:           $1.028,50
+
+--- PAGOS RECIBIDOS ---
+
+================================
+    ¡Gracias por su visita!
+================================
