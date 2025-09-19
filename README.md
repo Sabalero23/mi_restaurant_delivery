@@ -369,6 +369,86 @@ El sistema incluye roles predefinidos, pero puede:
 - **Animaciones suaves** para mejor UX
 - **Interfaz optimizada** para dispositivos táctiles
 
+### 🎨 Sistema de Gestión de Estilos Dinámicos
+
+El sistema incluye un potente módulo de personalización de temas que permite modificar la apariencia visual de toda la aplicación en tiempo real.
+
+#### Características del Sistema de Temas
+
+- **Editor visual de colores** con color pickers interactivos
+- **Vista previa en tiempo real** de los cambios
+- **Temas predefinidos** profesionales (Predeterminado, Oscuro, Verde, Morado, Azul, Naranja)
+- **Generador automático de paletas de colores**:
+  - Colores aleatorios
+  - Colores complementarios  
+  - Colores análogos
+- **Configuración de tipografía** con preview en vivo
+- **Personalización de layout** (bordes, espaciado, sidebar)
+- **Sistema de importación/exportación** de temas
+- **Backup automático** de configuraciones
+- **Validación de integridad** del tema
+- **CSS dinámico** generado automáticamente
+
+#### Archivos del Sistema de Temas
+
+admin/
+├── theme-settings.php          # Panel principal de configuración de temas
+└── api/
+└── regenerate-css.php          # API para regenerar archivos CSS
+config/
+└── theme.php                   # Clase ThemeManager con toda la lógica
+assets/css/
+├── generate-theme.php          # Generador de CSS dinámico
+└── dynamic-theme.css           # Archivo CSS generado automáticamente
+
+#### Uso del Sistema de Temas
+
+1. **Acceder al configurador**: Admin > Configuración > Tema
+2. **Personalizar colores**: 
+   - Colores principales (primario, secundario, acento)
+   - Colores de estado (éxito, advertencia, peligro, información)
+   - Vista previa instantánea de cambios
+3. **Configurar tipografía**:
+   - Selección de fuentes (Segoe UI, Inter, Roboto, Open Sans, Montserrat, Poppins)
+   - Tamaños de fuente (base, pequeño, grande)
+   - Preview en tiempo real
+4. **Ajustar diseño**:
+   - Radio de bordes (angular, normal, redondeado)
+   - Ancho del sidebar
+   - Intensidad de sombras
+5. **Aplicar temas predefinidos** con un solo clic
+6. **Generar paletas automáticas**:
+   - Colores aleatorios para inspiración
+   - Colores complementarios para alto contraste
+   - Colores análogos para armonía visual
+
+#### Herramientas Avanzadas
+
+- **Exportar tema**: Descarga configuración actual en formato JSON
+- **Importar tema**: Carga temas previamente exportados
+- **Restablecer**: Vuelve a la configuración predeterminada
+- **Regenerar CSS**: Actualiza archivos CSS dinámicos
+- **Crear backup**: Respaldo de seguridad de la configuración
+- **Validar tema**: Verifica integridad de colores y configuraciones
+
+#### Características Técnicas
+
+- **CSS Variables**: Uso de variables CSS para cambios en tiempo real
+- **Responsive design**: Todos los temas se adaptan a dispositivos móviles
+- **Validación robusta**: Verificación de colores hexadecimales y medidas CSS
+- **Cache inteligente**: Optimización de rendimiento
+- **Fallback automático**: CSS de emergencia si hay errores
+- **Compatibilidad total**: Funciona con todos los módulos del sistema
+
+#### Beneficios
+
+- **Branding personalizado**: Adapta el sistema a la identidad visual del restaurante
+- **Mejor experiencia de usuario**: Interface más atractiva y profesional
+- **Facilidad de uso**: Sin conocimientos técnicos requeridos
+- **Flexibilidad total**: Desde cambios sutiles hasta transformaciones completas
+- **Consistencia visual**: Todos los módulos mantienen el tema seleccionado
+- 
+
 ### Funcionalidades Adicionales
 El sistema es extensible para agregar:
 - **Reservas online**
