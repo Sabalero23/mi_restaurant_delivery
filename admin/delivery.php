@@ -13,6 +13,19 @@ $auth->requirePermission('delivery');
 $database = new Database();
 $db = $database->getConnection();
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 // Procesar formularios
 $message = '';
 $error = '';
@@ -173,29 +186,61 @@ function generateMapLink($address) {
     <title>Delivery - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    try {
+        $theme_manager = new ThemeManager($db);
+        $current_theme = $theme_manager->getThemeSettings();
+    } catch (Exception $e) {
+        $current_theme = array(
+            'primary_color' => '#667eea',
+            'secondary_color' => '#764ba2',
+            'success_color' => '#28a745',
+            'sidebar_width' => '280px'
+        );
+    }
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea', 
+        'secondary_color' => '#764ba2',
+        'success_color' => '#28a745',
+        'sidebar_width' => '280px'
+    );
+}
+?>
     <style>
         :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --delivery-gradient: linear-gradient(135deg, #28a745, #20c997);
-            --sidebar-width: 280px;
-        }
+    --primary-gradient: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
+    --kitchen-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
         body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    overflow-x: hidden;
+}
 
         .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--delivery-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: linear-gradient(135deg, <?php echo $current_theme['warning_color']; ?>, <?php echo $current_theme['accent_color']; ?>);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
+
 
         .menu-toggle {
             background: none;
@@ -204,19 +249,20 @@ function generateMapLink($address) {
             font-size: 1.2rem;
         }
 
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
+        /* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--kitchen-sidebar-width);
+    height: 100vh;
+    background: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
         .sidebar-backdrop {
             position: fixed;
@@ -497,7 +543,7 @@ function generateMapLink($address) {
                 <i class="fas fa-utensils me-2"></i>
                 <?php echo $restaurant_name; ?>
             </h4>
-            <small>Sistema de Delivery</small>
+            <small>Sistema de Gestión</small>
         </div>
 
         <div class="mb-4">
@@ -506,8 +552,8 @@ function generateMapLink($address) {
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -517,19 +563,14 @@ function generateMapLink($address) {
                 <i class="fas fa-tachometer-alt me-2"></i>
                 Dashboard
             </a>
-            
-            <a class="nav-link active" href="delivery.php">
-                <i class="fas fa-motorcycle me-2"></i>
-                Delivery
-                <?php if ($stats['total_orders'] > 0): ?>
-                    <span class="badge bg-danger ms-auto"><?php echo $stats['total_orders']; ?></span>
-                <?php endif; ?>
-            </a>
-            
+
             <?php if ($auth->hasPermission('orders')): ?>
                 <a class="nav-link" href="orders.php">
                     <i class="fas fa-receipt me-2"></i>
                     Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
             
@@ -537,9 +578,78 @@ function generateMapLink($address) {
                 <a class="nav-link" href="online-orders.php">
                     <i class="fas fa-globe me-2"></i>
                     Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
                 </a>
             <?php endif; ?>
-            
+
+            <?php if ($auth->hasPermission('tables')): ?>
+                <a class="nav-link" href="tables.php">
+                    <i class="fas fa-table me-2"></i>
+                    Mesas
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('kitchen')): ?>
+                <a class="nav-link" href="kitchen.php">
+                    <i class="fas fa-fire me-2"></i>
+                    Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('delivery')): ?>
+                <a class="nav-link active" href="delivery.php">
+                    <i class="fas fa-motorcycle me-2"></i>
+                    Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('products')): ?>
+                <a class="nav-link" href="products.php">
+                    <i class="fas fa-utensils me-2"></i>
+                    Productos
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('users')): ?>
+                <a class="nav-link" href="users.php">
+                    <i class="fas fa-users me-2"></i>
+                    Usuarios
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('reports')): ?>
+                <a class="nav-link" href="reports.php">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Reportes
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('all')): ?>
+                <hr class="text-white-50 my-3">
+                <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
+
+                <a class="nav-link" href="settings.php">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuración
+                </a>
+
+                <a class="nav-link" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>

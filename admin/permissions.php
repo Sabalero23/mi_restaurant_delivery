@@ -21,6 +21,19 @@ $db = $database->getConnection();
 $message = '';
 $error = '';
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 // Available permissions and their descriptions - ACTUALIZADOS según la base de datos
 $available_permissions = [
     'all' => 'Acceso completo al sistema (solo administradores)',
@@ -269,198 +282,540 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title>Gestión de Permisos - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-        }
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database_theme = new Database();
+    $db_theme = $database_theme->getConnection();
+    $theme_manager = new ThemeManager($db_theme);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'sidebar_width' => '280px'
+    );
+}
+?>
+   <style>
+/* Extensiones específicas de permissions */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --permissions-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+.page-header {
+    background: var(--primary-gradient) !important;
+    color: var(--text-white, white) !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--permissions-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
 
-        .permissions-section {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 2rem;
-        }
-        
-        .role-card {
-            border-left: 4px solid #007bff;
-            transition: all 0.3s ease;
-        }
-        
-        .role-card:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        .permission-badge {
-            font-size: 0.75rem;
-            margin: 2px;
-        }
+/* Main content - colores claros forzados */
+.main-content {
+    margin-left: var(--permissions-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        .permission-check {
-            margin: 0.25rem 0;
-        }
-        
-        .nav-tabs .nav-link {
-            border-radius: 10px 10px 0 0;
-            border: none;
-            color: #6c757d;
-            font-weight: 500;
-        }
-        
-        .nav-tabs .nav-link.active {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-        }
-        
-        .tab-content {
-            background: white;
-            border-radius: 0 0 15px 15px;
-            padding: 2rem;
-        }
+/* Contenido forzado a colores claros */
+.permissions-section {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+    margin-bottom: 2rem;
+}
 
-        .system-role {
-            border-left-color: #28a745 !important;
-        }
+.role-card {
+    border-left: 4px solid var(--primary-color);
+    transition: var(--transition-base);
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-        .custom-role {
-            border-left-color: #ffc107 !important;
-        }
+.role-card:hover {
+    box-shadow: var(--shadow-base);
+    transform: translateY(-2px);
+}
 
-        .warning-text {
-            color: #dc3545;
-            font-size: 0.9rem;
-        }
+.permission-badge {
+    font-size: 0.75rem;
+    margin: 2px;
+    background: var(--text-secondary) !important;
+    color: var(--text-white) !important;
+}
 
-        /* Responsive adjustments */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.permission-check {
+    margin: 0.25rem 0;
+}
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: 100%;
-                max-width: 350px;
-            }
+.nav-tabs {
+    border-bottom: none;
+    background: #f8f9fa !important;
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+}
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+.nav-tabs .nav-link {
+    border-radius: 0;
+    border: none;
+    color: #6c757d !important;
+    font-weight: 600;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    transition: var(--transition-base);
+}
 
-            .sidebar-close {
-                display: flex;
-            }
+.nav-tabs .nav-link.active {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important;
+    color: var(--text-white) !important;
+    border: none;
+}
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem;
-            }
-        }
-    </style>
+.nav-tabs .nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+.tab-content {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
+    padding: 2rem;
+}
+
+.system-role {
+    border-left-color: var(--success-color) !important;
+}
+
+.custom-role {
+    border-left-color: var(--warning-color) !important;
+}
+
+.warning-text {
+    color: var(--danger-color) !important;
+    font-size: 0.9rem;
+}
+
+/* Cards y elementos con colores claros */
+.card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-small);
+}
+
+.card-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
+
+/* Títulos y textos de cards */
+.card h6,
+.card .card-title {
+    color: #212529 !important;
+}
+
+/* CORREGIDO: Textos de descripción visibles */
+.card p,
+.card .card-text {
+    color: #495057 !important;
+    font-size: 0.9rem !important;
+}
+
+.card-text small {
+    color: #495057 !important;
+}
+
+/* Específicamente para la sección de permisos disponibles */
+#permissions-list .card-body p {
+    color: #495057 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.4;
+}
+
+#permissions-list .card-text {
+    color: #495057 !important;
+}
+
+/* Modal con colores claros */
+.modal-content {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-large);
+}
+
+.modal-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+}
+
+.modal-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.modal-footer {
+    background: #ffffff !important;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
+}
+
+/* Table con colores claros */
+.table {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.table th,
+.table td {
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table th {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+.table-hover tbody tr:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Forms con colores claros */
+.form-control, .form-select {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
+
+.form-control:focus, .form-select:focus {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-label {
+    color: #212529 !important;
+    font-weight: 500;
+}
+
+.form-text {
+    color: #6c757d !important;
+}
+
+.form-check-label {
+    color: #212529 !important;
+}
+
+/* Asegurar visibilidad en modales */
+.modal-body .form-text,
+.modal-body small,
+.modal-body .text-muted {
+    color: #6c757d !important;
+}
+
+/* Labels y textos en forms */
+.form-check-label small.text-muted {
+    color: #6c757d !important;
+}
+
+/* Alerts con colores claros */
+.alert {
+    border-radius: var(--border-radius-base);
+    border: none;
+}
+
+.alert-success {
+    background: rgba(40, 167, 69, 0.1) !important;
+    color: var(--success-color) !important;
+    border-left: 4px solid var(--success-color);
+}
+
+.alert-danger {
+    background: rgba(220, 53, 69, 0.1) !important;
+    color: var(--danger-color) !important;
+    border-left: 4px solid var(--danger-color);
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1) !important;
+    color: #856404 !important;
+    border-left: 4px solid var(--warning-color);
+}
+
+.alert-info {
+    background: rgba(23, 162, 184, 0.1) !important;
+    color: var(--info-color) !important;
+    border-left: 4px solid var(--info-color);
+}
+
+/* Text colors forzados */
+.text-muted {
+    color: #6c757d !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
+
+p {
+    color: #212529 !important;
+}
+
+/* Badges con tema dinámico */
+.badge.bg-primary {
+    background: var(--primary-color) !important;
+    color: var(--text-white) !important;
+}
+
+.badge.bg-success {
+    background: var(--success-color) !important;
+    color: var(--text-white) !important;
+}
+
+.badge.bg-warning {
+    background: var(--warning-color) !important;
+    color: #212529 !important;
+}
+
+.badge.bg-danger {
+    background: var(--danger-color) !important;
+    color: var(--text-white) !important;
+}
+
+.badge.bg-info {
+    background: var(--info-color) !important;
+    color: var(--text-white) !important;
+}
+
+.badge.bg-secondary {
+    background: var(--text-secondary) !important;
+    color: var(--text-white) !important;
+}
+
+/* Buttons con tema dinámico */
+.btn-primary {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-white) !important;
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+    color: var(--text-white) !important;
+}
+
+.btn-success {
+    background: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: var(--text-white) !important;
+}
+
+.btn-warning {
+    background: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+    color: #212529 !important;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-white) !important;
+}
+
+.btn-outline-warning {
+    color: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+    background: transparent;
+}
+
+.btn-outline-warning:hover {
+    background: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+    color: #212529 !important;
+}
+
+.btn-outline-danger {
+    color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    background: transparent;
+}
+
+.btn-outline-danger:hover {
+    background: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: var(--text-white) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .mobile-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: 100%;
+        max-width: 350px;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-close {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 0.5rem;
+        padding-top: 4.5rem;
+    }
+
+    .tab-content {
+        padding: 1rem;
+    }
+}
+</style>
 </head>
 <body>
     <!-- Mobile Top Bar -->
@@ -498,11 +853,11 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         <div class="mb-4">
             <div class="d-flex align-items-center">
                 <div class="bg-white bg-opacity-20 rounded-circle p-2 me-2">
-                    <i class="fas fa-user-shield"></i>
+                    <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75">Administrador</small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -512,30 +867,93 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <i class="fas fa-tachometer-alt me-2"></i>
                 Dashboard
             </a>
-            <a class="nav-link" href="orders.php">
-                <i class="fas fa-receipt me-2"></i>
-                Órdenes
+
+            <?php if ($auth->hasPermission('orders')): ?>
+                <a class="nav-link" href="orders.php">
+                    <i class="fas fa-receipt me-2"></i>
+                    Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+            
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('tables')): ?>
+                <a class="nav-link" href="tables.php">
+                    <i class="fas fa-table me-2"></i>
+                    Mesas
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('kitchen')): ?>
+                <a class="nav-link" href="kitchen.php">
+                    <i class="fas fa-fire me-2"></i>
+                    Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('delivery')): ?>
+                <a class="nav-link" href="delivery.php">
+                    <i class="fas fa-motorcycle me-2"></i>
+                    Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('products')): ?>
+                <a class="nav-link" href="products.php">
+                    <i class="fas fa-utensils me-2"></i>
+                    Productos
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('users')): ?>
+                <a class="nav-link" href="users.php">
+                    <i class="fas fa-users me-2"></i>
+                    Usuarios
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('reports')): ?>
+                <a class="nav-link" href="reports.php">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Reportes
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('all')): ?>
+                <hr class="text-white-50 my-3">
+                <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
+
+                <a class="nav-link" href="settings.php">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuración
+                </a>
+
+                <a class="nav-link active" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
             </a>
-            <a class="nav-link" href="online-orders.php">
-                <i class="fas fa-globe me-2"></i>
-                Órdenes Online
-            </a>
-            <a class="nav-link" href="products.php">
-                <i class="fas fa-utensils me-2"></i>
-                Productos
-            </a>
-            <a class="nav-link" href="users.php">
-                <i class="fas fa-users me-2"></i>
-                Usuarios
-            </a>
-            <a class="nav-link" href="settings.php">
-                <i class="fas fa-cog me-2"></i>
-                Configuración
-            </a>
-            <a class="nav-link active" href="permissions.php">
-                <i class="fas fa-shield-alt me-2"></i>
-                Permisos
-            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>
@@ -546,20 +964,23 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2>
-                    <i class="fas fa-shield-alt me-2"></i>
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>
                     Gestión de Permisos
-                </h2>
-                <p class="text-muted mb-0">Administra roles y permisos del sistema</p>
-            </div>
+                    </h2>
+                    <p class="text-muted mb-0">Administra roles y permisos del sistema</p>
+                </div>
             <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createRoleModal">
                 <i class="fas fa-plus me-2"></i>
                 Crear Rol
             </button>
         </div>
+        </div>        
+
 
         <!-- Messages -->
         <?php if ($message): ?>

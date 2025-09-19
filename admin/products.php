@@ -18,6 +18,19 @@ function normalizeImagePath($p) {
     return 'admin/' . $p;
 }
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 $auth = new Auth();
 $auth->requirePermission('products');
 
@@ -161,355 +174,491 @@ function toggleAvailability() {
     <title>Gestión de Productos - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-            --sidebar-mobile-width: 100%;
-        }
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
+<style>
+/* Extensiones específicas de productos */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --products-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        .mobile-topbar h5 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--products-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
 
-        .sidebar .nav-link .badge {
-            margin-left: auto;
-        }
+.sidebar .nav-link .badge {
+    margin-left: auto;
+}
 
-        /* Close button for mobile sidebar */
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+/* Main content - FORZAR COLORES CLAROS */
+.main-content {
+    margin-left: var(--products-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        /* Page header */
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+/* Page header - FORZAR COLORES CLAROS */
+.page-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base);
+}
 
-        /* Statistics cards */
-        .stats-row {
-            margin-bottom: 2rem;
-        }
+/* Statistics cards - FORZAR COLORES CLAROS */
+.stats-row {
+    margin-bottom: 2rem;
+}
 
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            transition: transform 0.3s;
-            height: 100%;
-        }
+.stat-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    text-align: center;
+    transition: transform var(--transition-base);
+    height: 100%;
+}
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+.stat-card:hover {
+    transform: translateY(-5px);
+}
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
 
-        /* Product cards */
-        .product-card {
-            transition: transform 0.3s ease;
-            border: none;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            border-radius: 15px;
-            overflow: hidden;
-            height: 100%;
-        }
-        
-        .product-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .product-image {
-            height: 200px;
-            object-fit: cover;
-            background: #f8f9fa;
-        }
-        
-        .product-unavailable {
-            opacity: 0.6;
-        }
-        
-        .product-inactive {
-            border-left: 5px solid #dc3545;
-        }
+/* Product cards - FORZAR COLORES CLAROS */
+.product-card {
+    transition: transform var(--transition-base);
+    border: none;
+    box-shadow: var(--shadow-base);
+    border-radius: var(--border-radius-large);
+    overflow: hidden;
+    height: 100%;
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-        /* Filter card */
-        .filter-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 2rem;
-        }
+.product-card:hover {
+    transform: translateY(-5px);
+}
 
-        /* Card improvements */
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+.product-image {
+    height: 200px;
+    object-fit: cover;
+    background: #f8f9fa;
+}
 
-        .card-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-            border-radius: 15px 15px 0 0 !important;
-            background: white !important;
-            padding: 1rem 1.5rem;
-        }
+.product-unavailable {
+    opacity: 0.6;
+}
 
-        /* Mobile responsive styles */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.product-inactive {
+    border-left: 5px solid var(--danger-color);
+}
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: var(--sidebar-mobile-width);
-                max-width: 350px;
-            }
+/* Filter card - FORZAR COLORES CLAROS */
+.filter-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    margin-bottom: 2rem;
+}
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+/* Card improvements - FORZAR COLORES CLAROS */
+.card {
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .sidebar-close {
-                display: flex;
-            }
+.card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1rem 1.5rem;
+}
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem; /* Space for mobile topbar */
-            }
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .stat-card {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
+.card-title {
+    color: #212529 !important;
+}
 
-            .stat-number {
-                font-size: 1.5rem;
-            }
+.card-text {
+    color: #6c757d !important;
+}
 
-            .page-header {
-                padding: 1rem;
-            }
+/* Forms - FORZAR COLORES CLAROS */
+.form-control, .form-select {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius-base);
+}
 
-            .page-header h2 {
-                font-size: 1.5rem;
-            }
+.form-control:focus, .form-select:focus {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
 
-            .page-header .d-flex {
-                flex-direction: column;
-                text-align: center;
-                gap: 1rem;
-            }
+.form-label {
+    color: #212529 !important;
+    font-weight: 500;
+}
 
-            .filter-card {
-                padding: 1rem;
-            }
+/* Modal - FORZAR COLORES CLAROS */
+.modal-content {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-large);
+}
 
-            .product-image {
-                height: 150px;
-            }
-        }
+.modal-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+}
 
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
+.modal-title {
+    color: #212529 !important;
+}
 
-            .stat-card {
-                padding: 0.75rem;
-            }
+.modal-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .stat-number {
-                font-size: 1.25rem;
-            }
+.modal-footer {
+    background: #ffffff !important;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
+}
 
-            .page-header {
-                padding: 0.75rem;
-            }
+/* Text colors */
+.text-muted {
+    color: #6c757d !important;
+}
 
-            .page-header h2 {
-                font-size: 1.25rem;
-            }
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
 
-            .filter-card {
-                padding: 0.75rem;
-            }
+p {
+    color: #212529 !important;
+}
 
-            .sidebar {
-                padding: 1rem;
-            }
+/* Badges usando variables del tema */
+.badge.bg-primary {
+    background: var(--primary-color) !important;
+    color: var(--text-white) !important;
+}
 
-            .sidebar .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
+.badge.bg-success {
+    background: var(--success-color) !important;
+    color: var(--text-white) !important;
+}
 
-            .product-image {
-                height: 120px;
-            }
-        }
+.badge.bg-warning {
+    background: var(--warning-color) !important;
+    color: #212529 !important;
+}
 
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #1a1a1a;
-            }
+.badge.bg-danger {
+    background: var(--danger-color) !important;
+    color: var(--text-white) !important;
+}
 
-            .stat-card,
-            .card,
-            .page-header,
-            .filter-card {
-                background: #2d2d2d;
-                color: white;
-            }
+.badge.bg-info {
+    background: var(--info-color) !important;
+    color: var(--text-white) !important;
+}
 
-            .card-header {
-                background: #2d2d2d !important;
-                border-bottom-color: #404040;
-            }
+/* Buttons usando variables del tema */
+.btn-primary {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-white) !important;
+}
 
-            .text-muted {
-                color: #aaa !important;
-            }
-        }
+.btn-primary:hover {
+    background: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+    color: var(--text-white) !important;
+}
 
-        /* Improved scrollbar for sidebar */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
+.btn-success {
+    background: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: var(--text-white) !important;
+}
 
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
+.btn-danger {
+    background: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: var(--text-white) !important;
+}
 
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
+/* Sidebar scrollbar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
 
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-    </style>
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Mobile responsive styles */
+@media (max-width: 991.98px) {
+    .mobile-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-mobile-width);
+        max-width: 350px;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-close {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 5rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .page-header {
+        padding: 1rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .page-header .d-flex {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+
+    .filter-card {
+        padding: 1rem;
+    }
+
+    .product-image {
+        height: 150px;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 0.5rem;
+        padding-top: 4.5rem;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-number {
+        font-size: 1.25rem;
+    }
+
+    .page-header {
+        padding: 0.75rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .filter-card {
+        padding: 0.75rem;
+    }
+
+    .sidebar {
+        padding: 1rem;
+    }
+
+    .sidebar .nav-link {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .product-image {
+        height: 120px;
+    }
+}
+</style>
 </head>
 <body>
     <!-- Mobile Top Bar -->
@@ -560,8 +709,8 @@ function toggleAvailability() {
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -571,29 +720,68 @@ function toggleAvailability() {
                 <i class="fas fa-tachometer-alt me-2"></i>
                 Dashboard
             </a>
+
+            <?php if ($auth->hasPermission('orders')): ?>
+                <a class="nav-link" href="orders.php">
+                    <i class="fas fa-receipt me-2"></i>
+                    Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
             
-            <a class="nav-link" href="orders.php">
-                <i class="fas fa-receipt me-2"></i>
-                Órdenes
-            </a>
-            
-            <a class="nav-link" href="tables.php">
-                <i class="fas fa-table me-2"></i>
-                Mesas
-            </a>
-            
-            <a class="nav-link active" href="products.php">
-                <i class="fas fa-utensils me-2"></i>
-                Productos
-            </a>
-            
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('tables')): ?>
+                <a class="nav-link" href="tables.php">
+                    <i class="fas fa-table me-2"></i>
+                    Mesas
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('kitchen')): ?>
+                <a class="nav-link" href="kitchen.php">
+                    <i class="fas fa-fire me-2"></i>
+                    Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('delivery')): ?>
+                <a class="nav-link" href="delivery.php">
+                    <i class="fas fa-motorcycle me-2"></i>
+                    Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('products')): ?>
+                <a class="nav-link active" href="products.php">
+                    <i class="fas fa-utensils me-2"></i>
+                    Productos
+                </a>
+            <?php endif; ?>
+
             <?php if ($auth->hasPermission('users')): ?>
                 <a class="nav-link" href="users.php">
                     <i class="fas fa-users me-2"></i>
                     Usuarios
                 </a>
             <?php endif; ?>
-            
+
             <?php if ($auth->hasPermission('reports')): ?>
                 <a class="nav-link" href="reports.php">
                     <i class="fas fa-chart-bar me-2"></i>
@@ -609,8 +797,16 @@ function toggleAvailability() {
                     <i class="fas fa-cog me-2"></i>
                     Configuración
                 </a>
-            <?php endif; ?>
 
+                <a class="nav-link" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>
@@ -729,14 +925,14 @@ function toggleAvailability() {
                      data-name="<?php echo strtolower($product['name']); ?>">
                     <div class="card product-card <?php echo !$product['is_available'] ? 'product-unavailable' : ''; ?> <?php echo !$product['is_active'] ? 'product-inactive' : ''; ?>">
                         <?php if ($product['image']): ?>
-                            <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
-                                 class="card-img-top product-image" 
-                                 alt="<?php echo htmlspecialchars($product['name']); ?>">
-                        <?php else: ?>
-                            <div class="product-image d-flex align-items-center justify-content-center bg-light">
-                                <i class="fas fa-image fa-2x text-muted"></i>
-                            </div>
-                        <?php endif; ?>
+    <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
+         class="card-img-top product-image" 
+         alt="<?php echo htmlspecialchars($product['name']); ?>">
+<?php else: ?>
+    <div class="product-image d-flex align-items-center justify-content-center bg-light">
+        <i class="fas fa-utensils fa-3x text-muted"></i>
+    </div>
+<?php endif; ?>
                         
                         <div class="card-body d-flex flex-column p-2 p-md-3">
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -884,17 +1080,19 @@ function toggleAvailability() {
                                 </div>
                             </div>
                             
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Imagen</label>
-                                    <div class="text-center">
-                                        <div id="imagePreview" class="mb-3" style="display: none;">
-                                            <img id="previewImg" src="" class="img-fluid rounded" style="max-height: 200px;">
-                                        </div>
-                                        <input type="file" class="form-control mb-2" name="image" id="productImage" accept="image/*" onchange="previewImage()">
-                                        <small class="text-muted">JPG, PNG, GIF. Máximo 5MB</small>
-                                    </div>
-                                </div>
+                            <div class="mb-3">
+    <label class="form-label">Imagen</label>
+    <div class="text-center">
+        <div id="imagePreview" class="mb-3" style="display: none;">
+            <img id="previewImg" src="" class="img-fluid rounded" style="max-height: 200px;">
+        </div>
+        <div id="imagePlaceholder" class="mb-3 d-flex align-items-center justify-content-center bg-light rounded" style="height: 200px; display: block;">
+            <i class="fas fa-utensils fa-3x text-muted"></i>
+        </div>
+        <input type="file" class="form-control mb-2" name="image" id="productImage" accept="image/*" onchange="previewImage()">
+        <small class="text-muted">JPG, PNG, GIF. Máximo 5MB</small>
+    </div>
+</div>
                                 
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="is_available" id="productAvailable" checked>
@@ -1055,11 +1253,14 @@ function toggleAvailability() {
                     
                     // Show image preview if exists
                     if (product.image) {
-                        document.getElementById('previewImg').src = '../' + product.image;
-                        document.getElementById('imagePreview').style.display = 'block';
-                    } else {
-                        document.getElementById('imagePreview').style.display = 'none';
-                    }
+    document.getElementById('previewImg').src = '../' + product.image;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('imagePlaceholder').style.display = 'none';
+} else {
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('imagePlaceholder').style.display = 'flex';
+}
+
                     
                     new bootstrap.Modal(document.getElementById('productModal')).show();
                 })
@@ -1095,21 +1296,24 @@ function toggleAvailability() {
         }
         
         function previewImage() {
-            const file = document.getElementById('productImage').files[0];
-            const preview = document.getElementById('imagePreview');
-            const previewImg = document.getElementById('previewImg');
-            
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        }
+    const file = document.getElementById('productImage').files[0];
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const placeholder = document.getElementById('imagePlaceholder');
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+        placeholder.style.display = 'flex';
+    }
+}
         
         // Auto-dismiss alerts
         setTimeout(() => {

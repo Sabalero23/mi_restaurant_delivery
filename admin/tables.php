@@ -14,6 +14,19 @@ $auth->requirePermission('tables');
 $tableModel = new Table();
 $orderModel = new Order();
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 // Handle form submissions
 $message = '';
 $error = '';
@@ -85,154 +98,278 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title>Gestión de Mesas - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
+    
     <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-            --sidebar-mobile-width: 100%;
-        }
+/* Extensiones específicas del dashboard */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
 
-        .mobile-topbar h5 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--dashboard-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
 
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar .nav-link .badge {
+    margin-left: auto;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        /* Page header */
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+/* Main content */
+.main-content {
+    margin-left: var(--dashboard-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        /* Statistics cards */
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            transition: transform 0.3s;
-            height: 100%;
-        }
+.card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+}
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+.card-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+    padding: 1rem 1.5rem;
+}
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
 
+/* Statistics cards usando variables del tema */
+.stat-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    transition: transform var(--transition-base);
+    height: 100%;
+}
+
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--border-radius-large);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-white) !important;
+    flex-shrink: 0;
+}
+
+.bg-primary-gradient { 
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important; 
+}
+.bg-success-gradient { 
+    background: linear-gradient(45deg, var(--success-color), #a8e6cf) !important; 
+}
+.bg-warning-gradient { 
+    background: linear-gradient(45deg, var(--warning-color), var(--accent-color)) !important; 
+}
+.bg-info-gradient { 
+    background: linear-gradient(45deg, var(--info-color), #00f2fe) !important; 
+}
+.bg-online-gradient { 
+    background: linear-gradient(45deg, var(--accent-color), var(--warning-color)) !important; 
+}
+
+.page-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base);
+}
+
+
+/* Notification styles */
+.notification-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideInRight 0.5s ease-out;
+    box-shadow: var(--shadow-large);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.notification-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+.pulsing-badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.urgent-notification {
+    border: 3px solid var(--danger-color) !important;
+    background: linear-gradient(45deg, var(--danger-color), var(--warning-color)) !important;
+    color: var(--text-white) !important;
+}
         /* Table cards with visual icons */
         .table-card {
             border: 2px solid;
@@ -541,8 +678,8 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -552,23 +689,72 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <i class="fas fa-tachometer-alt me-2"></i>
                 Dashboard
             </a>
-            <a class="nav-link" href="orders.php">
-                <i class="fas fa-receipt me-2"></i>
-                Órdenes
-            </a>
-            <a class="nav-link active" href="tables.php">
-                <i class="fas fa-table me-2"></i>
-                Mesas
-            </a>
-            <a class="nav-link" href="products.php">
-                <i class="fas fa-utensils me-2"></i>
-                Productos
-            </a>
+
+            <?php if ($auth->hasPermission('orders')): ?>
+                <a class="nav-link" href="orders.php">
+                    <i class="fas fa-receipt me-2"></i>
+                    Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
             
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('tables')): ?>
+                <a class="nav-link active" href="tables.php">
+                    <i class="fas fa-table me-2"></i>
+                    Mesas
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('kitchen')): ?>
+                <a class="nav-link" href="kitchen.php">
+                    <i class="fas fa-fire me-2"></i>
+                    Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('delivery')): ?>
+                <a class="nav-link" href="delivery.php">
+                    <i class="fas fa-motorcycle me-2"></i>
+                    Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('products')): ?>
+                <a class="nav-link" href="products.php">
+                    <i class="fas fa-utensils me-2"></i>
+                    Productos
+                </a>
+            <?php endif; ?>
+
             <?php if ($auth->hasPermission('users')): ?>
                 <a class="nav-link" href="users.php">
                     <i class="fas fa-users me-2"></i>
                     Usuarios
+                </a>
+            <?php endif; ?>
+
+            <?php if ($auth->hasPermission('reports')): ?>
+                <a class="nav-link" href="reports.php">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Reportes
                 </a>
             <?php endif; ?>
 
@@ -580,8 +766,16 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                     <i class="fas fa-cog me-2"></i>
                     Configuración
                 </a>
-            <?php endif; ?>
 
+                <a class="nav-link" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>

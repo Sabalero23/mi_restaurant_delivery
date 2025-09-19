@@ -17,6 +17,19 @@ if (!$auth->hasPermission('online_orders')) {
 $database = new Database();
 $db = $database->getConnection();
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 // Procesar acciones AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
     header('Content-Type: application/json');
@@ -539,386 +552,503 @@ function getOrderTimeline($order) {
     <title>Pedidos Online - <?php echo $settings['restaurant_name']; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    try {
+        $theme_manager = new ThemeManager($db);
+        $current_theme = $theme_manager->getThemeSettings();
+    } catch (Exception $e) {
+        $current_theme = array(
+            'primary_color' => '#667eea',
+            'secondary_color' => '#764ba2',
+            'sidebar_width' => '280px'
+        );
+    }
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'sidebar_width' => '280px'
+    );
+}
+?>
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-gradient: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            --warning-gradient: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-            --danger-gradient: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
-            --sidebar-width: 280px;
-        }
+/* Extensiones específicas para online-orders */
+:root {
+    --primary-gradient: linear-gradient(135deg, var(--primary-color, #667eea) 0%, var(--secondary-color, #764ba2) 100%);
+    --success-gradient: linear-gradient(135deg, var(--success-color, #28a745) 0%, #20c997 100%);
+    --warning-gradient: linear-gradient(135deg, var(--warning-color, #ffc107) 0%, #fd7e14 100%);
+    --danger-gradient: linear-gradient(135deg, var(--danger-color, #dc3545) 0%, #e83e8c 100%);
+    --online-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+}
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+/* Forzar colores claros para el contenido principal */
+body {
+    background: #f8f9fa !important;
+    overflow-x: hidden;
+    color: #212529 !important;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: linear-gradient(135deg, #ff6b6b, #ffa500);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: linear-gradient(135deg, var(--accent-color, #ff6b6b), var(--warning-color, #ffa500));
+    color: var(--text-white, white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white, white) !important;
+}
 
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white, white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base, 8px);
+    transition: var(--transition-base, 0.3s);
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--online-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white, white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base, 0.3s ease-in-out);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base, 0.3s ease-in-out);
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base, 8px);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base, 0.3s);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white, white) !important;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white, white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        /* Statistics cards */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
+/* Main content - FORZAR COLORES CLAROS */
+.main-content {
+    margin-left: var(--online-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base, 0.3s ease-in-out);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s ease;
-        }
+/* Statistics cards - FORZAR COLORES CLAROS */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+.stat-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large, 15px);
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-base, 0 5px 15px rgba(0, 0, 0, 0.08));
+    transition: transform var(--transition-base, 0.3s ease);
+}
 
-        .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
+.stat-card:hover {
+    transform: translateY(-5px);
+}
 
-        .stat-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
 
-        /* Order cards */
-        .order-card {
-            background: white;
-            border-radius: 15px;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border-left: 5px solid #6c757d;
-            overflow: hidden;
-        }
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
 
-        .order-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
+/* Order cards - FORZAR COLORES CLAROS */
+.order-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large, 15px);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-base, 0 5px 15px rgba(0, 0, 0, 0.08));
+    transition: var(--transition-base, 0.3s ease);
+    border-left: 5px solid #6c757d;
+    overflow: hidden;
+}
 
-        .order-card.status-pending { border-left-color: #ffc107; }
-        .order-card.status-accepted { border-left-color: #17a2b8; }
-        .order-card.status-preparing { border-left-color: #fd7e14; }
-        .order-card.status-ready { border-left-color: #28a745; }
-        .order-card.status-delivered { border-left-color: #007bff; }
-        .order-card.status-rejected { border-left-color: #dc3545; }
+.order-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-large, 0 8px 25px rgba(0, 0, 0, 0.15));
+}
 
-        .order-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e9ecef;
-            background: #f8f9fa;
-        }
+.order-card.status-pending { border-left-color: var(--warning-color, #ffc107); }
+.order-card.status-accepted { border-left-color: var(--info-color, #17a2b8); }
+.order-card.status-preparing { border-left-color: #fd7e14; }
+.order-card.status-ready { border-left-color: var(--success-color, #28a745); }
+.order-card.status-delivered { border-left-color: var(--primary-color, #007bff); }
+.order-card.status-rejected { border-left-color: var(--danger-color, #dc3545); }
 
-        .order-body {
-            padding: 1.5rem;
-        }
+.order-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        .order-number {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: #007bff;
-        }
+.order-body {
+    padding: 1.5rem;
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-        .time-badge {
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
+.order-number {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--primary-color, #007bff) !important;
+}
 
-        .time-normal { background: #d4edda; color: #155724; }
-        .time-warning { background: #fff3cd; color: #856404; }
-        .time-urgent { background: #f8d7da; color: #721c24; animation: pulse 2s infinite; }
+.time-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
+.time-normal { background: #d4edda; color: #155724; }
+.time-warning { background: #fff3cd; color: #856404; }
+.time-urgent { background: #f8d7da; color: #721c24; animation: pulse 2s infinite; }
 
-        .priority-badge {
-            animation: pulse 2s infinite;
-        }
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
 
-        .customer-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
+.priority-badge {
+    animation: pulse 2s infinite;
+}
 
-        .items-list {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
+.customer-info {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-base, 10px);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
 
-        .item-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #e9ecef;
-        }
+.items-list {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-base, 10px);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
 
-        .item-row:last-child {
-            border-bottom: none;
-            font-weight: bold;
-            margin-top: 0.5rem;
-            padding-top: 1rem;
-            border-top: 2px solid #dee2e6;
-        }
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+    color: #212529 !important;
+}
 
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
+.item-row:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid #dee2e6;
+}
 
-        .btn-accept {
-            background: var(--success-gradient);
-            border: none;
-            color: white;
-        }
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
 
-        .btn-reject {
-            background: var(--danger-gradient);
-            border: none;
-            color: white;
-        }
+.btn-accept {
+    background: var(--success-gradient);
+    border: none;
+    color: var(--text-white, white) !important;
+}
 
-        .btn-whatsapp {
-            background: #25d366;
-            border: none;
-            color: white;
-        }
+.btn-reject {
+    background: var(--danger-gradient);
+    border: none;
+    color: var(--text-white, white) !important;
+}
 
-        .btn-preparing {
-            background: var(--warning-gradient);
-            border: none;
-            color: white;
-        }
+.btn-whatsapp {
+    background: #25d366;
+    border: none;
+    color: var(--text-white, white) !important;
+}
 
-        .status-badge {
-            font-size: 0.9rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-        }
+.btn-preparing {
+    background: var(--warning-gradient);
+    border: none;
+    color: var(--text-white, white) !important;
+}
 
-        .filters-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+.status-badge {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+}
 
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            background: var(--primary-gradient);
-            color: white;
-        }
+.filters-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large, 15px);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base, 0 5px 15px rgba(0, 0, 0, 0.08));
+}
 
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #6c757d;
-        }
+.page-header {
+    background: var(--primary-gradient);
+    color: var(--text-white, white) !important;
+    border-radius: var(--border-radius-large, 15px);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base, 0 5px 15px rgba(0, 0, 0, 0.08));
+}
 
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
+.page-header h1,
+.page-header p {
+    color: var(--text-white, white) !important;
+}
 
-        /* Mobile responsive */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d !important;
+    background: #ffffff !important;
+    border-radius: var(--border-radius-large, 15px);
+}
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: 100%;
-                max-width: 350px;
-            }
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+/* Forzar colores para formularios */
+.form-control,
+.form-select {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius-base, 8px);
+}
 
-            .sidebar-close {
-                display: flex;
-            }
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color, #007bff);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem;
-            }
+.form-label {
+    color: #212529 !important;
+    font-weight: 500;
+}
 
-            .stats-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.5rem;
-            }
+/* Modales con colores claros */
+.modal-content {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .stat-card {
-                padding: 1rem;
-            }
+.modal-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+}
 
-            .order-body {
-                padding: 1rem;
-            }
+.modal-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .action-buttons {
-                flex-direction: column;
-            }
+.modal-footer {
+    background: #ffffff !important;
+    border-top: 1px solid #dee2e6;
+}
 
-            .action-buttons .btn {
-                margin-bottom: 0.5rem;
-            }
-        }
+.modal-title {
+    color: #212529 !important;
+}
 
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
+/* Text colors forzados */
+.text-muted {
+    color: #6c757d !important;
+}
 
-            .page-header {
-                padding: 1rem;
-            }
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
 
-            .order-card {
-                margin-bottom: 1rem;
-            }
+p, small {
+    color: #212529 !important;
+}
 
-            .customer-info, .items-list {
-                padding: 0.75rem;
-            }
+/* Responsive */
+@media (max-width: 991.98px) {
+    .mobile-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-            .stat-number {
-                font-size: 1.5rem;
-            }
+    .sidebar {
+        transform: translateX(-100%);
+        width: 100%;
+        max-width: 350px;
+    }
 
-            .stat-icon {
-                font-size: 1.5rem;
-            }
-        }
-        .time-urgent {
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-close {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 5rem;
+    }
+
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .order-body {
+        padding: 1rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-buttons .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 0.5rem;
+        padding-top: 4.5rem;
+    }
+
+    .page-header {
+        padding: 1rem;
+    }
+
+    .order-card {
+        margin-bottom: 1rem;
+    }
+
+    .customer-info, .items-list {
+        padding: 0.75rem;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+    }
+
+    .stat-icon {
+        font-size: 1.5rem;
+    }
+}
+
+/* Urgencia y animaciones */
+.time-urgent {
     background: #f8d7da;
     color: #721c24;
     animation: pulse 2s infinite;
@@ -940,19 +1070,11 @@ function getOrderTimeline($order) {
     animation: pulse 2s infinite;
 }
 
-@keyframes pulse {
-    0% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.05); }
-    100% { opacity: 1; transform: scale(1); }
-}
-
-/* Agregar sonido/alerta visual para pedidos urgentes */
 .order-card.urgent {
     box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
-    border-left: 5px solid #dc3545 !important;
+    border-left: 5px solid var(--danger-color, #dc3545) !important;
 }
-*/
-    </style>
+</style>
 </head>
 <body>
     <!-- Mobile Top Bar -->
@@ -992,9 +1114,9 @@ function getOrderTimeline($order) {
         <div class="text-center mb-4">
             <h4>
                 <i class="fas fa-utensils me-2"></i>
-                <?php echo $settings['restaurant_name']; ?>
+                <?php echo $restaurant_name; ?>
             </h4>
-            <small>Pedidos Online</small>
+            <small>Gestión Órdenes Online</small>
         </div>
 
         <div class="mb-4">
@@ -1003,8 +1125,8 @@ function getOrderTimeline($order) {
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -1019,13 +1141,19 @@ function getOrderTimeline($order) {
                 <a class="nav-link" href="orders.php">
                     <i class="fas fa-receipt me-2"></i>
                     Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
-
+            
             <?php if ($auth->hasPermission('online_orders')): ?>
                 <a class="nav-link active" href="online-orders.php">
                     <i class="fas fa-globe me-2"></i>
-                    Pedidos Online
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
                 </a>
             <?php endif; ?>
 
@@ -1040,6 +1168,9 @@ function getOrderTimeline($order) {
                 <a class="nav-link" href="kitchen.php">
                     <i class="fas fa-fire me-2"></i>
                     Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -1047,6 +1178,9 @@ function getOrderTimeline($order) {
                 <a class="nav-link" href="delivery.php">
                     <i class="fas fa-motorcycle me-2"></i>
                     Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -1064,14 +1198,31 @@ function getOrderTimeline($order) {
                 </a>
             <?php endif; ?>
 
+            <?php if ($auth->hasPermission('reports')): ?>
+                <a class="nav-link" href="reports.php">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Reportes
+                </a>
+            <?php endif; ?>
+
             <?php if ($auth->hasPermission('all')): ?>
                 <hr class="text-white-50 my-3">
+                <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
+
                 <a class="nav-link" href="settings.php">
                     <i class="fas fa-cog me-2"></i>
                     Configuración
                 </a>
-            <?php endif; ?>
 
+                <a class="nav-link" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>

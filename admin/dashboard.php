@@ -103,402 +103,353 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title>Dashboard - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
     <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-            --sidebar-mobile-width: 100%;
-        }
+/* Extensiones específicas del dashboard */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
 
-        .mobile-topbar h5 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--dashboard-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
 
-        .sidebar .nav-link .badge {
-            margin-left: auto;
-        }
+.sidebar .nav-link .badge {
+    margin-left: auto;
+}
 
-        /* Close button for mobile sidebar */
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+/* Main content */
+.main-content {
+    margin-left: var(--dashboard-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        /* Statistics cards */
-        .stat-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            transition: transform 0.3s;
-            height: 100%;
-        }
+.card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+}
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
+.card-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+    padding: 1rem 1.5rem;
+}
 
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: white;
-            flex-shrink: 0;
-        }
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
 
-        .bg-primary-gradient { background: linear-gradient(45deg, #667eea, #764ba2); }
-        .bg-success-gradient { background: linear-gradient(45deg, #56ab2f, #a8e6cf); }
-        .bg-warning-gradient { background: linear-gradient(45deg, #f093fb, #f5576c); }
-        .bg-info-gradient { background: linear-gradient(45deg, #4facfe, #00f2fe); }
-        .bg-online-gradient { background: linear-gradient(45deg, #ff6b6b, #ffa500); }
+/* Statistics cards usando variables del tema */
+.stat-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    transition: transform var(--transition-base);
+    height: 100%;
+}
 
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
 
-        /* Card improvements */
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+.stat-card:hover {
+    transform: translateY(-5px);
+}
 
-        .card-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-            border-radius: 15px 15px 0 0 !important;
-            background: white !important;
-            padding: 1rem 1.5rem;
-        }
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--border-radius-large);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-white) !important;
+    flex-shrink: 0;
+}
 
-        /* Notification styles */
-        .notification-alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-            animation: slideInRight 0.5s ease-out;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
+.bg-primary-gradient { 
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important; 
+}
+.bg-success-gradient { 
+    background: linear-gradient(45deg, var(--success-color), #a8e6cf) !important; 
+}
+.bg-warning-gradient { 
+    background: linear-gradient(45deg, var(--warning-color), var(--accent-color)) !important; 
+}
+.bg-info-gradient { 
+    background: linear-gradient(45deg, var(--info-color), #00f2fe) !important; 
+}
+.bg-online-gradient { 
+    background: linear-gradient(45deg, var(--accent-color), var(--warning-color)) !important; 
+}
 
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
+.page-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base);
+}
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
 
-        .notification-shake {
-            animation: shake 0.5s ease-in-out;
-        }
+/* Notification styles */
+.notification-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+    animation: slideInRight 0.5s ease-out;
+    box-shadow: var(--shadow-large);
+}
 
-        .pulsing-badge {
-            animation: pulse 2s infinite;
-        }
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.1); opacity: 0.7; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
 
-        .urgent-notification {
-            border: 3px solid #ff6b6b !important;
-            background: linear-gradient(45deg, #ff6b6b, #ffa500) !important;
-            color: white !important;
-        }
+.notification-shake {
+    animation: shake 0.5s ease-in-out;
+}
 
-        /* Mobile responsive styles */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.pulsing-badge {
+    animation: pulse 2s infinite;
+}
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: var(--sidebar-mobile-width);
-                max-width: 350px;
-            }
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+.urgent-notification {
+    border: 3px solid var(--danger-color) !important;
+    background: linear-gradient(45deg, var(--danger-color), var(--warning-color)) !important;
+    color: var(--text-white) !important;
+}
 
-            .sidebar-close {
-                display: flex;
-            }
+/* Tabla con colores claros */
+.table {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem;
-            }
+.table th,
+.table td {
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+}
 
-            .stat-card {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
+.table th {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-            .stat-icon {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
+.table-hover tbody tr:hover {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
 
-            .page-header {
-                padding: 1rem;
-            }
+/* Text colors forzados */
+.text-muted {
+    color: #6c757d !important;
+}
 
-            .page-header h2 {
-                font-size: 1.5rem;
-            }
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
 
-            .notification-alert {
-                position: fixed;
-                top: 80px;
-                left: 10px;
-                right: 10px;
-                max-width: none;
-            }
-        }
+p {
+    color: #212529 !important;
+}
 
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
-
-            .stat-card {
-                padding: 0.75rem;
-            }
-
-            .stat-card .d-flex {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .stat-card .stat-icon {
-                margin: 0 auto 0.5rem auto;
-            }
-
-            .page-header {
-                padding: 0.75rem;
-            }
-
-            .page-header .d-flex {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .sidebar {
-                padding: 1rem;
-            }
-
-            .sidebar .nav-link {
-                padding: 0.5rem 0.75rem;
-            }
-        }
-
-        /* Loading animation */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        
-        /* Mini tarjetas de mesa para dashboard */
+/* Mini tarjetas de mesa para dashboard */
 .table-mini-card {
     border: 2px solid;
-    border-radius: 10px;
+    border-radius: var(--border-radius-base);
     padding: 8px;
-    transition: all 0.3s ease;
+    transition: var(--transition-base);
     cursor: pointer;
     position: relative;
     display: flex;
     align-items: center;
     min-height: 60px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-small);
 }
 
 .table-mini-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-base);
 }
 
-/* Colores según estado */
 .table-mini-card.table-available {
-    border-color: #28a745;
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    color: var(--text-white) !important;
 }
 
 .table-mini-card.table-occupied {
-    border-color: #dc3545;
-    background: linear-gradient(135deg, #dc3545, #e83e8c);
-    color: white;
+    border-color: var(--danger-color);
+    background: linear-gradient(135deg, var(--danger-color), #e83e8c);
+    color: var(--text-white) !important;
 }
 
 .table-mini-card.table-reserved {
-    border-color: #ffc107;
-    background: linear-gradient(135deg, #ffc107, #fd7e14);
-    color: #212529;
+    border-color: var(--warning-color);
+    background: linear-gradient(135deg, var(--warning-color), #fd7e14);
+    color: var(--text-primary) !important;
 }
 
 .table-mini-card.table-maintenance {
-    border-color: #6c757d;
-    background: linear-gradient(135deg, #6c757d, #495057);
-    color: white;
+    border-color: var(--text-secondary);
+    background: linear-gradient(135deg, var(--text-secondary), #495057);
+    color: var(--text-white) !important;
 }
 
 /* Visual de mesa miniatura */
@@ -523,7 +474,6 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     z-index: 2;
 }
 
-/* Sillas miniatura */
 .chair-mini {
     width: 6px;
     height: 4px;
@@ -580,7 +530,6 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     transform: rotate(135deg); 
 }
 
-/* Información de la mesa */
 .table-mini-info {
     flex: 1;
     display: flex;
@@ -607,8 +556,106 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     align-self: flex-start;
 }
 
-/* Responsive adjustments */
+.table-mini-card.has-orders {
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        box-shadow: var(--shadow-small); 
+    }
+    50% { 
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3), var(--shadow-small); 
+    }
+}
+
+/* Loading animation */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
 @media (max-width: 991.98px) {
+    .mobile-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-mobile-width);
+        max-width: 350px;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-close {
+        display: flex;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 5rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+
+    .page-header {
+        padding: 1rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .notification-alert {
+        position: fixed;
+        top: 80px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+
     .table-mini-card {
         width: 140px;
         height: 140px;
@@ -645,6 +692,45 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
 }
 
 @media (max-width: 576px) {
+    .main-content {
+        padding: 0.5rem;
+        padding-top: 4.5rem;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-card .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-card .stat-icon {
+        margin: 0 auto 0.5rem auto;
+    }
+
+    .page-header {
+        padding: 0.75rem;
+    }
+
+    .page-header .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+
+    .sidebar {
+        padding: 1rem;
+    }
+
+    .sidebar .nav-link {
+        padding: 0.5rem 0.75rem;
+    }
+
     .table-mini-card {
         width: 120px;
         height: 120px;
@@ -681,32 +767,18 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     }
 }
 
-/* Animación de pulsado para mesas con órdenes activas */
-.table-mini-card.has-orders {
-    animation: pulse-glow 2s infinite;
-}
-
-@keyframes pulse-glow {
-    0%, 100% { 
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); 
-    }
-    50% { 
-        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3), 
-                    0 2px 6px rgba(0, 0, 0, 0.1); 
-    }
-}
-/* Estilos para badges de pago */
+/* Badges con variables del tema */
 .badge.bg-success { 
-    background: linear-gradient(45deg, #28a745, #20c997) !important; 
+    background: linear-gradient(45deg, var(--success-color), #20c997) !important; 
 }
 
 .badge.bg-warning { 
-    background: linear-gradient(45deg, #ffc107, #fd7e14) !important; 
-    color: #212529 !important;
+    background: linear-gradient(45deg, var(--warning-color), #fd7e14) !important; 
+    color: var(--text-primary) !important;
 }
 
 .badge.bg-info { 
-    background: linear-gradient(45deg, #17a2b8, #6f42c1) !important; 
+    background: linear-gradient(45deg, var(--info-color), var(--secondary-color)) !important; 
 }
 
 /* Responsive para la columna de pago */
@@ -715,7 +787,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         display: none;
     }
 }
-    </style>
+</style>
 </head>
 <body>
     <!-- Mobile Top Bar -->
@@ -859,8 +931,11 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                     <i class="fas fa-shield-alt me-2"></i>
                     Permisos
                 </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
             <?php endif; ?>
-
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>

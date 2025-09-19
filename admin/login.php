@@ -42,113 +42,197 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title>Acceso - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database_theme = new Database();
+    $db_theme = $database_theme->getConnection();
+    $theme_manager = new ThemeManager($db_theme);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745'
+    );
+}
+?>
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-        }
-        
-        .login-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        .login-header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 2rem;
-            text-align: center;
-        }
-        
-        .login-body {
-            padding: 2rem;
-        }
-        
-        .form-control {
-            border-radius: 10px;
-            padding: 12px 20px;
-            border: 1px solid #e1e5e9;
-            margin-bottom: 1rem;
-        }
-        
-        .form-control:focus {
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-            border-color: #667eea;
-        }
-        
-        .btn-login {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 10px;
-            padding: 12px 30px;
-            color: white;
-            width: 100%;
-            font-weight: 600;
-            transition: transform 0.2s;
-        }
-        
-        .btn-login:hover {
-            transform: translateY(-2px);
-            color: white;
-        }
-        
-        .alert {
-            border-radius: 10px;
-        }
-        
-        .input-group-text {
-            background: transparent;
-            border-right: none;
-            border-radius: 10px 0 0 10px;
-        }
-        
-        .input-group .form-control {
-            border-left: none;
-            border-radius: 0 10px 10px 0;
-        }
-        
-        /* Estilos para el toggle de contraseña */
-        .password-toggle {
-            position: relative;
-        }
-        
-        .password-toggle-btn {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            z-index: 10;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
-        }
-        
-        .password-toggle-btn:hover {
-            color: #667eea;
-        }
-        
-        .password-toggle .form-control {
-            padding-right: 45px;
-        }
-        
-        .input-group.password-toggle .form-control {
-            border-radius: 0 10px 10px 0;
-            border-left: none;
-            padding-right: 45px;
-        }
-    </style>
+:root {
+    --primary-color: <?php echo $current_theme['primary_color'] ?? '#667eea'; ?>;
+    --secondary-color: <?php echo $current_theme['secondary_color'] ?? '#764ba2'; ?>;
+    --accent-color: <?php echo $current_theme['accent_color'] ?? '#ff6b6b'; ?>;
+    --success-color: <?php echo $current_theme['success_color'] ?? '#28a745'; ?>;
+}
+
+body {
+    background: var(--accent-color) !important;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    color: #212529 !important;
+}
+
+.login-card {
+    background: white !important;
+    color: #212529 !important;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.login-header {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white !important;
+    padding: 2rem;
+    text-align: center;
+}
+
+.login-header h3 {
+    color: white !important;
+}
+
+.login-header p {
+    color: white !important;
+}
+
+.login-body {
+    padding: 2rem;
+    background: white !important;
+    color: #212529 !important;
+}
+
+.form-control {
+    border-radius: 10px;
+    padding: 12px 20px;
+    border: 1px solid #e1e5e9;
+    margin-bottom: 1rem;
+    background: white !important;
+    color: #212529 !important;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    border-color: var(--primary-color);
+    background: white !important;
+    color: #212529 !important;
+}
+
+.form-control::placeholder {
+    color: #6c757d !important;
+}
+
+.btn-login {
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    border-radius: 10px;
+    padding: 12px 30px;
+    color: white !important;
+    width: 100%;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    color: white !important;
+    background: linear-gradient(45deg, var(--secondary-color), var(--accent-color));
+}
+
+.alert {
+    border-radius: 10px;
+}
+
+.alert-danger {
+    background: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+    border: 1px solid #dc3545;
+}
+
+.input-group-text {
+    background: #f8f9fa !important;
+    border-right: none;
+    border-radius: 10px 0 0 10px;
+    color: #6c757d !important;
+    border: 1px solid #e1e5e9;
+}
+
+.input-group .form-control {
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+}
+
+/* Toggle de contraseña mejorado */
+.password-toggle {
+    position: relative;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d !important;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    font-size: 14px;
+}
+
+.password-toggle-btn:hover {
+    color: var(--primary-color) !important;
+}
+
+.password-toggle .form-control {
+    padding-right: 45px;
+}
+
+.input-group.password-toggle .form-control {
+    border-radius: 0 10px 10px 0;
+    border-left: none;
+    padding-right: 45px;
+}
+
+/* Enlaces */
+.text-muted {
+    color: #6c757d !important;
+}
+
+.text-decoration-none:hover {
+    color: var(--primary-color) !important;
+}
+
+/* Responsive improvements */
+@media (max-width: 576px) {
+    .login-card {
+        margin: 1rem;
+    }
+    
+    .login-header {
+        padding: 1.5rem;
+    }
+    
+    .login-body {
+        padding: 1.5rem;
+    }
+}
+</style>
 </head>
 <body>
     <div class="container">

@@ -23,324 +23,422 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title><?php echo $restaurant_name; ?> - Menú Digital</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = 'config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database_theme = new Database();
+    $db_theme = $database_theme->getConnection();
+    $theme_manager = new ThemeManager($db_theme);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745'
+    );
+}
+?>
     <style>
-        :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --accent-color: #ff6b6b;
-            --success-color: #28a745;
-            --text-dark: #2c3e50;
-            --text-muted: #6c757d;
-            --card-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            --hover-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-        }
+:root {
+    --primary-color: <?php echo $current_theme['primary_color'] ?? '#667eea'; ?>;
+    --secondary-color: <?php echo $current_theme['secondary_color'] ?? '#764ba2'; ?>;
+    --accent-color: <?php echo $current_theme['accent_color'] ?? '#ff6b6b'; ?>;
+    --success-color: <?php echo $current_theme['success_color'] ?? '#28a745'; ?>;
+    --text-dark: #2c3e50;
+    --text-muted: #6c757d;
+    --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+    --hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
 
-        * {
-            box-sizing: border-box;
-        }
+* {
+    box-sizing: border-box;
+}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
-            line-height: 1.6;
-            color: var(--text-dark);
-        }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f8f9fa !important;
+    line-height: 1.5;
+    color: #2c3e50 !important;
+    font-size: 14px;
+}
 
-        /* Header mejorado */
-        .header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 2rem 0;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
+/* Header más compacto */
+.header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white !important;
+    padding: 1.5rem 0;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
+.header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    color: white !important;
+}
 
-        .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin: 0;
-        }
+.header p {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+    color: white !important;
+}
 
-        /* Filtros de categorías */
-        .category-filters {
-            background: white;
-            padding: 1.5rem 0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 140px;
-            z-index: 999;
-        }
+/* Filtros de categorías más compactos */
+.category-filters {
+    background: white !important;
+    padding: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: sticky;
+    top: 120px;
+    z-index: 999;
+}
 
-        .filter-btn {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            color: var(--text-dark);
-            padding: 0.75rem 1.5rem;
-            margin: 0.25rem;
-            border-radius: 25px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-        }
+.filter-btn {
+    background: #f8f9fa !important;
+    border: 2px solid #e9ecef;
+    color: #2c3e50 !important;
+    padding: 0.5rem 1rem;
+    margin: 0.2rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
 
-        .filter-btn:hover {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
-        }
+.filter-btn:hover {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color);
+    color: white !important;
+    transform: translateY(-1px);
+}
 
-        .filter-btn.active {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
+.filter-btn.active {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color);
+    color: white !important;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+}
 
-        /* Tarjetas de productos mejoradas */
-        .product-card {
-            background: white;
-            border: none;
-            border-radius: 20px;
-            box-shadow: var(--card-shadow);
-            transition: all 0.4s ease;
-            margin-bottom: 2rem;
-            overflow: hidden;
-            height: 100%;
-        }
+/* Tarjetas de productos más compactas */
+.product-card {
+    background: white !important;
+    color: #2c3e50 !important;
+    border: none;
+    border-radius: 15px;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    height: 100%;
+}
 
-        .product-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--hover-shadow);
-        }
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--hover-shadow);
+}
 
-        .product-image {
-            height: 220px;
-            width: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
+.product-image {
+    height: 180px;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
 
-        .product-card:hover .product-image {
-            transform: scale(1.05);
-        }
+.product-card:hover .product-image {
+    transform: scale(1.03);
+}
 
-        .product-placeholder {
-            height: 220px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            font-size: 3rem;
-        }
+.product-placeholder {
+    height: 180px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d !important;
+    font-size: 2.5rem;
+}
 
-        .card-body {
-            padding: 1.5rem;
-        }
+.card-body {
+    padding: 1.2rem;
+    background: white !important;
+    color: #2c3e50 !important;
+}
 
-        .card-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 0.75rem;
-        }
+.card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c3e50 !important;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+}
 
-        .card-description {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
-            line-height: 1.5;
-        }
+.card-description {
+    color: #6c757d !important;
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+    line-height: 1.4;
+}
 
-        .price {
-            color: var(--success-color);
-            font-weight: 700;
-            font-size: 1.4rem;
-            margin: 0;
-        }
+.price {
+    color: var(--success-color) !important;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin: 0;
+}
 
-        /* Sección de categoría */
-        .category-section {
-            margin: 3rem 0;
-        }
+/* Sección de categoría más compacta */
+.category-section {
+    margin: 2rem 0;
+}
 
-        .category-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 2rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 3px solid var(--primary-color);
-            display: inline-block;
-        }
+.category-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2c3e50 !important;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 3px solid var(--primary-color);
+    display: inline-block;
+}
 
-        /* Botón llamar mesero mejorado */
-        .btn-call {
-            position: fixed;
-            bottom: 40px;
-            right: 25px;
-            background: linear-gradient(135deg, var(--accent-color) 0%, #ff4040 100%);
-            color: white;
-            border: none;
-            padding: 18px 24px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
-            z-index: 2000;
-            transition: all 0.3s ease;
-            min-width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+/* Botón llamar mesero más compacto */
+/* Botón llamar mesero más compacto */
+.btn-call {
+    position: fixed;
+    bottom: 25px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--secondary-color) 100%);
+    color: white !important;
+    border: none;
+    padding: 12px 18px;
+    border-radius: 40px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    transition: all 0.3s ease;
+    min-width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .btn-call:hover {
-            background: linear-gradient(135deg, #ff4040 0%, #e63946 100%);
-            transform: scale(1.1);
-            box-shadow: 0 12px 35px rgba(255, 107, 107, 0.6);
-        }
+.btn-call:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    color: white !important;
+}
 
-        .btn-call .btn-text {
-            margin-left: 8px;
-            display: none;
-        }
+.btn-call .btn-text {
+    margin-left: 6px;
+    display: none;
+}
 
-        /* Animaciones */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-        .product-card {
-            animation: fadeInUp 0.6s ease forwards;
-        }
+.product-card {
+    animation: fadeInUp 0.5s ease forwards;
+}
 
-        .category-section:nth-child(even) .product-card {
-            animation-delay: 0.1s;
-        }
+.category-section:nth-child(even) .product-card {
+    animation-delay: 0.1s;
+}
 
-        .category-section:nth-child(odd) .product-card {
-            animation-delay: 0.2s;
-        }
+.category-section:nth-child(odd) .product-card {
+    animation-delay: 0.15s;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
+/* Responsive más compacto */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 1.7rem;
+    }
 
-            .header {
-                padding: 1.5rem 0;
-            }
+    .header {
+        padding: 1.2rem 0;
+    }
 
-            .category-filters {
-                top: 120px;
-                padding: 1rem 0;
-            }
+    .category-filters {
+        top: 100px;
+        padding: 0.8rem 0;
+    }
 
-            .filter-btn {
-                padding: 0.6rem 1.2rem;
-                font-size: 0.9rem;
-            }
+    .filter-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        margin: 0.15rem;
+    }
 
-            .category-title {
-                font-size: 1.6rem;
-            }
+    .category-title {
+        font-size: 1.4rem;
+    }
 
-            .btn-call {
-                bottom: 20px;
-                right: 20px;
-                padding: 15px;
-                width: 55px;
-                height: 55px;
-            }
+    .btn-call {
+        bottom: 15px;
+        right: 15px;
+        padding: 10px;
+        width: 45px;
+        height: 45px;
+        font-size: 13px;
+    }
 
-            .btn-call .btn-text {
-                display: none;
-            }
-        }
+    .btn-call .btn-text {
+        display: none;
+    }
 
-        @media (min-width: 769px) {
-            .btn-call .btn-text {
-                display: inline;
-            }
-        }
+    .product-image,
+    .product-placeholder {
+        height: 150px;
+    }
 
-        /* Estados especiales */
-        .product-unavailable {
-            opacity: 0.6;
-            position: relative;
-        }
+    .card-body {
+        padding: 1rem;
+    }
 
-        .product-unavailable::after {
-            content: 'No disponible';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(220, 53, 69, 0.9);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
+    .card-title {
+        font-size: 1rem;
+    }
 
-        /* Indicador de carga */
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
+    .card-description {
+        font-size: 0.8rem;
+    }
 
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--primary-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
+    .price {
+        font-size: 1.1rem;
+    }
+}
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+@media (min-width: 769px) {
+    .btn-call .btn-text {
+        display: inline;
+    }
+}
 
-        /* Mensaje vacío */
-        .empty-category {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
-        }
+/* Estados especiales */
+.product-unavailable {
+    opacity: 0.6;
+    position: relative;
+}
 
-        .empty-category i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-    </style>
+.product-unavailable::after {
+    content: 'No disponible';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Indicador de carga */
+.loading {
+    text-align: center;
+    padding: 1.5rem;
+    color: #6c757d !important;
+}
+
+.spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 0.8rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mensaje vacío */
+.empty-category {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #6c757d !important;
+    background: white !important;
+    border-radius: 15px;
+    margin: 1rem 0;
+}
+
+.empty-category i {
+    font-size: 3rem;
+    margin-bottom: 0.8rem;
+    opacity: 0.5;
+    color: #6c757d !important;
+}
+
+.empty-category h4 {
+    color: #2c3e50 !important;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.empty-category p {
+    color: #6c757d !important;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Container más compacto */
+.container {
+    max-width: 1140px;
+}
+
+.py-4 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Espaciado entre productos */
+.row.g-4 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+}
+
+/* Texto adicional para asegurar visibilidad */
+.text-muted {
+    color: #6c757d !important;
+}
+
+small.text-muted {
+    color: #6c757d !important;
+    font-size: 0.8rem;
+}
+</style>
 </head>
 <body>
     <!-- Header -->
@@ -397,7 +495,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <?php else: ?>
                     <div class="row g-4">
                         <?php foreach ($categoryProducts as $product): ?>
-                            <div class="col-lg-4 col-md-6 col-sm-12 product-item" data-category="<?php echo $category['id']; ?>">
+                            <div class="col-lg-3 col-md-6 col-sm-12 product-item" data-category="<?php echo $category['id']; ?>">
                                 <div class="card product-card <?php echo !$product['is_available'] ? 'product-unavailable' : ''; ?>">
                                     <?php if (!empty($product['image']) && file_exists($product['image'])): ?>
                                         <img src="<?php echo htmlspecialchars($product['image']); ?>" 

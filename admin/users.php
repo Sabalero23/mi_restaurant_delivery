@@ -12,6 +12,19 @@ $auth->requirePermission('users');
 $message = '';
 $error = '';
 
+// Obtener configuraciones del sistema
+$settings = getSettings();
+$restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
+
 // Handle form submissions
 if ($_POST && isset($_POST['action'])) {
     switch ($_POST['action']) {
@@ -272,13 +285,43 @@ $user_name = $_SESSION['full_name'];
     <title>Gestión de Usuarios - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    try {
+        $database = new Database();
+        $db = $database->getConnection();
+        $theme_manager = new ThemeManager($db);
+        $current_theme = $theme_manager->getThemeSettings();
+    } catch (Exception $e) {
+        $current_theme = array(
+            'primary_color' => '#667eea',
+            'secondary_color' => '#764ba2',
+            'sidebar_width' => '280px'
+        );
+    }
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'sidebar_width' => '280px'
+    );
+}
+?>
     <style>
         :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-            --header-height: 70px;
-            --border-radius: 12px;
-        }
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --users-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --header-height: 70px;
+    --border-radius: var(--border-radius-large, 12px);
+}
 
         * {
             box-sizing: border-box;
@@ -347,19 +390,19 @@ $user_name = $_SESSION['full_name'];
 
         /* Sidebar */
         .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow-y: auto;
-            padding: 1.5rem;
-            -webkit-overflow-scrolling: touch;
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--users-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    padding: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+}
 
         .sidebar-backdrop {
             position: fixed;
@@ -427,11 +470,95 @@ $user_name = $_SESSION['full_name'];
 
         /* Main content */
         .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 1.5rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+    margin-left: var(--users-sidebar-width);
+    padding: 1.5rem;
+    min-height: 100vh;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+
+
+/* Forzar colores claros para el contenido */
+.stat-card,
+.card,
+
+.user-mobile-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.table {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.table th,
+.table td {
+    color: #212529 !important;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.table th {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
+
+.form-control,
+.form-select {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #d1d5db;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.modal-content {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.dropdown-menu {
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.dropdown-item {
+    color: #212529 !important;
+}
+
+.filter-container {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
         /* Enhanced touch targets for mobile */
         .btn {
@@ -476,7 +603,8 @@ $user_name = $_SESSION['full_name'];
         }
 
         .page-header {
-            background: white;
+            background: var(--primary-gradient) !important;
+            color: var(--text-white, white) !important;
             border-radius: var(--border-radius);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
@@ -499,6 +627,34 @@ $user_name = $_SESSION['full_name'];
             padding: 1.25rem 1.5rem;
             font-weight: 600;
         }
+        
+        .card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
+
+.card-title {
+    color: #212529 !important;
+}
+
+.card-text {
+    color: #212529 !important;
+}
+
+/* Asegurar que todos los elementos dentro de cards sean blancos */
+div.card-header,
+div.card-body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #212529 !important;
+}
+
+.card .card-header *,
+.card .card-body * {
+    color: inherit !important;
+}
+
 
         .user-card {
             border-left: 4px solid #007bff;
@@ -833,7 +989,7 @@ $user_name = $_SESSION['full_name'];
             }
 
             .text-muted {
-                color: #aaa !important;
+                color: #fff !important;
             }
 
             .table {
@@ -949,7 +1105,7 @@ $user_name = $_SESSION['full_name'];
 
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar menú">
+        <button class="sidebar-close" id="sidebarClose">
             <i class="fas fa-times"></i>
         </button>
 
@@ -958,7 +1114,7 @@ $user_name = $_SESSION['full_name'];
                 <i class="fas fa-utensils me-2"></i>
                 <?php echo $restaurant_name; ?>
             </h4>
-            <small>Sistema de Gestión</small>
+            <small>Gestión de Usuarios</small>
         </div>
 
         <div class="mb-4">
@@ -983,6 +1139,19 @@ $user_name = $_SESSION['full_name'];
                 <a class="nav-link" href="orders.php">
                     <i class="fas fa-receipt me-2"></i>
                     Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+            
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
                 </a>
             <?php endif; ?>
 
@@ -997,6 +1166,9 @@ $user_name = $_SESSION['full_name'];
                 <a class="nav-link" href="kitchen.php">
                     <i class="fas fa-fire me-2"></i>
                     Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -1004,6 +1176,9 @@ $user_name = $_SESSION['full_name'];
                 <a class="nav-link" href="delivery.php">
                     <i class="fas fa-motorcycle me-2"></i>
                     Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -1041,8 +1216,11 @@ $user_name = $_SESSION['full_name'];
                     <i class="fas fa-shield-alt me-2"></i>
                     Permisos
                 </a>
+                <a class="nav-link" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
             <?php endif; ?>
-
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>

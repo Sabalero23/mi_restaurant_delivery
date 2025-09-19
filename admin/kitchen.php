@@ -9,8 +9,18 @@ require_once '../models/Order.php';
 $auth = new Auth();
 $auth->requirePermission('kitchen');
 
+// Obtener configuraciones del sistema
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// AGREGAR ESTAS LÍNEAS:
+// Obtener información del usuario actual
+$user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
+$role = $_SESSION['role_name'] ?? 'usuario';
+
+// Verificar si hay estadísticas disponibles (opcional)
+$stats = array();
+$online_stats = array();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -20,346 +30,453 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title>Cocina - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-            --sidebar-mobile-width: 100%;
-        }
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
+   <style>
+/* Extensiones específicas de cocina usando variables del tema */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --kitchen-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        /* Mobile Top Bar */
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: linear-gradient(135deg, #ff6b6b, #ffa500);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
+/* Mobile Top Bar para cocina */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: linear-gradient(135deg, var(--warning-color), var(--accent-color));
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        .mobile-topbar h5 {
-            margin: 0;
-            font-size: 1.1rem;
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
 
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
-        .menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
 
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--kitchen-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
 
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-        }
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
 
-        .sidebar-backdrop.show {
-            display: block;
-            opacity: 1;
-        }
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
 
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
 
-        .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
-        }
+/* Main content forzado a colores claros */
+.main-content {
+    margin-left: var(--kitchen-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
 
-        /* Kitchen specific styles */
-        .order-card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            transition: transform 0.3s ease;
-        }
+/* Kitchen specific styles con colores fijos claros */
+.order-card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: transform var(--transition-base);
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-        .order-card:hover {
-            transform: translateY(-3px);
-        }
+.order-card:hover {
+    transform: translateY(-3px);
+}
 
-        .order-pending {
-            border-left: 5px solid #ffc107;
-        }
+.order-pending {
+    border-left: 5px solid var(--warning-color);
+}
 
-        .order-preparing {
-            border-left: 5px solid #fd7e14;
-        }
+.order-preparing {
+    border-left: 5px solid var(--accent-color);
+}
 
-        .order-priority {
-            border-left: 5px solid #dc3545;
-            animation: pulse 2s infinite;
-        }
+.order-priority {
+    border-left: 5px solid var(--danger-color);
+    animation: pulse 2s infinite;
+}
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
 
-        .item-card {
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+.item-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius-base);
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-        .item-ready {
-            background: #d4edda;
-            border-color: #28a745;
-        }
+.item-ready {
+    background: #d4edda !important;
+    border-color: var(--success-color);
+    color: #212529 !important;
+}
 
-        .item-preparing {
-            background: #fff3cd;
-            border-color: #ffc107;
-        }
+.item-preparing {
+    background: #fff3cd !important;
+    border-color: var(--warning-color);
+    color: #212529 !important;
+}
 
-        .time-indicator {
-            font-size: 0.9rem;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-weight: bold;
-        }
+.time-indicator {
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+}
 
-        .time-normal {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
+.time-normal {
+    background: #e3f2fd;
+    color: #1976d2;
+}
 
-        .time-warning {
-            background: #fff3e0;
-            color: #f57c00;
-        }
+.time-warning {
+    background: #fff3e0;
+    color: #f57c00;
+}
 
-        .time-critical {
-            background: #ffebee;
-            color: #d32f2f;
-            animation: blink 1s infinite;
-        }
+.time-critical {
+    background: #ffebee;
+    color: #d32f2f;
+    animation: blink 1s infinite;
+}
 
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.5; }
-        }
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.5; }
+}
 
-        .stats-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+.stats-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow-base);
+}
 
-        .stats-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
+.stats-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
 
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+.page-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base);
+}
 
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
+.card {
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+    background: #ffffff !important;
+    color: #212529 !important;
+}
 
-        .order-number {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #007bff;
-        }
+.card-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+}
 
-        .table-info {
-            background: #f8f9fa;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
 
-        .preparation-time {
-            background: #e3f2fd;
-            color: #1976d2;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
+.order-number {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color) !important;
+}
 
-        /* Mobile responsive styles */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+.table-info {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: var(--sidebar-mobile-width);
-                max-width: 350px;
-            }
+.preparation-time {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+/* Botones usando variables del tema */
+.btn-success {
+    background: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: #ffffff !important;
+}
 
-            .sidebar-close {
-                display: flex;
-            }
+.btn-warning {
+    background: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+    color: #212529 !important;
+}
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem;
-            }
+.btn-danger {
+    background: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: #ffffff !important;
+}
 
-            .stats-card {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
+.btn-primary {
+    background: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #ffffff !important;
+}
 
-            .stats-icon {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
+/* Badges usando variables del tema */
+.badge.bg-success {
+    background: var(--success-color) !important;
+    color: #ffffff !important;
+}
 
-            .page-header {
-                padding: 1rem;
-            }
+.badge.bg-warning {
+    background: var(--warning-color) !important;
+    color: #212529 !important;
+}
 
-            .page-header h2 {
-                font-size: 1.5rem;
-            }
+.badge.bg-danger {
+    background: var(--danger-color) !important;
+    color: #ffffff !important;
+}
 
-            .order-card {
-                margin-bottom: 1rem;
-            }
+.badge.bg-info {
+    background: var(--info-color) !important;
+    color: #ffffff !important;
+}
 
-            .item-card {
-                padding: 8px;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
+/* Text colors forzados a claros */
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
 
-            .item-card .d-flex {
-                width: 100%;
-                justify-content: space-between;
-                align-items: center;
-            }
-        }
+p, span, div {
+    color: #212529 !important;
+}
 
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
+.text-muted {
+    color: #6c757d !important;
+}
 
-            .stats-card {
-                padding: 0.75rem;
-            }
+/* Mobile responsive styles */
+@media (max-width: 991.98px) {
+    .mobile-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-            .page-header {
-                padding: 0.75rem;
-            }
+    .sidebar {
+        transform: translateX(-100%);
+        width: var(--sidebar-mobile-width);
+        max-width: 350px;
+    }
 
-            .page-header .d-flex {
-                flex-direction: column;
-                text-align: center;
-            }
+    .sidebar.show {
+        transform: translateX(0);
+    }
 
-            .order-card {
-                margin-bottom: 1rem;
-            }
+    .sidebar-close {
+        display: flex;
+    }
 
-            .order-number {
-                font-size: 1rem;
-            }
-        }
+    .main-content {
+        margin-left: 0;
+        padding: 1rem;
+        padding-top: 5rem;
+    }
+
+    .stats-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stats-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+
+    .page-header {
+        padding: 1rem;
+    }
+
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .order-card {
+        margin-bottom: 1rem;
+    }
+
+    .item-card {
+        padding: 8px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .item-card .d-flex {
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-content {
+        padding: 0.5rem;
+        padding-top: 4.5rem;
+    }
+
+    .stats-card {
+        padding: 0.75rem;
+    }
+
+    .page-header {
+        padding: 0.75rem;
+    }
+
+    .page-header .d-flex {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .order-card {
+        margin-bottom: 1rem;
+    }
+
+    .order-number {
+        font-size: 1rem;
+    }
+}
 </style>
 </head>
 <body>
@@ -402,7 +519,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <i class="fas fa-utensils me-2"></i>
                 <?php echo $restaurant_name; ?>
             </h4>
-            <small>Sistema de Gestión</small>
+            <small>Gestión de Cocina</small>
         </div>
 
         <div class="mb-4">
@@ -411,8 +528,8 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                     <i class="fas fa-user"></i>
                 </div>
                 <div>
-                    <div class="fw-bold"><?php echo $_SESSION['full_name']; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($_SESSION['role_name']); ?></small>
+                    <div class="fw-bold"><?php echo $user_name; ?></div>
+                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
                 </div>
             </div>
         </div>
@@ -427,6 +544,19 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <a class="nav-link" href="orders.php">
                     <i class="fas fa-receipt me-2"></i>
                     Órdenes
+                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
+                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
+            
+            <?php if ($auth->hasPermission('online_orders')): ?>
+                <a class="nav-link" href="online-orders.php">
+                    <i class="fas fa-globe me-2"></i>
+                    Órdenes Online
+                    <span class="badge bg-warning ms-auto" id="online-orders-count">
+                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
+                    </span>
                 </a>
             <?php endif; ?>
 
@@ -441,6 +571,9 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <a class="nav-link active" href="kitchen.php">
                     <i class="fas fa-fire me-2"></i>
                     Cocina
+                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
+                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -448,6 +581,9 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 <a class="nav-link" href="delivery.php">
                     <i class="fas fa-motorcycle me-2"></i>
                     Delivery
+                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
+                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
+                    <?php endif; ?>
                 </a>
             <?php endif; ?>
 
@@ -465,6 +601,13 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 </a>
             <?php endif; ?>
 
+            <?php if ($auth->hasPermission('reports')): ?>
+                <a class="nav-link" href="reports.php">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Reportes
+                </a>
+            <?php endif; ?>
+
             <?php if ($auth->hasPermission('all')): ?>
                 <hr class="text-white-50 my-3">
                 <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
@@ -473,8 +616,16 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                     <i class="fas fa-cog me-2"></i>
                     Configuración
                 </a>
-            <?php endif; ?>
 
+                <a class="nav-link" href="permissions.php">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permisos
+                </a>
+                <a class="nav-link active" href="theme-settings.php">
+                <i class="fas fa-palette me-2"></i>
+                Tema
+            </a>
+            <?php endif; ?>
             <hr class="text-white-50 my-3">
             <a class="nav-link" href="logout.php">
                 <i class="fas fa-sign-out-alt me-2"></i>
