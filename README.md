@@ -65,7 +65,8 @@ mi_restaurant_delivery/
 │ ├── config.php # Configuración general (constantes, variables globales)
 │ ├── database.php # Conexión a la base de datos
 │ ├── auth.php # Sistema de autenticación y sesiones
-│ └── functions.php # Funciones auxiliares y utilidades
+│ ├── functions.php # Funciones auxiliares y utilidades
+│ └── theme.php # Clase ThemeManager con toda la lógica
 │
 ├── admin/ # Panel de administración
 │ ├── api/ # APIs internas para el frontend
@@ -81,6 +82,7 @@ mi_restaurant_delivery/
 │ │ ├── update-order-status.php # Actualización del estado de órdenes
 │ │ ├── create-order.php # Creación de órdenes desde el sistema
 │ │ ├── tables.php # API de gestión de mesas
+│ │ ├── regenerate-css.php # API para regenerar archivos CSS
 │ │ └── online-orders-recent.php # Listado de pedidos online recientes
 │ │
 │ ├── receipts/ # Archivos de recibos generados
@@ -113,11 +115,15 @@ mi_restaurant_delivery/
 │ ├── logout.php # Cerrar sesión
 │ ├── order-details.php # Detalle de una orden
 │ ├── print-order.php # Impresión de órdenes
+│ ├── theme-settings.php # Panel principal de configuración de temas
 │ └── login.php # Página de login
 │
 ├── assets/ # Recursos estáticos
 │ ├── includes/ # Archivos de inclusión
 │ ├── css/ # Hojas de estilo
+│ │ ├── generate-theme.php # Generador de CSS dinámico
+│ │ └── dynamic-theme.css # Archivo CSS generado automáticamente
+│ │
 │ ├── images/ # Imágenes del sistema
 │ └── js/ # Scripts JavaScript
 │
@@ -389,17 +395,6 @@ El sistema incluye un potente módulo de personalización de temas que permite m
 - **Validación de integridad** del tema
 - **CSS dinámico** generado automáticamente
 
-#### Archivos del Sistema de Temas
-
-admin/
-├── theme-settings.php          # Panel principal de configuración de temas
-└── api/
-└── regenerate-css.php          # API para regenerar archivos CSS
-config/
-└── theme.php                   # Clase ThemeManager con toda la lógica
-assets/css/
-├── generate-theme.php          # Generador de CSS dinámico
-└── dynamic-theme.css           # Archivo CSS generado automáticamente
 
 #### Uso del Sistema de Temas
 
