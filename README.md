@@ -647,7 +647,7 @@ define('ENVIRONMENT', 'development');
 
 ## 📋 Changelog
 
-### Versión 2.1.0
+### Versión 2.1.1
 - Sistema completo de gestión de restaurante
 - Pedidos online integrados con panel dedicado
 - Panel de administración responsive
@@ -661,15 +661,15 @@ define('ENVIRONMENT', 'development');
 - Sistema de impresión de tickets personalizable
 - Configuración avanzada del sistema
 - Interfaz optimizada para dispositivos táctiles
+- Sistema de WhatsApp Business API
 
 
 ### Próximas Versiones
-- **v2.1.1** (En desarrollo):
+- **v2.1.2** (En desarrollo):
   - Integración completa con Mercado Pago API
   - Sistema de backup automático de base de datos
   - Mejoras en la interfaz de pagos
   - Panel de gestión de transacciones
-  - 
 ---
 
 **¡Bienvenido al futuro de la gestión de restaurantes!** 🍽️
