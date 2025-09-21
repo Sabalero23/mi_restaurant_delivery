@@ -692,8 +692,8 @@ $user_name = $_SESSION['full_name'];
                     <p class="text-muted mb-0">Configure el envío automático de mensajes por WhatsApp</p>
                 </div>
                 <div class="d-flex align-items-center">
-                    <a href="whatsapp-messages.php" class="btn btn-outline-primary me-2">
-                        <i class="fas fa-comments me-1"></i>Ver Mensajes
+                    <a href="whatsapp-setup-guide.php" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-book me-1"></i>Ver Guía
                     </a>
                     <small class="text-muted d-none d-lg-block">
                         <i class="fas fa-clock me-1"></i>
