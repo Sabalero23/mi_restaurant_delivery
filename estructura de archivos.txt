@@ -1,3 +1,5 @@
+## 📂 Estructura del Proyecto
+
 mi_restaurant_delivery/
 ├── index.php # Página principal del menú online
 ├── 404.html # Página de error 404
@@ -20,7 +22,9 @@ mi_restaurant_delivery/
 │ ├── config.php # Configuración general (constantes, variables globales)
 │ ├── database.php # Conexión a la base de datos
 │ ├── auth.php # Sistema de autenticación y sesiones
-│ └── functions.php # Funciones auxiliares y utilidades
+│ ├── functions.php # Funciones auxiliares y utilidades
+│ ├── whatsapp_api.php         # Clase de integración con WhatsApp Business API
+│ └── theme.php # Clase ThemeManager con toda la lógica
 │
 ├── admin/ # Panel de administración
 │ ├── api/ # APIs internas para el frontend
@@ -36,6 +40,8 @@ mi_restaurant_delivery/
 │ │ ├── update-order-status.php # Actualización del estado de órdenes
 │ │ ├── create-order.php # Creación de órdenes desde el sistema
 │ │ ├── tables.php # API de gestión de mesas
+│ │ ├── regenerate-css.php # API para regenerar archivos CSS
+│ │ ├── whatsapp-stats.php   # API de estadísticas de WhatsApp
 │ │ └── online-orders-recent.php # Listado de pedidos online recientes
 │ │
 │ ├── receipts/ # Archivos de recibos generados
@@ -68,11 +74,18 @@ mi_restaurant_delivery/
 │ ├── logout.php # Cerrar sesión
 │ ├── order-details.php # Detalle de una orden
 │ ├── print-order.php # Impresión de órdenes
+│ ├── theme-settings.php # Panel principal de configuración de temas
+│ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
+│ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
+│ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
 │ └── login.php # Página de login
 │
 ├── assets/ # Recursos estáticos
 │ ├── includes/ # Archivos de inclusión
 │ ├── css/ # Hojas de estilo
+│ │ ├── generate-theme.php # Generador de CSS dinámico
+│ │ └── dynamic-theme.css # Archivo CSS generado automáticamente
+│ │
 │ ├── images/ # Imágenes del sistema
 │ └── js/ # Scripts JavaScript
 │
