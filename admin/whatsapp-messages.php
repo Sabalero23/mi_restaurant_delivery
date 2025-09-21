@@ -801,19 +801,7 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
 
                 <!-- DEBUG INFO -->
                 <div class="alert alert-info">
-                    <strong>Debug:</strong> Mostrando <?php echo count($conversations); ?> conversaciones.
-                    Filtros activos: 
-                    <?php echo $phone_filter ? "Teléfono: $phone_filter " : ""; ?>
-                    <?php echo $date_filter ? "Fecha: $date_filter " : ""; ?>
-                    <?php echo $unread_only ? "Solo no leídos" : ""; ?>
-                    
-                    <?php if (!empty($conversations)): ?>
-                        <br><small><strong>Números encontrados:</strong> 
-                        <?php foreach($conversations as $conv): ?>
-                            <?php echo htmlspecialchars($conv['phone_number']); ?> (<?php echo $conv['message_count']; ?> msgs), 
-                        <?php endforeach; ?>
-                        </small>
-                    <?php endif; ?>
+                    <strong style="display: block; text-align: center; font-size: 2rem;">CONVERSACIONES</strong>
                 </div>
 
                 <!-- Conversations -->
