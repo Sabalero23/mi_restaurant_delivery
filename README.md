@@ -66,6 +66,7 @@ mi_restaurant_delivery/
 │ ├── database.php # Conexión a la base de datos
 │ ├── auth.php # Sistema de autenticación y sesiones
 │ ├── functions.php # Funciones auxiliares y utilidades
+│ ├── whatsapp_api.php         # Clase de integración con WhatsApp Business API
 │ └── theme.php # Clase ThemeManager con toda la lógica
 │
 ├── admin/ # Panel de administración
@@ -83,6 +84,7 @@ mi_restaurant_delivery/
 │ │ ├── create-order.php # Creación de órdenes desde el sistema
 │ │ ├── tables.php # API de gestión de mesas
 │ │ ├── regenerate-css.php # API para regenerar archivos CSS
+│ │ ├── whatsapp-stats.php   # API de estadísticas de WhatsApp
 │ │ └── online-orders-recent.php # Listado de pedidos online recientes
 │ │
 │ ├── receipts/ # Archivos de recibos generados
@@ -116,6 +118,9 @@ mi_restaurant_delivery/
 │ ├── order-details.php # Detalle de una orden
 │ ├── print-order.php # Impresión de órdenes
 │ ├── theme-settings.php # Panel principal de configuración de temas
+│ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
+│ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
+│ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
 │ └── login.php # Página de login
 │
 ├── assets/ # Recursos estáticos
@@ -452,6 +457,98 @@ El sistema es extensible para agregar:
 - **Sistemas de pago online**
 - **Facturación electrónica**
 - **Múltiples sucursales**
+ 
+
+### 📱 Sistema de WhatsApp Business API
+
+El sistema incluye integración completa con WhatsApp Business API para comunicación automática con clientes y gestión de conversaciones.
+
+#### Características del Sistema WhatsApp
+
+- **API de WhatsApp Business** completamente integrada
+- **Webhook automático** para recibir mensajes entrantes
+- **Respuestas automáticas inteligentes** basadas en contenido
+- **Panel de gestión de conversaciones** con interface tipo chat
+- **Logs completos** de envíos y recepciones
+- **Configuración dinámica** del restaurante
+- **Limpieza automática** de números telefónicos argentinos
+- **Sistema de fallback** a WhatsApp Web
+
+#### Funcionalidades de Mensajería
+
+**Envío Automático:**
+- Confirmaciones de pedidos online
+- Actualizaciones de estado en tiempo real
+- Notificaciones de entrega
+- Mensajes de prueba del sistema
+
+**Respuestas Automáticas Inteligentes:**
+- **Saludos**: Responde a "hola", "buenos días", etc.
+- **Consultas de pedidos**: Información sobre realizar pedidos
+- **Estado de órdenes**: Consulta automática del estado de pedidos
+- **Horarios de atención**: Información de horarios del restaurante
+- **Ubicación**: Dirección y referencias del local
+- **Contacto**: Teléfonos y emails de contacto
+- **Menú**: Enlace al menú completo online
+
+**Ejemplo de respuestas automáticas:**
+
+Cliente: "Hola"
+Bot: "¡Hola! Gracias por contactar a Mi Restaurante. Para realizar pedidos diríjase a https://comidas.ordenes.com.ar"
+Cliente: "horarios"
+Bot: "Horarios de atención de Mi Restaurante:
+Lunes a Domingo: 08:00 - 23:00"
+Cliente: "estado pedido"
+Bot: "Su pedido #WEB-20250914-719 está: En preparación"
+
+#### Panel de Gestión de Conversaciones
+
+- **Vista unificada** de todas las conversaciones
+- **Interface tipo chat** con burbujas de mensajes
+- **Identificación visual** de conversaciones nuevas/leídas
+- **Respuestas manuales** desde el panel
+- **Marcado automático** como leído
+- **Filtros avanzados** por teléfono, fecha, estado
+- **Estadísticas en tiempo real** de mensajes
+- **Enlaces directos** a WhatsApp Web
+
+#### Configuración y Seguridad
+
+**Configuración en Meta for Developers:**
+- Callback URL: `https://tu-dominio.com/admin/whatsapp-webhook.php`
+- Verify Token: Configurable desde el panel
+- Webhook Fields: messages, messaging_postbacks
+
+**Credenciales requeridas:**
+- Access Token de WhatsApp Business API
+- Phone Number ID del número de WhatsApp Business
+- Webhook Token para verificación de seguridad
+
+**Funciones de prueba integradas:**
+- Prueba de envío de mensajes
+- Verificación de webhook
+- Validación de configuración
+- Logs detallados de errores
+
+#### Características Técnicas
+
+- **Limpieza automática** de números telefónicos argentinos (formato 549XXXXXXXXX)
+- **Detección automática** de pedidos relacionados por teléfono
+- **Almacenamiento seguro** de mensajes y logs
+- **Manejo de errores** robusto con fallbacks
+- **Configuración dinámica** desde base de datos
+- **Webhook seguro** con token de verificación
+- **API REST** para integración con otros sistemas
+
+#### Beneficios del Sistema
+
+- **Comunicación automática** con clientes
+- **Reducción de consultas** telefónicas repetitivas
+- **Mejora en experiencia** del cliente
+- **Centralización** de conversaciones
+- **Respuestas instantáneas** 24/7
+- **Seguimiento completo** de interacciones
+- **Integración total** con sistema de pedidos
 
 ## 📈 Optimización
 
