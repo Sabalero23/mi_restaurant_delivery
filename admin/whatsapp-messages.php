@@ -198,12 +198,37 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     <title>Mensajes WhatsApp - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tema dinámico -->
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
     <style>
-    
-        /* Estilos para el sidebar y layout responsivo */
+/* Extensiones específicas del dashboard */
 :root {
-    --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-    --sidebar-width: 280px;
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
     --sidebar-mobile-width: 100%;
 }
 
@@ -215,7 +240,7 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     right: 0;
     z-index: 1040;
     background: var(--primary-gradient);
-    color: white !important;
+    color: var(--text-white) !important;
     padding: 1rem;
     display: none;
 }
@@ -223,17 +248,17 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
 .mobile-topbar h5 {
     margin: 0;
     font-size: 1.1rem;
-    color: white !important;
+    color: var(--text-white) !important;
 }
 
 .menu-toggle {
     background: none;
     border: none;
-    color: white !important;
+    color: var(--text-white) !important;
     font-size: 1.2rem;
     padding: 0.5rem;
-    border-radius: 4px;
-    transition: all 0.3s ease;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
 }
 
 .menu-toggle:hover {
@@ -245,15 +270,16 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     position: fixed;
     top: 0;
     left: 0;
-    width: var(--sidebar-width);
+    width: var(--dashboard-sidebar-width);
     height: 100vh;
     background: var(--primary-gradient);
-    color: white !important;
+    color: var(--text-white) !important;
     z-index: 1030;
-    transition: transform 0.3s ease;
+    transition: transform var(--transition-base);
     overflow-y: auto;
     padding: 1.5rem;
 }
+
 
 .sidebar-backdrop {
     position: fixed;
@@ -265,7 +291,7 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     z-index: 1020;
     display: none;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity var(--transition-base);
 }
 
 .sidebar-backdrop.show {
@@ -276,9 +302,9 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
 .sidebar .nav-link {
     color: rgba(255, 255, 255, 0.8) !important;
     padding: 0.75rem 1rem;
-    border-radius: 6px;
+    border-radius: var(--border-radius-base);
     margin-bottom: 0.25rem;
-    transition: all 0.3s ease;
+    transition: var(--transition-base);
     display: flex;
     align-items: center;
     text-decoration: none;
@@ -287,7 +313,11 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
 .sidebar .nav-link:hover,
 .sidebar .nav-link.active {
     background: rgba(255, 255, 255, 0.1);
-    color: white !important;
+    color: var(--text-white) !important;
+}
+
+.sidebar .nav-link .badge {
+    margin-left: auto;
 }
 
 .sidebar-close {
@@ -296,7 +326,7 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     right: 1rem;
     background: rgba(255, 255, 255, 0.1);
     border: none;
-    color: white !important;
+    color: var(--text-white) !important;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -306,16 +336,114 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
     font-size: 1.1rem;
 }
 
-/* Main content ajustado para el sidebar */
+/* Main content */
 .main-content {
-    margin-left: var(--sidebar-width);
+    margin-left: var(--dashboard-sidebar-width);
     padding: 2rem;
     min-height: 100vh;
-    transition: margin-left 0.3s ease;
+    transition: margin-left var(--transition-base);
     background: #f8f9fa !important;
     color: #212529 !important;
 }
 
+.card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border: none;
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--shadow-base);
+}
+
+.card-header {
+    background: #f8f9fa !important;
+    color: #212529 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    background: #ffffff !important;
+    color: #212529 !important;
+    padding: 1.5rem;
+}
+
+/* Statistics cards usando variables del tema */
+.stat-card {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    transition: transform var(--transition-base);
+    height: 100%;
+}
+
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.form-control {
+    background: #fff !important;
+    color: #212529 !important;
+}
+
+
+.form-label {
+    font-weight: 500;
+    color: #212529 !important;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--border-radius-large);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-white) !important;
+    flex-shrink: 0;
+}
+
+.bg-primary-gradient { 
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) !important; 
+}
+.bg-success-gradient { 
+    background: linear-gradient(45deg, var(--success-color), #a8e6cf) !important; 
+}
+.bg-warning-gradient { 
+    background: linear-gradient(45deg, var(--warning-color), var(--accent-color)) !important; 
+}
+.bg-info-gradient { 
+    background: linear-gradient(45deg, var(--info-color), #00f2fe) !important; 
+}
+.bg-online-gradient { 
+    background: linear-gradient(45deg, var(--accent-color), var(--warning-color)) !important; 
+}
+
+.page-header {
+    background: #ffffff !important;
+    color: #212529 !important;
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-base);
+}
+
+/* Text colors forzados */
+.text-muted {
+    color: #6c757d !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #212529 !important;
+}
+
+p {
+    color: #212529 !important;
+}
 /* Responsive */
 @media (max-width: 991.98px) {
     .mobile-topbar {
@@ -591,7 +719,7 @@ error_log("WhatsApp Debug: Found $debug_count conversations in PHP array");
                 <i class="fas fa-utensils me-2"></i>
                 <?php echo $restaurant_name; ?>
             </h4>
-            <small>Sistema de Gestión</small>
+            <small>Conversaciones WhatsApp</small>
         </div>
 
         <div class="mb-4">
