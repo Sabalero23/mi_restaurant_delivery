@@ -1,21 +1,16 @@
 <?php
-// admin/whatsapp-webhook.php - Versión con configuración dinámica del restaurante
-// Configuración de base de datos
-$host = 'localhost';
-$dbname = 'comidasm';
-$username = 'comidasm';
-$password = 'f2367cc9cb499';
+// admin/whatsapp-webhook.php - Versión mejorada usando configuración centralizada
+require_once '../config/config.php';
+require_once '../config/database.php';
 
-// Función para obtener configuración de la base de datos
+// Función para obtener configuración del webhook desde la base de datos
 function getWebhookToken() {
-    global $host, $dbname, $username, $password;
-    
     try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $database = new Database();
+        $db = $database->getConnection();
         
         $query = "SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_webhook_token'";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -30,15 +25,13 @@ function getWebhookToken() {
 
 // Función para obtener configuración del restaurante
 function getRestaurantSettings() {
-    global $host, $dbname, $username, $password;
-    
     try {
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $database = new Database();
+        $db = $database->getConnection();
         
         $query = "SELECT setting_key, setting_value FROM settings 
                   WHERE setting_key IN ('restaurant_name', 'restaurant_web')";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         
         $settings = [
@@ -141,27 +134,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function processIncomingMessage($value) {
-    global $host, $dbname, $username, $password;
-    
     try {
-        // Conectar a base de datos
-        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        // Conectar usando la clase Database centralizada
+        $database = new Database();
+        $db = $database->getConnection();
         
         // Verificar si las tablas existen
-        createTablesIfNotExist($pdo);
+        createTablesIfNotExist($db);
         
         // Procesar mensajes recibidos
         if (isset($value['messages'])) {
             foreach ($value['messages'] as $message) {
-                handleIncomingMessage($pdo, $message);
+                handleIncomingMessage($db, $message);
             }
         }
         
         // Procesar cambios de estado de mensajes enviados
         if (isset($value['statuses'])) {
             foreach ($value['statuses'] as $status) {
-                handleMessageStatus($pdo, $status);
+                handleMessageStatus($db, $status);
             }
         }
         
@@ -171,7 +162,7 @@ function processIncomingMessage($value) {
     }
 }
 
-function handleIncomingMessage($pdo, $message) {
+function handleIncomingMessage($db, $message) {
     $from = $message['from'];
     $message_id = $message['id'];
     $timestamp = $message['timestamp'];
@@ -202,16 +193,26 @@ function handleIncomingMessage($pdo, $message) {
     }
     
     // Verificar si es respuesta a un pedido existente
-    $order_id = findRelatedOrder($pdo, $from);
+    $order_id = findRelatedOrder($db, $from);
     
     try {
+        // Verificar duplicados usando la conexión centralizada
+        $check_query = "SELECT id FROM whatsapp_messages WHERE message_id = ?";
+        $check_stmt = $db->prepare($check_query);
+        $check_stmt->execute([$message_id]);
+        
+        if ($check_stmt->fetch()) {
+            logWebhook("Duplicate message ignored: $message_id");
+            return;
+        }
+        
         // Guardar mensaje en la base de datos
         $query = "INSERT INTO whatsapp_messages (
             message_id, phone_number, message_type, content, media_url, 
             order_id, is_from_customer, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, 1, FROM_UNIXTIME(?))";
         
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute([
             $message_id,
             $from,
@@ -225,14 +226,14 @@ function handleIncomingMessage($pdo, $message) {
         logWebhook("Message saved: From $from, Type: $type, Content: " . substr($content, 0, 50));
         
         // Procesar respuestas automáticas si está habilitado
-        processAutoResponse($pdo, $from, $content, $order_id);
+        processAutoResponse($db, $from, $content, $order_id);
         
     } catch (Exception $e) {
         logWebhook("Error saving message: " . $e->getMessage());
     }
 }
 
-function handleMessageStatus($pdo, $status) {
+function handleMessageStatus($db, $status) {
     $message_id = $status['id'];
     $status_type = $status['status'];
     $timestamp = $status['timestamp'];
@@ -243,7 +244,7 @@ function handleMessageStatus($pdo, $status) {
                   status_updated_at = FROM_UNIXTIME(?) 
                   WHERE message_id = ?";
         
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute([$status_type, $timestamp, $message_id]);
         
         logWebhook("Status updated: $message_id -> $status_type");
@@ -253,7 +254,7 @@ function handleMessageStatus($pdo, $status) {
     }
 }
 
-function findRelatedOrder($pdo, $phone) {
+function findRelatedOrder($db, $phone) {
     $clean_phone = preg_replace('/[^0-9]/', '', $phone);
     
     try {
@@ -262,7 +263,7 @@ function findRelatedOrder($pdo, $phone) {
                   WHERE REPLACE(REPLACE(customer_phone, ' ', ''), '-', '') LIKE ? 
                   ORDER BY created_at DESC LIMIT 1";
         
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute(['%' . substr($clean_phone, -8) . '%']);
         $result = $stmt->fetch();
         
@@ -275,7 +276,7 @@ function findRelatedOrder($pdo, $phone) {
                   WHERE REPLACE(REPLACE(customer_phone, ' ', ''), '-', '') LIKE ? 
                   ORDER BY created_at DESC LIMIT 1";
         
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute(['%' . substr($clean_phone, -8) . '%']);
         $result = $stmt->fetch();
         
@@ -289,10 +290,10 @@ function findRelatedOrder($pdo, $phone) {
     return null;
 }
 
-function processAutoResponse($pdo, $from, $content, $order_id) {
+function processAutoResponse($db, $from, $content, $order_id) {
     try {
         $query = "SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_auto_responses'";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         $setting = $stmt->fetch();
         
@@ -311,38 +312,38 @@ function processAutoResponse($pdo, $from, $content, $order_id) {
     
     $auto_response = null;
     
-    // Obtener configuración del restaurante
+    // Obtener configuración del restaurante usando la función centralizada
     $restaurant_settings = getRestaurantSettings();
     $restaurant_name = $restaurant_settings['restaurant_name'];
     $restaurant_web = $restaurant_settings['restaurant_web'];
     
     // Respuestas automáticas personalizadas
     if (strpos($content_lower, 'estado') !== false && $order_id) {
-        $auto_response = getOrderStatus($pdo, $order_id);
+        $auto_response = getOrderStatus($db, $order_id);
     } elseif (strpos($content_lower, 'hola') !== false || strpos($content_lower, 'buenos') !== false) {
         $auto_response = "¡Hola! Gracias por contactar a {$restaurant_name}. Para realizar pedidos diríjase a {$restaurant_web}";
     } elseif (strpos($content_lower, 'pedido') !== false || strpos($content_lower, 'pedir') !== false || strpos($content_lower, 'orden') !== false) {
         $auto_response = "Para realizar un pedido diríjase a {$restaurant_web}";
     } elseif (strpos($content_lower, 'horarios') !== false || strpos($content_lower, 'horario') !== false) {
-        $auto_response = getOperatingHours($pdo, $restaurant_name);
+        $auto_response = getOperatingHours($db, $restaurant_name);
     } elseif (strpos($content_lower, 'direccion') !== false || strpos($content_lower, 'dirección') !== false || strpos($content_lower, 'ubicacion') !== false || strpos($content_lower, 'ubicación') !== false) {
-        $auto_response = getRestaurantAddress($pdo, $restaurant_name);
+        $auto_response = getRestaurantAddress($db, $restaurant_name);
     } elseif (strpos($content_lower, 'menu') !== false || strpos($content_lower, 'menú') !== false || strpos($content_lower, 'carta') !== false) {
         $auto_response = "Puede ver nuestro menú completo en {$restaurant_web}";
     } elseif (strpos($content_lower, 'telefono') !== false || strpos($content_lower, 'teléfono') !== false || strpos($content_lower, 'contacto') !== false) {
-        $auto_response = getRestaurantContact($pdo, $restaurant_name);
+        $auto_response = getRestaurantContact($db, $restaurant_name);
     }
     
     if ($auto_response) {
-        sendAutoResponse($pdo, $from, $auto_response);
+        sendAutoResponse($db, $from, $auto_response);
     }
 }
 
-function getOperatingHours($pdo, $restaurant_name) {
+function getOperatingHours($db, $restaurant_name) {
     try {
         $query = "SELECT setting_key, setting_value FROM settings 
                   WHERE setting_key IN ('opening_time', 'closing_time')";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         
         $hours = [];
@@ -360,10 +361,10 @@ function getOperatingHours($pdo, $restaurant_name) {
     }
 }
 
-function getRestaurantAddress($pdo, $restaurant_name) {
+function getRestaurantAddress($db, $restaurant_name) {
     try {
         $query = "SELECT setting_value FROM settings WHERE setting_key = 'restaurant_address'";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -380,11 +381,11 @@ function getRestaurantAddress($pdo, $restaurant_name) {
     }
 }
 
-function getRestaurantContact($pdo, $restaurant_name) {
+function getRestaurantContact($db, $restaurant_name) {
     try {
         $query = "SELECT setting_key, setting_value FROM settings 
                   WHERE setting_key IN ('restaurant_phone', 'restaurant_email')";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         
         $contacts = [];
@@ -415,7 +416,7 @@ function getRestaurantContact($pdo, $restaurant_name) {
     }
 }
 
-function getOrderStatus($pdo, $order_id) {
+function getOrderStatus($db, $order_id) {
     try {
         if (strpos($order_id, 'online_') === 0) {
             $id = str_replace('online_', '', $order_id);
@@ -425,7 +426,7 @@ function getOrderStatus($pdo, $order_id) {
             $query = "SELECT status, order_number FROM orders WHERE id = ?";
         }
         
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute([$id]);
         $order = $stmt->fetch();
         
@@ -448,11 +449,11 @@ function getOrderStatus($pdo, $order_id) {
     return "No encontramos información sobre su pedido. ¿Puede proporcionarnos el número de orden?";
 }
 
-function sendAutoResponse($pdo, $to, $message) {
+function sendAutoResponse($db, $to, $message) {
     try {
         $query = "SELECT setting_key, setting_value FROM settings 
                   WHERE setting_key IN ('whatsapp_access_token', 'whatsapp_phone_number_id')";
-        $stmt = $pdo->prepare($query);
+        $stmt = $db->prepare($query);
         $stmt->execute();
         $settings = [];
         
@@ -499,6 +500,23 @@ function sendAutoResponse($pdo, $to, $message) {
         
         if ($http_code === 200) {
             logWebhook("Auto-response sent to $to");
+            
+            // Guardar respuesta automática en la base de datos
+            try {
+                $response_data = json_decode($response, true);
+                $message_id = $response_data['messages'][0]['id'] ?? 'auto_' . time();
+                
+                $insert_query = "INSERT INTO whatsapp_messages (
+                    message_id, phone_number, message_type, content, 
+                    is_from_customer, is_read, created_at
+                ) VALUES (?, ?, 'text', ?, 0, 1, NOW())";
+                
+                $insert_stmt = $db->prepare($insert_query);
+                $insert_stmt->execute([$message_id, $to, $message]);
+                
+            } catch (Exception $e) {
+                logWebhook("Error saving auto-response to database: " . $e->getMessage());
+            }
         } else {
             logWebhook("Failed to send auto-response: $response");
         }
@@ -527,7 +545,7 @@ function cleanPhoneNumber($phone) {
     return $clean;
 }
 
-function createTablesIfNotExist($pdo) {
+function createTablesIfNotExist($db) {
     try {
         $sql = "CREATE TABLE IF NOT EXISTS whatsapp_messages (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -545,7 +563,7 @@ function createTablesIfNotExist($pdo) {
             INDEX idx_created (created_at)
         )";
         
-        $pdo->exec($sql);
+        $db->exec($sql);
         
         $sql_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -563,7 +581,7 @@ function createTablesIfNotExist($pdo) {
             INDEX idx_created (created_at)
         )";
         
-        $pdo->exec($sql_logs);
+        $db->exec($sql_logs);
         
     } catch (Exception $e) {
         logWebhook("Error creating tables: " . $e->getMessage());
