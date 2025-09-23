@@ -1,5 +1,5 @@
 <?php
-// admin/whatsapp-webhook.php - Versión mejorada usando configuración centralizada
+// admin/whatsapp-webhook.php - Versión completa con respuestas automáticas desde base de datos
 require_once '../config/config.php';
 require_once '../config/database.php';
 
@@ -17,7 +17,6 @@ function getWebhookToken() {
         return $result ? $result['setting_value'] : 'whatsapp-webhook-comias';
         
     } catch (Exception $e) {
-        // Log error but continue with fallback
         error_log("Error getting webhook token: " . $e->getMessage());
         return 'whatsapp-webhook-comias';
     }
@@ -30,13 +29,24 @@ function getRestaurantSettings() {
         $db = $database->getConnection();
         
         $query = "SELECT setting_key, setting_value FROM settings 
-                  WHERE setting_key IN ('restaurant_name', 'restaurant_web')";
+                  WHERE setting_key IN (
+                      'restaurant_name', 'restaurant_web', 'restaurant_phone', 
+                      'restaurant_email', 'restaurant_address', 'opening_time', 
+                      'closing_time', 'delivery_fee', 'min_delivery_amount'
+                  )";
         $stmt = $db->prepare($query);
         $stmt->execute();
         
         $settings = [
             'restaurant_name' => 'Mi Restaurante',
-            'restaurant_web' => 'https://comidas.ordenes.com.ar'
+            'restaurant_web' => 'https://comidas.ordenes.com.ar',
+            'restaurant_phone' => '',
+            'restaurant_email' => '',
+            'restaurant_address' => '',
+            'opening_time' => '08:00',
+            'closing_time' => '23:00',
+            'delivery_fee' => '3000',
+            'min_delivery_amount' => '1500'
         ];
         
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -49,7 +59,14 @@ function getRestaurantSettings() {
         error_log("Error getting restaurant settings: " . $e->getMessage());
         return [
             'restaurant_name' => 'Mi Restaurante',
-            'restaurant_web' => 'https://comidas.ordenes.com.ar'
+            'restaurant_web' => 'https://comidas.ordenes.com.ar',
+            'restaurant_phone' => '',
+            'restaurant_email' => '',
+            'restaurant_address' => '',
+            'opening_time' => '08:00',
+            'closing_time' => '23:00',
+            'delivery_fee' => '3000',
+            'min_delivery_amount' => '1500'
         ];
     }
 }
@@ -78,7 +95,6 @@ function logWebhookDetailed($data) {
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $verify_token = getWebhookToken();
     
-    // Log petición GET
     logWebhookDetailed('GET request received');
     
     $mode = $_GET['hub_mode'] ?? '';
@@ -89,7 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     if ($mode === 'subscribe' && $token === $verify_token) {
         logWebhook("Verification successful - sending challenge: $challenge");
-        // Solo enviar el challenge, sin headers adicionales
         echo $challenge;
         exit;
     } else {
@@ -109,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = file_get_contents('php://input');
     
-    // Log petición POST
     logWebhookDetailed(['post_data' => $input]);
     logWebhook("POST received: " . substr($input, 0, 100) . "...");
     
@@ -127,7 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Responder 200 OK a Meta
     http_response_code(200);
     echo json_encode(['status' => 'ok']);
     exit;
@@ -135,21 +148,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 function processIncomingMessage($value) {
     try {
-        // Conectar usando la clase Database centralizada
         $database = new Database();
         $db = $database->getConnection();
         
-        // Verificar si las tablas existen
         createTablesIfNotExist($db);
         
-        // Procesar mensajes recibidos
         if (isset($value['messages'])) {
             foreach ($value['messages'] as $message) {
                 handleIncomingMessage($db, $message);
             }
         }
         
-        // Procesar cambios de estado de mensajes enviados
         if (isset($value['statuses'])) {
             foreach ($value['statuses'] as $status) {
                 handleMessageStatus($db, $status);
@@ -196,7 +205,7 @@ function handleIncomingMessage($db, $message) {
     $order_id = findRelatedOrder($db, $from);
     
     try {
-        // Verificar duplicados usando la conexión centralizada
+        // Verificar duplicados
         $check_query = "SELECT id FROM whatsapp_messages WHERE message_id = ?";
         $check_stmt = $db->prepare($check_query);
         $check_stmt->execute([$message_id]);
@@ -249,7 +258,6 @@ function handleMessageStatus($db, $status) {
         
         logWebhook("Status updated: $message_id -> $status_type");
     } catch (Exception $e) {
-        // Ignorar errores de status si la tabla no existe aún
         logWebhook("Status update failed (table may not exist): " . $e->getMessage());
     }
 }
@@ -290,140 +298,196 @@ function findRelatedOrder($db, $phone) {
     return null;
 }
 
+/**
+ * Procesar respuestas automáticas desde la base de datos
+ */
 function processAutoResponse($db, $from, $content, $order_id) {
     try {
-        $query = "SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_auto_responses'";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $setting = $stmt->fetch();
+        // Verificar si las respuestas automáticas están habilitadas
+        $settings_query = "SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_auto_responses'";
+        $settings_stmt = $db->prepare($settings_query);
+        $settings_stmt->execute();
+        $setting = $settings_stmt->fetch();
         
         if (!$setting || $setting['setting_value'] !== '1') {
+            logWebhook("Auto responses disabled");
             return;
         }
-    } catch (Exception $e) {
-        return;
-    }
-    
-    $content_lower = strtolower($content);
-    
-    if (strlen($content) > 500) {
-        return; // No responder a mensajes muy largos
-    }
-    
-    $auto_response = null;
-    
-    // Obtener configuración del restaurante usando la función centralizada
-    $restaurant_settings = getRestaurantSettings();
-    $restaurant_name = $restaurant_settings['restaurant_name'];
-    $restaurant_web = $restaurant_settings['restaurant_web'];
-    
-    // Respuestas automáticas personalizadas
-    if (strpos($content_lower, 'estado') !== false && $order_id) {
-        $auto_response = getOrderStatus($db, $order_id);
-    } elseif (strpos($content_lower, 'hola') !== false || strpos($content_lower, 'buenos') !== false) {
-        $auto_response = "¡Hola! Gracias por contactar a {$restaurant_name}. Para realizar pedidos diríjase a {$restaurant_web}";
-    } elseif (strpos($content_lower, 'pedido') !== false || strpos($content_lower, 'pedir') !== false || strpos($content_lower, 'orden') !== false) {
-        $auto_response = "Para realizar un pedido diríjase a {$restaurant_web}";
-    } elseif (strpos($content_lower, 'horarios') !== false || strpos($content_lower, 'horario') !== false) {
-        $auto_response = getOperatingHours($db, $restaurant_name);
-    } elseif (strpos($content_lower, 'direccion') !== false || strpos($content_lower, 'dirección') !== false || strpos($content_lower, 'ubicacion') !== false || strpos($content_lower, 'ubicación') !== false) {
-        $auto_response = getRestaurantAddress($db, $restaurant_name);
-    } elseif (strpos($content_lower, 'menu') !== false || strpos($content_lower, 'menú') !== false || strpos($content_lower, 'carta') !== false) {
-        $auto_response = "Puede ver nuestro menú completo en {$restaurant_web}";
-    } elseif (strpos($content_lower, 'telefono') !== false || strpos($content_lower, 'teléfono') !== false || strpos($content_lower, 'contacto') !== false) {
-        $auto_response = getRestaurantContact($db, $restaurant_name);
-    }
-    
-    if ($auto_response) {
-        sendAutoResponse($db, $from, $auto_response);
-    }
-}
-
-function getOperatingHours($db, $restaurant_name) {
-    try {
-        $query = "SELECT setting_key, setting_value FROM settings 
-                  WHERE setting_key IN ('opening_time', 'closing_time')";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
         
-        $hours = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $hours[$row['setting_key']] = $row['setting_value'];
+        // No responder a mensajes muy largos
+        if (strlen($content) > 500) {
+            logWebhook("Message too long, skipping auto response");
+            return;
         }
         
-        $opening = $hours['opening_time'] ?? '08:00';
-        $closing = $hours['closing_time'] ?? '23:00';
-        
-        return "Horarios de atención de {$restaurant_name}:\nLunes a Domingo: {$opening} - {$closing}";
-        
-    } catch (Exception $e) {
-        return "Para conocer nuestros horarios, visite nuestro sitio web o contáctenos directamente.";
-    }
-}
-
-function getRestaurantAddress($db, $restaurant_name) {
-    try {
-        $query = "SELECT setting_value FROM settings WHERE setting_key = 'restaurant_address'";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $address = $result['setting_value'] ?? '';
-        
-        if (!empty($address)) {
-            return "La dirección de {$restaurant_name} es:\n{$address}";
-        } else {
-            return "Para conocer nuestra ubicación, visite nuestro sitio web o contáctenos directamente.";
+        // Verificar rate limiting simple (no más de 1 respuesta por minuto por número)
+        if (!checkRateLimit($db, $from)) {
+            logWebhook("Rate limit exceeded for $from");
+            return;
         }
         
-    } catch (Exception $e) {
-        return "Para conocer nuestra ubicación, visite nuestro sitio web o contáctenos directamente.";
-    }
-}
-
-function getRestaurantContact($db, $restaurant_name) {
-    try {
-        $query = "SELECT setting_key, setting_value FROM settings 
-                  WHERE setting_key IN ('restaurant_phone', 'restaurant_email')";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
+        // Obtener respuestas automáticas de la base de datos, ordenadas por prioridad
+        $responses_query = "SELECT * FROM whatsapp_auto_responses 
+                           WHERE is_active = 1 
+                           ORDER BY priority DESC, created_at ASC";
+        $responses_stmt = $db->prepare($responses_query);
+        $responses_stmt->execute();
+        $responses = $responses_stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $contacts = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            if (!empty($row['setting_value'])) {
-                $contacts[$row['setting_key']] = $row['setting_value'];
+        if (empty($responses)) {
+            logWebhook("No auto responses configured");
+            return;
+        }
+        
+        $content_lower = strtolower(trim($content));
+        $matched_response = null;
+        
+        // Buscar la primera respuesta que coincida
+        foreach ($responses as $response) {
+            if (messageMatchesResponse($content_lower, $response)) {
+                $matched_response = $response;
+                break;
             }
         }
         
-        $response = "Información de contacto de {$restaurant_name}:\n";
-        
-        if (isset($contacts['restaurant_phone'])) {
-            $response .= "📞 Teléfono: {$contacts['restaurant_phone']}\n";
+        if ($matched_response) {
+            // Incrementar contador de uso
+            $update_counter_query = "UPDATE whatsapp_auto_responses 
+                                   SET use_count = use_count + 1, updated_at = NOW() 
+                                   WHERE id = ?";
+            $update_counter_stmt = $db->prepare($update_counter_query);
+            $update_counter_stmt->execute([$matched_response['id']]);
+            
+            // Generar respuesta reemplazando variables
+            $response_message = replaceVariablesInResponse($matched_response['response_message'], $db, $order_id);
+            
+            // Enviar respuesta automática
+            sendAutoResponse($db, $from, $response_message);
+            
+            logWebhook("Auto response sent for rule ID {$matched_response['id']}: " . 
+                      substr($response_message, 0, 100));
+        } else {
+            logWebhook("No matching auto response found for: " . substr($content, 0, 100));
         }
-        
-        if (isset($contacts['restaurant_email'])) {
-            $response .= "📧 Email: {$contacts['restaurant_email']}\n";
-        }
-        
-        if (empty($contacts)) {
-            $response = "Para contactarnos, puede escribirnos por este medio o visitar nuestro sitio web.";
-        }
-        
-        return trim($response);
         
     } catch (Exception $e) {
-        return "Para contactarnos, puede escribirnos por este medio o visitar nuestro sitio web.";
+        logWebhook("Auto response error: " . $e->getMessage());
     }
 }
 
-function getOrderStatus($db, $order_id) {
+/**
+ * Rate limiting simple - máximo 1 respuesta automática por minuto por número
+ */
+function checkRateLimit($db, $phone) {
+    try {
+        $one_minute_ago = date('Y-m-d H:i:s', strtotime('-1 minute'));
+        
+        $query = "SELECT COUNT(*) as count FROM whatsapp_messages 
+                  WHERE phone_number = ? 
+                  AND is_from_customer = 0 
+                  AND created_at > ?";
+        
+        $stmt = $db->prepare($query);
+        $stmt->execute([$phone, $one_minute_ago]);
+        $result = $stmt->fetch();
+        
+        return $result['count'] < 1; // Máximo 1 respuesta por minuto
+        
+    } catch (Exception $e) {
+        logWebhook("Rate limit check error: " . $e->getMessage());
+        return true; // En caso de error, permitir envío
+    }
+}
+
+/**
+ * Verificar si un mensaje coincide con una respuesta automática
+ */
+function messageMatchesResponse($content_lower, $response) {
+    $trigger_words = explode(',', strtolower($response['trigger_words']));
+    $match_type = $response['match_type'];
+    
+    foreach ($trigger_words as $trigger_word) {
+        $trigger_word = trim($trigger_word);
+        
+        if (empty($trigger_word)) {
+            continue;
+        }
+        
+        switch ($match_type) {
+            case 'contains':
+                if (strpos($content_lower, $trigger_word) !== false) {
+                    return true;
+                }
+                break;
+                
+            case 'exact':
+                if ($content_lower === $trigger_word) {
+                    return true;
+                }
+                break;
+                
+            case 'starts_with':
+                if (strpos($content_lower, $trigger_word) === 0) {
+                    return true;
+                }
+                break;
+                
+            case 'ends_with':
+                if (substr($content_lower, -strlen($trigger_word)) === $trigger_word) {
+                    return true;
+                }
+                break;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Reemplazar variables en el mensaje de respuesta
+ */
+function replaceVariablesInResponse($message, $db, $order_id = null) {
+    // Obtener configuraciones del restaurante
+    $restaurant_settings = getRestaurantSettings();
+    
+    // Variables básicas del restaurante
+    $variables = [
+        '{restaurant_name}' => $restaurant_settings['restaurant_name'],
+        '{restaurant_web}' => $restaurant_settings['restaurant_web'],
+        '{restaurant_phone}' => $restaurant_settings['restaurant_phone'],
+        '{restaurant_email}' => $restaurant_settings['restaurant_email'],
+        '{restaurant_address}' => $restaurant_settings['restaurant_address'],
+        '{opening_time}' => $restaurant_settings['opening_time'],
+        '{closing_time}' => $restaurant_settings['closing_time'],
+        '{delivery_fee}' => '$' . number_format($restaurant_settings['delivery_fee'], 0, ',', '.'),
+        '{min_delivery_amount}' => '$' . number_format($restaurant_settings['min_delivery_amount'], 0, ',', '.')
+    ];
+    
+    // Si hay un pedido asociado, agregar información específica
+    if ($order_id) {
+        $order_info = getOrderInfo($db, $order_id);
+        if ($order_info) {
+            $variables['{order_number}'] = $order_info['order_number'] ?? '';
+            $variables['{order_status}'] = $order_info['status_text'] ?? '';
+            $variables['{order_total}'] = '$' . number_format($order_info['total'] ?? 0, 0, ',', '.');
+        }
+    }
+    
+    // Reemplazar todas las variables
+    return str_replace(array_keys($variables), array_values($variables), $message);
+}
+
+/**
+ * Obtener información de un pedido
+ */
+function getOrderInfo($db, $order_id) {
     try {
         if (strpos($order_id, 'online_') === 0) {
             $id = str_replace('online_', '', $order_id);
-            $query = "SELECT status, order_number FROM online_orders WHERE id = ?";
+            $query = "SELECT order_number, status, total FROM online_orders WHERE id = ?";
         } else {
             $id = str_replace('traditional_', '', $order_id);
-            $query = "SELECT status, order_number FROM orders WHERE id = ?";
+            $query = "SELECT order_number, status, total FROM orders WHERE id = ?";
         }
         
         $stmt = $db->prepare($query);
@@ -439,14 +503,17 @@ function getOrderStatus($db, $order_id) {
                 'delivered' => 'Entregado'
             ];
             
-            $status_text = $status_texts[$order['status']] ?? $order['status'];
-            return "Su pedido #{$order['order_number']} está: {$status_text}";
+            return [
+                'order_number' => $order['order_number'],
+                'status_text' => $status_texts[$order['status']] ?? $order['status'],
+                'total' => $order['total']
+            ];
         }
     } catch (Exception $e) {
-        logWebhook("Error getting order status: " . $e->getMessage());
+        logWebhook("Error getting order info: " . $e->getMessage());
     }
     
-    return "No encontramos información sobre su pedido. ¿Puede proporcionarnos el número de orden?";
+    return null;
 }
 
 function sendAutoResponse($db, $to, $message) {
@@ -501,10 +568,10 @@ function sendAutoResponse($db, $to, $message) {
         if ($http_code === 200) {
             logWebhook("Auto-response sent to $to");
             
-            // Guardar respuesta automática en la base de datos
+            // IMPORTANTE: Guardar respuesta automática como mensaje en la conversación
             try {
                 $response_data = json_decode($response, true);
-                $message_id = $response_data['messages'][0]['id'] ?? 'auto_' . time();
+                $message_id = $response_data['messages'][0]['id'] ?? 'auto_' . time() . '_' . rand(1000, 9999);
                 
                 $insert_query = "INSERT INTO whatsapp_messages (
                     message_id, phone_number, message_type, content, 
@@ -514,11 +581,13 @@ function sendAutoResponse($db, $to, $message) {
                 $insert_stmt = $db->prepare($insert_query);
                 $insert_stmt->execute([$message_id, $to, $message]);
                 
+                logWebhook("Auto-response saved to conversation: $message_id");
+                
             } catch (Exception $e) {
                 logWebhook("Error saving auto-response to database: " . $e->getMessage());
             }
         } else {
-            logWebhook("Failed to send auto-response: $response");
+            logWebhook("Failed to send auto-response: HTTP $http_code - $response");
         }
         
     } catch (Exception $e) {
@@ -547,6 +616,7 @@ function cleanPhoneNumber($phone) {
 
 function createTablesIfNotExist($db) {
     try {
+        // Tabla de mensajes
         $sql = "CREATE TABLE IF NOT EXISTS whatsapp_messages (
             id INT AUTO_INCREMENT PRIMARY KEY,
             message_id VARCHAR(255) UNIQUE NOT NULL,
@@ -565,6 +635,7 @@ function createTablesIfNotExist($db) {
         
         $db->exec($sql);
         
+        // Tabla de logs
         $sql_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             phone_number VARCHAR(20) NOT NULL,
@@ -582,6 +653,23 @@ function createTablesIfNotExist($db) {
         )";
         
         $db->exec($sql_logs);
+        
+        // Tabla de respuestas automáticas
+        $sql_responses = "CREATE TABLE IF NOT EXISTS whatsapp_auto_responses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            trigger_words TEXT NOT NULL,
+            response_message TEXT NOT NULL,
+            match_type ENUM('contains','exact','starts_with','ends_with') DEFAULT 'contains',
+            is_active TINYINT(1) DEFAULT 1,
+            priority INT DEFAULT 0,
+            use_count INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_active (is_active),
+            INDEX idx_priority (priority)
+        )";
+        
+        $db->exec($sql_responses);
         
     } catch (Exception $e) {
         logWebhook("Error creating tables: " . $e->getMessage());

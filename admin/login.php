@@ -22,7 +22,37 @@ if ($_POST) {
     if (empty($username) || empty($password)) {
         $error = 'Por favor, complete todos los campos.';
     } else {
+        // Intentar login y actualizar last_login
+        $database = new Database();
+        $db = $database->getConnection();
+        
+        // Verificar si existe la columna last_login y crearla si no existe
+        try {
+            $check_last_login = "SHOW COLUMNS FROM users LIKE 'last_login'";
+            $stmt_check = $db->prepare($check_last_login);
+            $stmt_check->execute();
+            $last_login_exists = $stmt_check->rowCount() > 0;
+            
+            if (!$last_login_exists) {
+                $add_last_login = "ALTER TABLE users ADD COLUMN last_login DATETIME NULL AFTER updated_at";
+                $db->exec($add_last_login);
+            }
+        } catch (Exception $e) {
+            // Continuar sin la funcionalidad si falla
+        }
+        
         if ($auth->login($username, $password)) {
+            // Actualizar last_login después del login exitoso
+            try {
+                $user_id = $_SESSION['user_id'];
+                $update_login = "UPDATE users SET last_login = NOW() WHERE id = :user_id";
+                $stmt_login = $db->prepare($update_login);
+                $stmt_login->bindParam(':user_id', $user_id);
+                $stmt_login->execute();
+            } catch (Exception $e) {
+                // Si falla, continuar sin error
+            }
+            
             header('Location: dashboard.php');
             exit();
         } else {
@@ -110,6 +140,39 @@ body {
     color: #212529 !important;
 }
 
+/* Texto oscuro para todos los elementos de formulario */
+.form-control,
+.form-select,
+.form-check-input,
+.form-check-label,
+input,
+textarea,
+select {
+    color: #212529 !important;
+    background: white !important;
+}
+
+/* Placeholder oscuro */
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+    color: #6c757d !important;
+    opacity: 1;
+}
+
+/* Labels de formulario */
+.form-label,
+label {
+    color: #212529 !important;
+}
+
+/* Texto de ayuda de formularios */
+.form-text,
+.invalid-feedback,
+.valid-feedback {
+    color: #6c757d !important;
+}
+
 .form-control {
     border-radius: 10px;
     padding: 12px 20px;
@@ -124,10 +187,6 @@ body {
     border-color: var(--primary-color);
     background: white !important;
     color: #212529 !important;
-}
-
-.form-control::placeholder {
-    color: #6c757d !important;
 }
 
 .btn-login {
@@ -216,6 +275,42 @@ body {
 
 .text-decoration-none:hover {
     color: var(--primary-color) !important;
+}
+
+/* Opciones de select */
+.form-select option,
+select option {
+    color: #212529 !important;
+    background: #ffffff !important;
+}
+
+/* Input groups */
+.input-group-text {
+    color: #212529 !important;
+    background-color: #f8f9fa !important;
+    border-color: #ced4da !important;
+}
+
+/* Checkboxes y radio buttons */
+.form-check-label {
+    color: #212529 !important;
+}
+
+/* Disabled state */
+.form-control:disabled,
+.form-select:disabled,
+input:disabled,
+textarea:disabled {
+    color: #6c757d !important;
+    background-color: #e9ecef !important;
+}
+
+/* Focus state mantiene color oscuro */
+.form-control:focus,
+.form-select:focus,
+input:focus,
+textarea:focus {
+    color: #212529 !important;
 }
 
 /* Responsive improvements */

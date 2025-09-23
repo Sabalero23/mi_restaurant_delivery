@@ -790,159 +790,8 @@ p {
 </style>
 </head>
 <body>
-    <!-- Mobile Top Bar -->
-    <div class="mobile-topbar">
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="d-flex align-items-center">
-                <button class="menu-toggle me-3" id="mobileMenuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h5>
-                    <i class="fas fa-utensils me-2"></i>
-                    <?php echo $restaurant_name; ?>
-                </h5>
-            </div>
-            <div class="d-flex align-items-center">
-                <small class="me-3 d-none d-sm-inline">
-                    <i class="fas fa-user me-1"></i>
-                    <?php echo explode(' ', $user_name)[0]; ?>
-                </small>
-                <small>
-                    <i class="fas fa-clock me-1"></i>
-                    <?php echo date('H:i'); ?>
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar Backdrop -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <button class="sidebar-close" id="sidebarClose">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="text-center mb-4">
-            <h4>
-                <i class="fas fa-utensils me-2"></i>
-                <?php echo $restaurant_name; ?>
-            </h4>
-            <small>Sistema de Gestión</small>
-        </div>
-
-        <div class="mb-4">
-            <div class="d-flex align-items-center">
-                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-2">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div>
-                    <div class="fw-bold"><?php echo $user_name; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
-                </div>
-            </div>
-        </div>
-
-        <nav class="nav flex-column">
-            <a class="nav-link active" href="dashboard.php">
-                <i class="fas fa-tachometer-alt me-2"></i>
-                Dashboard
-            </a>
-
-            <?php if ($auth->hasPermission('orders')): ?>
-                <a class="nav-link" href="orders.php">
-                    <i class="fas fa-receipt me-2"></i>
-                    Órdenes
-                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
-                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-            
-            <?php if ($auth->hasPermission('online_orders')): ?>
-                <a class="nav-link" href="online-orders.php">
-                    <i class="fas fa-globe me-2"></i>
-                    Órdenes Online
-                    <span class="badge bg-warning ms-auto" id="online-orders-count">
-                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
-                    </span>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('tables')): ?>
-                <a class="nav-link" href="tables.php">
-                    <i class="fas fa-table me-2"></i>
-                    Mesas
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('kitchen')): ?>
-                <a class="nav-link" href="kitchen.php">
-                    <i class="fas fa-fire me-2"></i>
-                    Cocina
-                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
-                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('delivery')): ?>
-                <a class="nav-link" href="delivery.php">
-                    <i class="fas fa-motorcycle me-2"></i>
-                    Delivery
-                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
-                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('products')): ?>
-                <a class="nav-link" href="products.php">
-                    <i class="fas fa-utensils me-2"></i>
-                    Productos
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('users')): ?>
-                <a class="nav-link" href="users.php">
-                    <i class="fas fa-users me-2"></i>
-                    Usuarios
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('reports')): ?>
-                <a class="nav-link" href="reports.php">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Reportes
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('all')): ?>
-                <hr class="text-white-50 my-3">
-                <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
-
-                <a class="nav-link" href="settings.php">
-                    <i class="fas fa-cog me-2"></i>
-                    Configuración
-                </a>
-
-                <a class="nav-link" href="permissions.php">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    Permisos
-                </a>
-                <a class="nav-link active" href="theme-settings.php">
-                <i class="fas fa-palette me-2"></i>
-                Tema
-            </a>
-            <?php endif; ?>
-            <hr class="text-white-50 my-3">
-            <a class="nav-link" href="logout.php">
-                <i class="fas fa-sign-out-alt me-2"></i>
-                Cerrar Sesión
-            </a>
-        </nav>
-    </div>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -1236,6 +1085,19 @@ function playNotificationSound(type = 'default') {
         }).catch(() => {
             playHTML5Sound(type);
         });
+    // En la función playWebAudioSound(), agregar después de type === 'urgent'
+} else if (type === 'whatsapp') {
+    // Sonido específico para WhatsApp - tono distintivo
+    oscillator.frequency.setValueAtTime(700, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(900, audioContext.currentTime + 0.15);
+    oscillator.frequency.setValueAtTime(700, audioContext.currentTime + 0.3);
+    
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.35, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.5);
     } else {
         // Fallback a HTML5 Audio
         playHTML5Sound(type);
@@ -1432,6 +1294,210 @@ function checkOnlineOrders() {
     });
 }
 
+// Verificar mensajes de WhatsApp nuevos
+let lastWhatsAppCheck = new Date().toISOString();
+let hasPermissionWhatsApp = <?php echo $auth->hasPermission('all') || $auth->hasPermission('online_orders') ? 'true' : 'false'; ?>;
+
+function checkWhatsAppMessages() {
+    if (!hasPermissionWhatsApp) {
+        return;
+    }
+
+    console.log('Verificando mensajes de WhatsApp...');
+
+    fetch('api/whatsapp-stats.php?last_check=' + encodeURIComponent(lastWhatsAppCheck), {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Respuesta WhatsApp:', data);
+        
+        if (data && data.success) {
+            const unreadCount = parseInt(data.unread_messages) || 0;
+            const newMessagesCount = parseInt(data.new_messages_count) || 0;
+            
+            // Actualizar badge en el sidebar (si existe enlace a WhatsApp)
+            updateWhatsAppBadge(unreadCount);
+            
+            // Si hay mensajes nuevos desde la última verificación
+            if (newMessagesCount > 0) {
+                console.log(`¡NUEVOS MENSAJES WHATSAPP! Cantidad: ${newMessagesCount}`);
+                
+                // Mostrar alerta
+                showWhatsAppAlert(unreadCount, newMessagesCount, data.recent_messages);
+                
+                // Reproducir sonido
+                playNotificationSound('whatsapp');
+                
+                // Vibración
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([150, 100, 150]);
+                }
+            }
+            
+            // Actualizar timestamp para próxima verificación
+            lastWhatsAppCheck = data.last_check;
+        }
+    })
+    .catch(error => {
+        console.error('Error verificando mensajes WhatsApp:', error);
+    });
+}
+
+function updateWhatsAppBadge(unreadCount) {
+    // Buscar enlace de WhatsApp en el sidebar
+    const whatsappLink = document.querySelector('.sidebar .nav-link[href*="whatsapp"]');
+    if (whatsappLink) {
+        let badge = whatsappLink.querySelector('.badge');
+        
+        if (unreadCount > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'badge bg-success ms-auto';
+                whatsappLink.appendChild(badge);
+            }
+            badge.textContent = unreadCount;
+            badge.classList.add('pulsing-badge');
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+}
+
+function showWhatsAppAlert(totalUnread, newMessages, recentMessages) {
+    console.log(`Mostrando alerta WhatsApp: ${newMessages} nuevos mensajes`);
+    
+    // Crear modal dinámicamente si no existe
+    let modal = document.getElementById('whatsappMessageModal');
+    if (!modal) {
+        modal = createWhatsAppModal();
+        document.body.appendChild(modal);
+    }
+    
+    const info = modal.querySelector('#whatsappMessageInfo');
+    const details = modal.querySelector('#whatsappMessageDetails');
+    const messagesList = modal.querySelector('#whatsappMessagesList');
+    
+    // Configurar contenido
+    if (newMessages === 1) {
+        info.textContent = `¡Nuevo mensaje de WhatsApp!`;
+    } else {
+        info.textContent = `¡${newMessages} nuevos mensajes de WhatsApp!`;
+    }
+    
+    details.textContent = `Total no leídos: ${totalUnread}`;
+    
+    // Mostrar últimos mensajes
+    if (recentMessages && recentMessages.length > 0) {
+        let messagesHtml = '';
+        recentMessages.slice(0, 3).forEach(msg => {
+            const time = new Date(msg.created_at).toLocaleTimeString('es-AR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const content = msg.content.substring(0, 50) + (msg.content.length > 50 ? '...' : '');
+            messagesHtml += `
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="small">${msg.phone_number}</strong>
+                        <small class="text-muted">${time}</small>
+                    </div>
+                    <div class="small text-muted">${content}</div>
+                </div>
+            `;
+        });
+        messagesList.innerHTML = messagesHtml;
+    } else {
+        messagesList.innerHTML = '<div class="text-muted small">No hay vista previa disponible</div>';
+    }
+
+    // Mostrar notificación visual flotante
+    const message = `📱 ${newMessages === 1 ? 'Nuevo' : newMessages + ' nuevos'} mensaje${newMessages > 1 ? 's' : ''} de WhatsApp`;
+    showVisualNotification(message, 'success');
+
+    // Mostrar modal
+    try {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        bsModal.show();
+        
+        console.log('Modal de WhatsApp mostrado');
+    } catch (e) {
+        console.error('Error mostrando modal WhatsApp:', e);
+    }
+}
+
+function createWhatsAppModal() {
+    const modalHtml = `
+        <div class="modal fade" id="whatsappMessageModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fab fa-whatsapp me-2"></i>
+                            Mensajes de WhatsApp
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <i class="fab fa-whatsapp fa-3x text-success mb-3"></i>
+                            <h4 id="whatsappMessageInfo">Nuevos mensajes</h4>
+                            <p class="text-muted" id="whatsappMessageDetails">Detalles de mensajes</p>
+                        </div>
+                        <div id="whatsappMessagesList" class="border rounded p-3 bg-light">
+                            <!-- Aquí se mostrarán los mensajes recientes -->
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button class="btn btn-success me-2" onclick="goToWhatsAppMessages()">
+                            <i class="fas fa-comments me-1"></i>Ver Conversaciones
+                        </button>
+                        <button class="btn btn-outline-success me-2" onclick="openWhatsAppQuickReply()">
+                            <i class="fas fa-reply me-1"></i>Respuesta Rápida
+                        </button>
+                        <button class="btn btn-secondary" onclick="dismissWhatsAppAlert()">
+                            <i class="fas fa-times me-1"></i>Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = modalHtml;
+    return tempDiv.firstElementChild;
+}
+
+function goToWhatsAppMessages() {
+    window.location.href = 'whatsapp-messages.php';
+}
+
+function openWhatsAppQuickReply() {
+    // Cerrar modal actual
+    const modal = bootstrap.Modal.getInstance(document.getElementById('whatsappMessageModal'));
+    if (modal) modal.hide();
+    
+    // Abrir ventana de WhatsApp Web en nueva pestaña
+    window.open('https://web.whatsapp.com/', '_blank');
+}
+
+function dismissWhatsAppAlert() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('whatsappMessageModal'));
+    if (modal) modal.hide();
+}
+
 function showOnlineOrderAlert(totalPending, newOrders, data) {
     console.log(`Mostrando alerta: ${newOrders} nuevos pedidos, total: ${totalPending}`);
     
@@ -1557,65 +1623,32 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Primera verificación de pedidos online...');
             checkOnlineOrders();
         }, 3000);
+        // Revisar mensajes de WhatsApp cada 20 segundos
+if (hasPermissionWhatsApp) {
+    setInterval(checkWhatsAppMessages, 20000);
+}
     } else {
         console.log('Usuario sin permisos para pedidos online');
     }
     
     console.log('Sistema de notificaciones inicializado');
+    
+    // Agregar después de la configuración de pedidos online
+// Configurar verificación de mensajes WhatsApp
+if (hasPermissionWhatsApp) {
+    console.log('Configurando verificación automática de mensajes WhatsApp...');
+    
+    // Verificar después de 5 segundos
+    setTimeout(() => {
+        console.log('Primera verificación de mensajes WhatsApp...');
+        checkWhatsAppMessages();
+    }, 5000);
+} else {
+    console.log('Usuario sin permisos para WhatsApp');
+}
 });
 
-function initializeMobileMenu() {
-    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    const sidebarClose = document.getElementById('sidebarClose');
 
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            sidebar.classList.toggle('show');
-            sidebarBackdrop.classList.toggle('show');
-            document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : '';
-        });
-    }
-
-    if (sidebarClose) {
-        sidebarClose.addEventListener('click', function(e) {
-            e.preventDefault();
-            closeSidebar();
-        });
-    }
-
-    if (sidebarBackdrop) {
-        sidebarBackdrop.addEventListener('click', function(e) {
-            e.preventDefault();
-            closeSidebar();
-        });
-    }
-
-    document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
-        link.addEventListener('click', function() {
-            if (window.innerWidth < 992) {
-                setTimeout(closeSidebar, 100);
-            }
-        });
-    });
-
-    window.addEventListener('resize', function() {
-        if (window.innerWidth >= 992) {
-            closeSidebar();
-        }
-    });
-}
-
-function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    
-    if (sidebar) sidebar.classList.remove('show');
-    if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
-    document.body.style.overflow = '';
-}
 
 // Auto-refresh data every 30 seconds
 setInterval(loadDashboardData, 30000);

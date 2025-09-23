@@ -65,7 +65,8 @@ function updateGeneralSettings() {
         'restaurant_phone' => sanitize($_POST['restaurant_phone']),
         'restaurant_address' => sanitize($_POST['restaurant_address']),
         'whatsapp_number' => sanitize($_POST['whatsapp_number']),
-        'restaurant_email' => sanitize($_POST['restaurant_email'] ?? '')
+        'restaurant_email' => sanitize($_POST['restaurant_email'] ?? ''),
+        'restaurant_maps_url' => sanitize($_POST['restaurant_maps_url'] ?? '')
     ];
     
     try {
@@ -76,11 +77,77 @@ function updateGeneralSettings() {
             $stmt->execute([$key, $value, $value]);
         }
         
-        return ['success' => true, 'message' => 'Configuración general actualizada'];
+        // Si se proporcionó una URL de Google Maps, extraer y guardar las coordenadas
+        $maps_url = $settings['restaurant_maps_url'];
+        if (!empty($maps_url)) {
+            $coordinates = extractCoordinatesFromMapsUrl($maps_url);
+            if ($coordinates) {
+                // Guardar las coordenadas extraídas
+                $coord_settings = [
+                    'restaurant_lat' => $coordinates['lat'],
+                    'restaurant_lng' => $coordinates['lng']
+                ];
+                
+                foreach ($coord_settings as $key => $value) {
+                    $query = "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) 
+                             ON DUPLICATE KEY UPDATE setting_value = ?";
+                    $stmt = $db->prepare($query);
+                    $stmt->execute([$key, $value, $value]);
+                }
+            }
+        }
+        
+        return ['success' => true, 'message' => 'Configuración general actualizada. ' . 
+                (isset($coordinates) ? 'Coordenadas extraídas automáticamente desde Google Maps.' : '')];
     } catch (Exception $e) {
         return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
     }
 }
+
+/**
+ * Extrae las coordenadas de una URL de Google Maps
+ */
+function extractCoordinatesFromMapsUrl($url) {
+    if (empty($url)) {
+        return null;
+    }
+    
+    // Varios patrones para extraer coordenadas de URLs de Google Maps
+    $patterns = [
+        // Patrón: @lat,lng,zoom
+        '/@(-?\d+\.?\d*),(-?\d+\.?\d*),/',
+        // Patrón: ?q=lat,lng
+        '/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: ll=lat,lng
+        '/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: center=lat,lng
+        '/[?&]center=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: /place/name/@lat,lng
+        '/\/place\/[^\/]*\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: !3d-lat!4d-lng (formato de URLs compartidas)
+        '/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/',
+        // Patrón: data=...lat,lng...
+        '/data=[^&]*!2d(-?\d+\.?\d*)!3d(-?\d+\.?\d*)/'
+    ];
+    
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $matches)) {
+            $lat = floatval($matches[1]);
+            $lng = floatval($matches[2]);
+            
+            // Validar que las coordenadas estén en rangos válidos
+            if ($lat >= -90 && $lat <= 90 && $lng >= -180 && $lng <= 180) {
+                return [
+                    'lat' => $lat,
+                    'lng' => $lng
+                ];
+            }
+        }
+    }
+    
+    return null;
+}
+
 
 function updateBusinessSettings() {
     global $db;
@@ -692,162 +759,45 @@ p {
         margin-bottom: 0.5rem;
     }
 }
+
+.step-by-step {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.step-number {
+    background: var(--primary-color);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-content p {
+    margin: 0.25rem 0 0 0;
+    color: #6c757d;
+}
 </style>
 </head>
 <body>
-    <!-- Mobile Top Bar -->
-    <div class="mobile-topbar">
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="d-flex align-items-center">
-                <button class="menu-toggle me-3" id="mobileMenuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h5>
-                    <i class="fas fa-cog me-2"></i>
-                    Configuración
-                </h5>
-            </div>
-            <div class="d-flex align-items-center">
-                <small class="me-3 d-none d-sm-inline">
-                    <i class="fas fa-user me-1"></i>
-                    <?php echo explode(' ', $_SESSION['full_name'])[0]; ?>
-                </small>
-                <small>
-                    <i class="fas fa-clock me-1"></i>
-                    <?php echo date('H:i'); ?>
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar Backdrop -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <button class="sidebar-close" id="sidebarClose">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="text-center mb-4">
-            <h4>
-                <i class="fas fa-utensils me-2"></i>
-                <?php echo $restaurant_name; ?>
-            </h4>
-            <small>Configuraciones Generales</small>
-        </div>
-
-        <div class="mb-4">
-            <div class="d-flex align-items-center">
-                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-2">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div>
-                    <div class="fw-bold"><?php echo $user_name; ?></div>
-                    <small class="opacity-75"><?php echo ucfirst($role); ?></small>
-                </div>
-            </div>
-        </div>
-
-        <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
-                <i class="fas fa-tachometer-alt me-2"></i>
-                Dashboard
-            </a>
-
-            <?php if ($auth->hasPermission('orders')): ?>
-                <a class="nav-link" href="orders.php">
-                    <i class="fas fa-receipt me-2"></i>
-                    Órdenes
-                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
-                        <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-            
-            <?php if ($auth->hasPermission('online_orders')): ?>
-                <a class="nav-link" href="online-orders.php">
-                    <i class="fas fa-globe me-2"></i>
-                    Órdenes Online
-                    <span class="badge bg-warning ms-auto" id="online-orders-count">
-                        <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>
-                    </span>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('tables')): ?>
-                <a class="nav-link" href="tables.php">
-                    <i class="fas fa-table me-2"></i>
-                    Mesas
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('kitchen')): ?>
-                <a class="nav-link" href="kitchen.php">
-                    <i class="fas fa-fire me-2"></i>
-                    Cocina
-                    <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
-                        <span class="badge bg-warning ms-auto"><?php echo $stats['preparing_orders']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('delivery')): ?>
-                <a class="nav-link" href="delivery.php">
-                    <i class="fas fa-motorcycle me-2"></i>
-                    Delivery
-                    <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
-                        <span class="badge bg-info ms-auto"><?php echo $stats['pending_deliveries']; ?></span>
-                    <?php endif; ?>
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('products')): ?>
-                <a class="nav-link" href="products.php">
-                    <i class="fas fa-utensils me-2"></i>
-                    Productos
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('users')): ?>
-                <a class="nav-link" href="users.php">
-                    <i class="fas fa-users me-2"></i>
-                    Usuarios
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('reports')): ?>
-                <a class="nav-link" href="reports.php">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Reportes
-                </a>
-            <?php endif; ?>
-
-            <?php if ($auth->hasPermission('all')): ?>
-                <hr class="text-white-50 my-3">
-                <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
-
-                <a class="nav-link active" href="settings.php">
-                    <i class="fas fa-cog me-2"></i>
-                    Configuración
-                </a>
-
-                <a class="nav-link" href="permissions.php">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    Permisos
-                </a>
-                <a class="nav-link" href="theme-settings.php">
-                <i class="fas fa-palette me-2"></i>
-                Tema
-            </a>
-            <?php endif; ?>
-            <hr class="text-white-50 my-3">
-            <a class="nav-link" href="logout.php">
-                <i class="fas fa-sign-out-alt me-2"></i>
-                Cerrar Sesión
-            </a>
-        </nav>
-    </div>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
             
     <!-- Main Content -->
     <div class="main-content">
@@ -954,56 +904,83 @@ p {
             
             <div class="tab-content">
                 <!-- General Settings -->
-                <div class="tab-pane fade show active" id="general" role="tabpanel">
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_general">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Nombre del Restaurante</label>
-                                    <input type="text" class="form-control" name="restaurant_name" 
-                                           value="<?php echo htmlspecialchars($current_settings['restaurant_name'] ?? ''); ?>" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Email del Restaurante</label>
-                                    <input type="email" class="form-control" name="restaurant_email" 
-                                           value="<?php echo htmlspecialchars($current_settings['restaurant_email'] ?? ''); ?>">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Teléfono</label>
-                                    <input type="text" class="form-control" name="restaurant_phone" 
-                                           value="<?php echo htmlspecialchars($current_settings['restaurant_phone'] ?? ''); ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">WhatsApp (sin +54)</label>
-                                    <input type="text" class="form-control" name="whatsapp_number" 
-                                           value="<?php echo htmlspecialchars($current_settings['whatsapp_number'] ?? ''); ?>"
-                                           placeholder="3482549555">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <textarea class="form-control" name="restaurant_address" rows="2"><?php echo htmlspecialchars($current_settings['restaurant_address'] ?? ''); ?></textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>
-                            Guardar Configuración General
-                        </button>
-                    </form>
+<div class="tab-pane fade show active" id="general" role="tabpanel">
+    <form method="POST">
+        <input type="hidden" name="action" value="update_general">
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Nombre del Restaurante</label>
+                    <input type="text" class="form-control" name="restaurant_name" 
+                           value="<?php echo htmlspecialchars($current_settings['restaurant_name'] ?? ''); ?>" required>
                 </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Email del Restaurante</label>
+                    <input type="email" class="form-control" name="restaurant_email" 
+                           value="<?php echo htmlspecialchars($current_settings['restaurant_email'] ?? ''); ?>">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Teléfono</label>
+                    <input type="text" class="form-control" name="restaurant_phone" 
+                           value="<?php echo htmlspecialchars($current_settings['restaurant_phone'] ?? ''); ?>">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">WhatsApp (sin +54)</label>
+                    <input type="text" class="form-control" name="whatsapp_number" 
+                           value="<?php echo htmlspecialchars($current_settings['whatsapp_number'] ?? ''); ?>"
+                           placeholder="3482549555">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Dirección</label>
+                    <textarea class="form-control" name="restaurant_address" rows="2"><?php echo htmlspecialchars($current_settings['restaurant_address'] ?? ''); ?></textarea>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">
+                        URL de Google Maps
+                        <small class="text-muted">(para extraer coordenadas automáticamente)</small>
+                    </label>
+                    <input type="url" class="form-control" name="restaurant_maps_url" 
+                           value="<?php echo htmlspecialchars($current_settings['restaurant_maps_url'] ?? ''); ?>"
+                           placeholder="https://maps.google.com/...">
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Pegue aquí la URL completa de Google Maps de su restaurante. 
+                        <button type="button" class="btn btn-link p-0 text-decoration-none" onclick="showMapsInstructions()">
+                            ¿Cómo obtener la URL?
+                        </button>
+                    </div>
+                    <div id="maps-coordinates-preview" class="form-text text-success" style="display: none;">
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        <span id="coordinates-text"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>
+            Guardar Configuración General
+        </button>
+    </form>
+</div>
+
                 
                 <!-- Business Settings -->
                 <div class="tab-pane fade" id="business" role="tabpanel">
@@ -1312,6 +1289,62 @@ p {
         </div>
     </div>
     
+    <!-- Modal con instrucciones -->
+<div class="modal fade" id="mapsInstructionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fab fa-google me-2"></i>
+                    Cómo obtener la URL de Google Maps
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="step-by-step">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Abrir Google Maps</strong>
+                            <p>Vaya a <a href="https://maps.google.com" target="_blank">maps.google.com</a></p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Buscar su restaurante</strong>
+                            <p>Escriba el nombre y dirección de su restaurante en la barra de búsqueda</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Copiar la URL</strong>
+                            <p>Una vez que aparezca su restaurante en el mapa, copie la URL completa desde la barra del navegador</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <strong>Pegar aquí</strong>
+                            <p>Pegue la URL en el campo anterior y guarde la configuración</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Ejemplo de URL válida:</strong><br>
+                    <code>https://maps.google.com/maps?q=-29.1167,-59.6500</code><br>
+                    <code>https://www.google.com/maps/place/Mi+Restaurante/@-29.1167,-59.6500,15z</code>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1496,6 +1529,80 @@ p {
             }
         });
     </script>
+    <script>
+function showMapsInstructions() {
+    const modal = new bootstrap.Modal(document.getElementById('mapsInstructionsModal'));
+    modal.show();
+}
+
+// Validación en tiempo real de URL de Google Maps
+document.addEventListener('DOMContentLoaded', function() {
+    const mapsUrlInput = document.querySelector('input[name="restaurant_maps_url"]');
+    const preview = document.getElementById('maps-coordinates-preview');
+    const coordinatesText = document.getElementById('coordinates-text');
+    
+    if (mapsUrlInput) {
+        mapsUrlInput.addEventListener('input', function() {
+            const url = this.value;
+            
+            if (url && (url.includes('maps.google.com') || url.includes('google.com/maps'))) {
+                const coordinates = extractCoordinatesFromUrl(url);
+                
+                if (coordinates) {
+                    coordinatesText.textContent = `Coordenadas encontradas: ${coordinates.lat}, ${coordinates.lng}`;
+                    preview.style.display = 'block';
+                    this.classList.add('is-valid');
+                    this.classList.remove('is-invalid');
+                } else {
+                    preview.style.display = 'none';
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                }
+            } else if (url) {
+                preview.style.display = 'none';
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else {
+                preview.style.display = 'none';
+                this.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+        
+        // Verificar URL inicial si ya existe
+        if (mapsUrlInput.value) {
+            mapsUrlInput.dispatchEvent(new Event('input'));
+        }
+    }
+});
+
+function extractCoordinatesFromUrl(url) {
+    // Varios patrones para extraer coordenadas de URLs de Google Maps
+    const patterns = [
+        // Patrón: @lat,lng,zoom
+        /@(-?\d+\.?\d*),(-?\d+\.?\d*),/,
+        // Patrón: ?q=lat,lng
+        /[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+        // Patrón: ll=lat,lng
+        /[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+        // Patrón: center=lat,lng
+        /[?&]center=(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+        // Patrón: /place/name/@lat,lng
+        /\/place\/[^/]*\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) {
+            return {
+                lat: parseFloat(match[1]),
+                lng: parseFloat(match[2])
+            };
+        }
+    }
+    
+    return null;
+}
+</script>
 
 <?php include 'footer.php'; ?>
 </body>

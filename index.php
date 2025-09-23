@@ -100,7 +100,48 @@ $current_time = date('H:i');
 $is_open = ($current_time >= $opening_time && $current_time <= $kitchen_closing_time);
 
 ?>
-
+<?php
+function extractCoordinatesFromMapsUrl($url) {
+    if (empty($url)) {
+        return null;
+    }
+    
+    // Varios patrones para extraer coordenadas de URLs de Google Maps
+    $patterns = [
+        // Patrón: @lat,lng,zoom
+        '/@(-?\d+\.?\d*),(-?\d+\.?\d*),/',
+        // Patrón: ?q=lat,lng
+        '/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: ll=lat,lng
+        '/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: center=lat,lng
+        '/[?&]center=(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: /place/name/@lat,lng
+        '/\/place\/[^\/]*\/@(-?\d+\.?\d*),(-?\d+\.?\d*)/',
+        // Patrón: !3d-lat!4d-lng (formato de URLs compartidas)
+        '/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/',
+        // Patrón: data=...lat,lng...
+        '/data=[^&]*!2d(-?\d+\.?\d*)!3d(-?\d+\.?\d*)/'
+    ];
+    
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $matches)) {
+            $lat = floatval($matches[1]);
+            $lng = floatval($matches[2]);
+            
+            // Validar que las coordenadas estén en rangos válidos
+            if ($lat >= -90 && $lat <= 90 && $lng >= -180 && $lng <= 180) {
+                return [
+                    'lat' => $lat,
+                    'lng' => $lng
+                ];
+            }
+        }
+    }
+    
+    return null;
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1278,6 +1319,29 @@ p {
                 if (!addressInput) return;
 
                 try {
+                    // Obtener las coordenadas del restaurante desde PHP (extraídas automáticamente de Google Maps URL)
+                    const restaurantLat = <?php 
+                        // Obtener coordenadas desde la base de datos o extraer de la URL si no existen
+                        $restaurant_lat = $settings['restaurant_lat'] ?? null;
+                        $restaurant_lng = $settings['restaurant_lng'] ?? null;
+                        
+                        // Si no hay coordenadas guardadas, intentar extraerlas de la URL
+                        if (!$restaurant_lat || !$restaurant_lng) {
+                            $maps_url = $settings['restaurant_maps_url'] ?? '';
+                            if (!empty($maps_url)) {
+                                $coords = extractCoordinatesFromMapsUrl($maps_url);
+                                if ($coords) {
+                                    $restaurant_lat = $coords['lat'];
+                                    $restaurant_lng = $coords['lng'];
+                                }
+                            }
+                        }
+                        
+                        echo $restaurant_lat ?? '-29.1167'; // Valor por defecto para Avellaneda, Santa Fe
+                    ?>;
+                    
+                    const restaurantLng = <?php echo $restaurant_lng ?? '-59.6500'; ?>;
+                    
                     // Configurar el autocomplete con restricciones para Argentina
                     const autocomplete = new google.maps.places.Autocomplete(addressInput, {
                         types: ['address'],
@@ -1287,13 +1351,19 @@ p {
                         fields: ['address_components', 'formatted_address', 'geometry']
                     });
 
-                    // Configurar el área de búsqueda (Santa Fe, Argentina)
-                    const avellanedaCenter = new google.maps.LatLng(-29.1167, -59.6500);
+                    // Configurar el área de búsqueda usando las coordenadas reales del restaurante
+                    const restaurantCenter = new google.maps.LatLng(restaurantLat, restaurantLng);
                     const circle = new google.maps.Circle({
-                        center: santaFeCenter,
-                        radius: 50000 // 50km de radio
+                        center: restaurantCenter,
+                        radius: <?php echo ($settings['max_delivery_distance'] ?? '25') * 1000; ?> // Convertir km a metros
                     });
                     autocomplete.setBounds(circle.getBounds());
+
+                    console.log('Ubicación del restaurante configurada:', {
+                        lat: restaurantLat, 
+                        lng: restaurantLng,
+                        source: '<?php echo !empty($settings['restaurant_maps_url']) ? 'Google Maps URL' : 'Coordenadas por defecto'; ?>'
+                    });
 
                     // Variable para almacenar los detalles de la dirección
                     let selectedAddressDetails = null;
@@ -1318,6 +1388,7 @@ p {
                             components: {}
                         };
 
+                        // Procesar componentes de dirección
                         place.address_components.forEach(component => {
                             const types = component.types;
                             if (types.includes('street_number')) {
@@ -1346,11 +1417,16 @@ p {
 
                     window.addressAutocomplete = autocomplete;
                     window.getSelectedAddressDetails = () => selectedAddressDetails;
+                    
+                    // Almacenar las coordenadas del restaurante globalmente
+                    window.restaurantLocation = { lat: restaurantLat, lng: restaurantLng };
+                    
                 } catch (error) {
                     console.error('Error inicializando Google Maps:', error);
                 }
             }
 
+            // Funciones auxiliares para Google Maps
             function showAddressDetails(details) {
                 const detailsDiv = document.getElementById('address-details');
                 if (!detailsDiv) return;
@@ -1374,9 +1450,14 @@ p {
             }
 
             function validateDeliveryArea(lat, lng) {
-                const restaurantLocation = { lat: -29.1167, lng: -59.6500 }; // Avellaneda, Santa Fe // Ajustar a tu ubicación
-                const maxDeliveryDistance = 25; // km
-
+                // Usar las coordenadas dinámicas del restaurante
+                const restaurantLocation = window.restaurantLocation || { 
+                    lat: <?php echo $restaurant_lat ?? '-29.1167'; ?>, 
+                    lng: <?php echo $restaurant_lng ?? '-59.6500'; ?> 
+                };
+                
+                const maxDeliveryDistance = <?php echo $settings['max_delivery_distance'] ?? '25'; ?>; // km
+                
                 const distance = calculateDistance(lat, lng, restaurantLocation.lat, restaurantLocation.lng);
                 
                 const deliveryStatus = document.getElementById('delivery-status');
@@ -1386,7 +1467,7 @@ p {
                     deliveryStatus.innerHTML = `
                         <div class="alert alert-success py-2">
                             <i class="fas fa-check-circle me-1"></i>
-                            <strong>Zona de delivery válida</strong> (${distance.toFixed(1)} km)
+                            <strong>Zona de delivery válida</strong> (${distance.toFixed(1)} km desde el restaurante)
                         </div>
                     `;
                 } else {
@@ -1434,7 +1515,6 @@ p {
         let isSubmitting = false;
 
         // ===== FUNCIONES DE FORMATEO DE TELÉFONO =====
-
         function formatPhoneNumber(phone) {
             let cleanPhone = phone.replace(/[^0-9]/g, '');
             
@@ -1519,7 +1599,6 @@ p {
         }
 
         // ===== FUNCIONES DEL CARRITO =====
-
         function addToCart(id, name, price) {
             if (!isOpen || !onlineOrdersEnabled) {
                 alert('Los pedidos online no están disponibles en este momento.');
@@ -1637,7 +1716,6 @@ p {
         }
 
         // ===== FUNCIONES DE CHECKOUT =====
-
         function checkout() {
             if (cart.length === 0) {
                 alert('Tu carrito está vacío');
@@ -1664,8 +1742,11 @@ p {
             const selectedAddress = window.getSelectedAddressDetails ? window.getSelectedAddressDetails() : null;
             
             if (selectedAddress) {
-                const restaurantLocation = { lat: -29.1167, lng: -59.6500 }; // Avellaneda, Santa Fe
-                const maxDeliveryDistance = 25;
+                const restaurantLocation = window.restaurantLocation || { 
+                    lat: <?php echo $restaurant_lat ?? '-29.1167'; ?>, 
+                    lng: <?php echo $restaurant_lng ?? '-59.6500'; ?> 
+                };
+                const maxDeliveryDistance = <?php echo $settings['max_delivery_distance'] ?? '25'; ?>;
                 
                 const distance = calculateDistance(
                     selectedAddress.lat, 
@@ -1744,115 +1825,128 @@ p {
         }
 
         async function submitOrder() {
-            if (isSubmitting) return;
-            
-            if (!validateForm()) return;
-            
-            isSubmitting = true;
-            
-            try {
-                const name = document.getElementById('customerName').value.trim();
-                const phoneInput = document.getElementById('customerPhone');
-                const rawPhone = phoneInput.value.trim();
-                const formattedPhone = formatPhoneNumber(rawPhone);
-                const address = document.getElementById('customerAddress').value.trim();
-                const notes = document.getElementById('customerNotes').value.trim();
-                const references = document.getElementById('customerReferences') ? 
-                                  document.getElementById('customerReferences').value.trim() : '';
-                
-                const selectedAddress = window.getSelectedAddressDetails ? window.getSelectedAddressDetails() : null;
-                
-                let fullAddress = address;
-                if (references) {
-                    fullAddress += ` - Referencias: ${references}`;
-                }
-                
-                const orderData = {
-                    customer_name: name,
-                    customer_phone: formattedPhone,
-                    customer_address: fullAddress,
-                    customer_notes: notes,
-                    customer_references: references,
-                    items: cart,
-                    address_details: selectedAddress ? {
-                        formatted_address: selectedAddress.formatted_address,
-                        coordinates: {
-                            lat: selectedAddress.lat,
-                            lng: selectedAddress.lng
-                        },
-                        components: selectedAddress.components
-                    } : null
-                };
-                
-                console.log('Enviando pedido:', orderData);
-                
-                document.getElementById('loadingOverlay').style.display = 'flex';
-                
-                const customerModal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
-                customerModal.hide();
-                
-                const response = await fetch('admin/api/online-orders.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(orderData)
-                });
-                
-                const result = await response.json();
-                
-                document.getElementById('loadingOverlay').style.display = 'none';
-                
-                if (result.success) {
-                    document.getElementById('order-number-display').textContent = result.order_number;
-                    document.getElementById('order-success').classList.remove('d-none');
-                    document.getElementById('order-error').classList.add('d-none');
-                    
-                    clearCart();
-                    document.getElementById('customerForm').reset();
-                    
-                    const addressDetails = document.getElementById('address-details');
-                    const deliveryStatus = document.getElementById('delivery-status');
-                    const phonePreview = document.getElementById('phonePreview');
-                    
-                    if (addressDetails) addressDetails.style.display = 'none';
-                    if (deliveryStatus) deliveryStatus.innerHTML = '';
-                    if (phonePreview) phonePreview.style.display = 'none';
-                    
-                    if (window.addressAutocomplete) {
-                        window.addressAutocomplete.set('place', null);
-                    }
-                    
-                    const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
-                    statusModal.show();
-                    
-                    trackEvent('purchase', 'ecommerce', result.order_number);
-                    
-                } else {
-                    document.getElementById('error-message').textContent = result.message || 'Error al procesar el pedido';
-                    document.getElementById('order-success').classList.add('d-none');
-                    document.getElementById('order-error').classList.remove('d-none');
-                    
-                    const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
-                    statusModal.show();
-                }
-            } catch (error) {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('error-message').textContent = 'Error de conexión. Verifique su internet y vuelva a intentar.';
-                document.getElementById('order-success').classList.add('d-none');
-                document.getElementById('order-error').classList.remove('d-none');
-                
-                const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
-                statusModal.show();
-                
-                console.error('Error al enviar pedido:', error);
-            } finally {
-                isSubmitting = false;
-            }
+    if (isSubmitting) return;
+    
+    if (!validateForm()) return;
+    
+    isSubmitting = true;
+    
+    try {
+        const name = document.getElementById('customerName').value.trim();
+        const phoneInput = document.getElementById('customerPhone');
+        const rawPhone = phoneInput.value.trim();
+        const formattedPhone = formatPhoneNumber(rawPhone);
+        const address = document.getElementById('customerAddress').value.trim();
+        const notes = document.getElementById('customerNotes').value.trim();
+        const references = document.getElementById('customerReferences') ? 
+                          document.getElementById('customerReferences').value.trim() : '';
+        
+        const selectedAddress = window.getSelectedAddressDetails ? window.getSelectedAddressDetails() : null;
+        
+        let fullAddress = address;
+        if (references) {
+            fullAddress += ` - Referencias: ${references}`;
         }
+        
+        const orderData = {
+            customer_name: name,
+            customer_phone: formattedPhone,
+            customer_address: fullAddress,
+            customer_notes: notes,
+            customer_references: references,
+            items: cart,
+            address_details: selectedAddress ? {
+                formatted_address: selectedAddress.formatted_address,
+                coordinates: {
+                    lat: selectedAddress.lat,
+                    lng: selectedAddress.lng
+                },
+                components: selectedAddress.components
+            } : null
+        };
+        
+        console.log('Enviando pedido:', orderData);
+        
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        
+        const customerModal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+        customerModal.hide();
+        
+        const response = await fetch('admin/api/online-orders.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        });
+        
+        const result = await response.json();
+        
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+        if (result.success) {
+            document.getElementById('order-number-display').textContent = result.order_number;
+            document.getElementById('order-success').classList.remove('d-none');
+            document.getElementById('order-error').classList.add('d-none');
+            
+            // Limpiar carrito y formulario
+            clearCart();
+            document.getElementById('customerForm').reset();
+            
+            // Limpiar elementos de la interfaz de forma segura
+            const addressDetails = document.getElementById('address-details');
+            const deliveryStatus = document.getElementById('delivery-status');
+            const phonePreview = document.getElementById('phonePreview');
+            
+            if (addressDetails) addressDetails.style.display = 'none';
+            if (deliveryStatus) deliveryStatus.innerHTML = '';
+            if (phonePreview) phonePreview.style.display = 'none';
+            
+            // Limpiar Google Maps de forma segura
+            try {
+                if (window.addressAutocomplete && typeof window.addressAutocomplete.setComponentRestrictions === 'function') {
+                    // Limpiar el input en lugar de establecer place como null
+                    const addressInput = document.getElementById('customerAddress');
+                    if (addressInput) {
+                        addressInput.value = '';
+                    }
+                    // Resetear la función que obtiene detalles de dirección
+                    window.getSelectedAddressDetails = () => null;
+                }
+            } catch (mapsError) {
+                console.warn('Error al limpiar Google Maps (no crítico):', mapsError);
+                // No es un error crítico, el pedido ya se procesó correctamente
+            }
+            
+            const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
+            statusModal.show();
+            
+            trackEvent('purchase', 'ecommerce', result.order_number);
+            
+        } else {
+            document.getElementById('error-message').textContent = result.message || 'Error al procesar el pedido';
+            document.getElementById('order-success').classList.add('d-none');
+            document.getElementById('order-error').classList.remove('d-none');
+            
+            const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
+            statusModal.show();
+        }
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('error-message').textContent = 'Error de conexión. Verifique su internet y vuelva a intentar.';
+        document.getElementById('order-success').classList.add('d-none');
+        document.getElementById('order-error').classList.remove('d-none');
+        
+        const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
+        statusModal.show();
+        
+        console.error('Error al enviar pedido:', error);
+    } finally {
+        isSubmitting = false;
+    }
+}
 
         // ===== FUNCIONES DE ALMACENAMIENTO =====
-
         function saveCartToStorage() {
             localStorage.setItem('restaurant_cart', JSON.stringify(cart));
         }
@@ -1871,10 +1965,9 @@ p {
         }
 
         // ===== FUNCIONES AUXILIARES =====
-
-function formatPrice(price) {
-    return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
+        function formatPrice(price) {
+            return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
 
         function trackEvent(action, category, label) {
             if (typeof gtag !== 'undefined') {
@@ -1905,7 +1998,6 @@ function formatPrice(price) {
         }
 
         // ===== EVENT LISTENERS Y INICIALIZACIÓN =====
-
         document.addEventListener('DOMContentLoaded', function() {
             loadCartFromStorage();
             updateCartDisplay();
@@ -2010,5 +2102,7 @@ function formatPrice(price) {
             });
         }
     </script>
+    
+    
 </body>
 </html>

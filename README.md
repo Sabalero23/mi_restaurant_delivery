@@ -118,6 +118,7 @@ mi_restaurant_delivery/
 │ ├── order-details.php # Detalle de una orden
 │ ├── print-order.php # Impresión de órdenes
 │ ├── theme-settings.php # Panel principal de configuración de temas
+│ ├── whatsapp-answers.php      # Panel de configuración de respuestas automáticas
 │ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
 │ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
 │ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
@@ -459,20 +460,33 @@ El sistema es extensible para agregar:
 - **Múltiples sucursales**
  
 
+README.md
+678 líneas
+
+md
+
+dame solo el codigo de la api de whatsapp que nmodificamos y  a corregir en el readme para reemplazar lo que ya esta con lo nuevo, solo reemplazar, dame el codigo para pegarlo en readme
+
+Aquí está el código actualizado para reemplazar la sección de WhatsApp en el README:
+
+markdown
 ### 📱 Sistema de WhatsApp Business API
 
-El sistema incluye integración completa con WhatsApp Business API para comunicación automática con clientes y gestión de conversaciones.
+El sistema incluye integración completa con WhatsApp Business API para comunicación automática con clientes y gestión de conversaciones avanzadas.
 
 #### Características del Sistema WhatsApp
 
 - **API de WhatsApp Business** completamente integrada
-- **Webhook automático** para recibir mensajes entrantes
-- **Respuestas automáticas inteligentes** basadas en contenido
+- **Webhook automático** para recibir mensajes entrantes con configuración segura
+- **Respuestas automáticas configurables** desde panel web con variables dinámicas
 - **Panel de gestión de conversaciones** con interface tipo chat
+- **Sistema de prioridades** y tipos de coincidencia para respuestas
+- **Rate limiting** y detección de duplicados
 - **Logs completos** de envíos y recepciones
 - **Configuración dinámica** del restaurante
 - **Limpieza automática** de números telefónicos argentinos
 - **Sistema de fallback** a WhatsApp Web
+- **Guardado de conversaciones completas** para seguimiento
 
 #### Funcionalidades de Mensajería
 
@@ -482,47 +496,68 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 - Notificaciones de entrega
 - Mensajes de prueba del sistema
 
-**Respuestas Automáticas Inteligentes:**
-- **Saludos**: Responde a "hola", "buenos días", etc.
-- **Consultas de pedidos**: Información sobre realizar pedidos
-- **Estado de órdenes**: Consulta automática del estado de pedidos
-- **Horarios de atención**: Información de horarios del restaurante
-- **Ubicación**: Dirección y referencias del local
-- **Contacto**: Teléfonos y emails de contacto
-- **Menú**: Enlace al menú completo online
+**Sistema de Respuestas Automáticas Avanzado:**
+- **Editor web de respuestas** con variables dinámicas
+- **Tipos de coincidencia**: Contiene, exacto, empieza con, termina con
+- **Sistema de prioridades** (mayor número = mayor prioridad)
+- **Variables automáticas**: {restaurant_name}, {restaurant_web}, {restaurant_phone}, etc.
+- **Estadísticas de uso** para cada respuesta
+- **Activación/desactivación** individual
+- **Contador de usos** y fechas de creación/actualización
 
-**Ejemplo de respuestas automáticas:**
+**Ejemplos de respuestas configurables:**
 
-Cliente: "Hola"
-Bot: "¡Hola! Gracias por contactar a Mi Restaurante. Para realizar pedidos diríjase a https://comidas.ordenes.com.ar"
-Cliente: "horarios"
-Bot: "Horarios de atención de Mi Restaurante:
-Lunes a Domingo: 08:00 - 23:00"
-Cliente: "estado pedido"
-Bot: "Su pedido #WEB-20250914-719 está: En preparación"
+| Palabras Clave | Respuesta | Tipo |
+|----------------|-----------|------|
+| hola,saludos,buenos | ¡Hola! Gracias por contactar a {restaurant_name}. Para pedidos: {restaurant_web} | Contiene |
+| menu,menú,carta | Vea nuestro menú completo en {restaurant_web} | Contiene |
+| horario,horarios | Horarios: {opening_time} - {closing_time} | Contiene |
+| estado,pedido | Para consultar estado, proporcione número de orden | Contiene |
+| direccion,ubicacion | Nuestra dirección: {restaurant_address} | Contiene |
 
 #### Panel de Gestión de Conversaciones
 
-- **Vista unificada** de todas las conversaciones
-- **Interface tipo chat** con burbujas de mensajes
-- **Identificación visual** de conversaciones nuevas/leídas
-- **Respuestas manuales** desde el panel
+- **Vista unificada** de todas las conversaciones por contacto
+- **Interface tipo chat** con burbujas de mensajes cronológicas
+- **Identificación visual** de conversaciones nuevas/no leídas
+- **Respuestas manuales** desde el panel con guardado automático
 - **Marcado automático** como leído
-- **Filtros avanzados** por teléfono, fecha, estado
-- **Estadísticas en tiempo real** de mensajes
+- **Filtros avanzados** por teléfono, fecha, estado de lectura
+- **Estadísticas en tiempo real** de mensajes y conversaciones
 - **Enlaces directos** a WhatsApp Web
+- **Auto-expansión** de conversaciones nuevas
+- **Auto-refresh** cada 30 segundos
+
+#### Panel de Configuración de Respuestas Automáticas
+
+- **Editor visual** con formularios intuitivos
+- **Gestión completa** de palabras clave y respuestas
+- **Variables dinámicas** con reemplazo automático:
+  - `{restaurant_name}` - Nombre del restaurante
+  - `{restaurant_web}` - Sitio web
+  - `{restaurant_phone}` - Teléfono
+  - `{restaurant_email}` - Email
+  - `{restaurant_address}` - Dirección
+  - `{opening_time}` / `{closing_time}` - Horarios
+  - `{delivery_fee}` - Costo de envío
+  - `{min_delivery_amount}` - Monto mínimo delivery
+  - `{order_number}` / `{order_status}` - Info de pedidos
+- **Vista previa** de respuestas en tiempo real
+- **Estadísticas de uso** por respuesta
+- **Sistema de backup** y exportación
 
 #### Configuración y Seguridad
 
 **Configuración en Meta for Developers:**
 - Callback URL: `https://tu-dominio.com/admin/whatsapp-webhook.php`
-- Verify Token: Configurable desde el panel
-- Webhook Fields: messages, messaging_postbacks
+- Verify Token: Configurable desde el panel (sin hardcodear)
+- Webhook Fields: messages, messaging_postbacks, message_deliveries
 
-**Credenciales requeridas:**
-- Access Token de WhatsApp Business API
-- Phone Number ID del número de WhatsApp Business
-- Webhook Token para verificación de seguridad
+**Credenciales seguras:**
+- Access Token de WhatsApp Business API (almacenado en BD)
+- Phone Number ID del número WhatsApp Business
+- Webhook Token para verificación (configurable)
+- **Sin credenciales hardcodeadas** en el código
 
 **Funciones de prueba integradas:**
 - Prueba de envío de mensajes
@@ -530,40 +565,20 @@ Bot: "Su pedido #WEB-20250914-719 está: En preparación"
 - Validación de configuración
 - Logs detallados de errores
 
-#### Características Técnicas
+#### Características Técnicas Mejoradas
 
+- **Configuración centralizada** usando archivos config/config.php y config/database.php
 - **Limpieza automática** de números telefónicos argentinos (formato 549XXXXXXXXX)
 - **Detección automática** de pedidos relacionados por teléfono
-- **Almacenamiento seguro** de mensajes y logs
+- **Rate limiting** (máximo 1 respuesta automática por minuto por número)
+- **Detección de duplicados** para evitar mensajes repetidos
+- **Almacenamiento seguro** de mensajes y logs en base de datos
 - **Manejo de errores** robusto con fallbacks
-- **Configuración dinámica** desde base de datos
-- **Webhook seguro** con token de verificación
+- **Webhook seguro** con validación de origen
 - **API REST** para integración con otros sistemas
+- **Creación automática** de tablas si no existen
 
-#### Beneficios del Sistema
 
-- **Comunicación automática** con clientes
-- **Reducción de consultas** telefónicas repetitivas
-- **Mejora en experiencia** del cliente
-- **Centralización** de conversaciones
-- **Respuestas instantáneas** 24/7
-- **Seguimiento completo** de interacciones
-- **Integración total** con sistema de pedidos
-
-## 📈 Optimización
-
-### Rendimiento
-- **Consultas SQL optimizadas** con índices apropiados
-- **Caching** de configuraciones
-- **Lazy loading** de imágenes
-- **Minificación** de assets
-- **Compresión** de respuestas
-
-### Escalabilidad
-- **Arquitectura modular**
-- **APIs REST** para integración
-- **Base de datos normalizada**
-- **Código reutilizable**
 
 ## 🛠 Solución de Problemas
 
@@ -647,7 +662,7 @@ define('ENVIRONMENT', 'development');
 
 ## 📋 Changelog
 
-### Versión 2.1.1
+### Versión 2.1.0
 - Sistema completo de gestión de restaurante
 - Pedidos online integrados con panel dedicado
 - Panel de administración responsive
@@ -661,15 +676,15 @@ define('ENVIRONMENT', 'development');
 - Sistema de impresión de tickets personalizable
 - Configuración avanzada del sistema
 - Interfaz optimizada para dispositivos táctiles
-- Sistema de WhatsApp Business API
 
 
 ### Próximas Versiones
-- **v2.1.2** (En desarrollo):
+- **v2.1.1** (En desarrollo):
   - Integración completa con Mercado Pago API
   - Sistema de backup automático de base de datos
   - Mejoras en la interfaz de pagos
   - Panel de gestión de transacciones
+  - 
 ---
 
 **¡Bienvenido al futuro de la gestión de restaurantes!** 🍽️

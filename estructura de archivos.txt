@@ -75,6 +75,7 @@ mi_restaurant_delivery/
 │ ├── order-details.php # Detalle de una orden
 │ ├── print-order.php # Impresión de órdenes
 │ ├── theme-settings.php # Panel principal de configuración de temas
+│ ├── whatsapp-answers.php      # Panel de configuración de respuestas automáticas
 │ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
 │ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
 │ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
