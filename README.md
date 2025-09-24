@@ -523,16 +523,6 @@ El sistema es extensible para agregar:
 - **Múltiples sucursales**
  
 
-README.md
-678 líneas
-
-md
-
-dame solo el codigo de la api de whatsapp que nmodificamos y  a corregir en el readme para reemplazar lo que ya esta con lo nuevo, solo reemplazar, dame el codigo para pegarlo en readme
-
-Aquí está el código actualizado para reemplazar la sección de WhatsApp en el README:
-
-markdown
 ### 📱 Sistema de WhatsApp Business API
 
 El sistema incluye integración completa con WhatsApp Business API para comunicación automática con clientes y gestión de conversaciones avanzadas.
