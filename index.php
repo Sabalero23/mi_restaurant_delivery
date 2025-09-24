@@ -1516,87 +1516,93 @@ p {
 
         // ===== FUNCIONES DE FORMATEO DE TELÉFONO =====
         function formatPhoneNumber(phone) {
-            let cleanPhone = phone.replace(/[^0-9]/g, '');
-            
-            if (cleanPhone.startsWith('54')) {
-                return cleanPhone;
-            }
-            
-            if (cleanPhone.startsWith('9') && cleanPhone.length > 10) {
-                cleanPhone = cleanPhone.substring(1);
-            }
-            
-            if (cleanPhone.startsWith('15')) {
-                cleanPhone = cleanPhone.substring(2);
-            }
-            
-            if (cleanPhone.length === 10) {
-                cleanPhone = '54' + cleanPhone;
-            }
-            
-            if (cleanPhone.length === 8 || cleanPhone.length === 9) {
-                const defaultAreaCode = '3482';
-                cleanPhone = '54' + defaultAreaCode + cleanPhone;
-            }
-            
-            return cleanPhone;
-        }
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    
+    if (cleanPhone.startsWith('549')) {
+        return cleanPhone;
+    }
+    
+    if (cleanPhone.startsWith('54')) {
+        cleanPhone = '9' + cleanPhone;
+        return cleanPhone;
+    }
+    
+    if (cleanPhone.startsWith('9') && cleanPhone.length > 10) {
+        cleanPhone = cleanPhone.substring(1);
+    }
+    
+    if (cleanPhone.startsWith('15')) {
+        cleanPhone = cleanPhone.substring(2);
+    }
+    
+    if (cleanPhone.length === 10) {
+        cleanPhone = '549' + cleanPhone;
+    }
+    
+    if (cleanPhone.length === 8 || cleanPhone.length === 9) {
+        const defaultAreaCode = '3482';
+        cleanPhone = '549' + defaultAreaCode + cleanPhone;
+    }
+    
+    return cleanPhone;
+}
 
         function isValidArgentinePhone(phone) {
-            const cleanPhone = phone.replace(/[^0-9]/g, '');
-            
-            const areaCodes = [
-                '11', '221', '223', '261', '341', '351', '381', '3482', '3476', '342',
-                '376', '388', '299', '2966', '264', '280', '383', '385', '387', '2920', '2944'
-            ];
-            
-            if (cleanPhone.startsWith('54')) {
-                const phoneWithoutCountry = cleanPhone.substring(2);
-                
-                return areaCodes.some(areaCode => 
-                    phoneWithoutCountry.startsWith(areaCode) && 
-                    phoneWithoutCountry.length >= areaCode.length + 6 && 
-                    phoneWithoutCountry.length <= areaCode.length + 8
-                );
-            }
-            
-            return false;
-        }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    
+    const areaCodes = [
+        '11', '221', '223', '261', '341', '351', '381', '3482', '3476', '342',
+        '376', '388', '299', '2966', '264', '280', '383', '385', '387', '2920', '2944'
+    ];
+    
+    if (cleanPhone.startsWith('549')) {
+        const phoneWithoutCountry = cleanPhone.substring(3);
+        
+        return areaCodes.some(areaCode => 
+            phoneWithoutCountry.startsWith(areaCode) && 
+            phoneWithoutCountry.length >= areaCode.length + 6 && 
+            phoneWithoutCountry.length <= areaCode.length + 8
+        );
+    }
+    
+    return false;
+}
+
 
         function showPhonePreview(phone) {
-            const phonePreview = document.getElementById('phonePreview');
-            const phonePreviewText = document.getElementById('phonePreviewText');
-            
-            if (!phonePreview || !phonePreviewText) return;
-            
-            if (phone.length >= 8) {
-                const formattedPhone = formatPhoneNumber(phone);
-                const displayPhone = formattedPhone.replace(/^54/, '+54 ');
-                
-                let prettyPhone = displayPhone;
-                if (prettyPhone.length >= 13) {
-                    prettyPhone = prettyPhone.substring(0, 3) + ' ' + 
-                                 prettyPhone.substring(3, 7) + ' ' + 
-                                 prettyPhone.substring(7);
-                }
-                
-                phonePreviewText.textContent = `WhatsApp: ${prettyPhone}`;
-                phonePreview.style.display = 'block';
-            } else {
-                phonePreview.style.display = 'none';
-            }
+    const phonePreview = document.getElementById('phonePreview');
+    const phonePreviewText = document.getElementById('phonePreviewText');
+    
+    if (!phonePreview || !phonePreviewText) return;
+    
+    if (phone.length >= 8) {
+        const formattedPhone = formatPhoneNumber(phone);
+        const displayPhone = formattedPhone.replace(/^549/, '+54 9 ');
+        
+        let prettyPhone = displayPhone;
+        if (prettyPhone.length >= 15) {
+            prettyPhone = prettyPhone.substring(0, 5) + 
+                         prettyPhone.substring(5, 9) + ' ' + 
+                         prettyPhone.substring(9);
         }
+        
+        phonePreviewText.textContent = `WhatsApp: ${prettyPhone}`;
+        phonePreview.style.display = 'block';
+    } else {
+        phonePreview.style.display = 'none';
+    }
+}
 
         function validatePhoneBeforeSubmit(phone) {
-            const formattedPhone = formatPhoneNumber(phone);
-            
-            if (!isValidArgentinePhone(formattedPhone)) {
-                alert('El número de teléfono no parece ser válido para Argentina. Verifique el código de área.');
-                return false;
-            }
-            
-            return true;
-        }
+    const formattedPhone = formatPhoneNumber(phone);
+    
+    if (!isValidArgentinePhone(formattedPhone)) {
+        alert('El número de teléfono no parece ser válido para Argentina. Verifique el código de área.');
+        return false;
+    }
+    
+    return true;
+}
 
         // ===== FUNCIONES DEL CARRITO =====
         function addToCart(id, name, price) {
@@ -1787,10 +1793,11 @@ p {
             }
             
             const formattedPhone = formatPhoneNumber(phone);
-            if (formattedPhone.length < 12 || formattedPhone.length > 15) {
-                alert('El número de teléfono no tiene un formato válido. Ejemplo: 3482549555');
-                return false;
-            }
+            if (formattedPhone.length < 13 || formattedPhone.length > 16) {
+    alert('El número de teléfono no tiene un formato válido. Ejemplo: 3482549555');
+    return false;
+}
+
             
             if (!validatePhoneBeforeSubmit(phone)) {
                 return false;
