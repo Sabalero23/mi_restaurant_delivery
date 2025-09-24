@@ -16,161 +16,157 @@ function logWhatsAppDebug($message) {
 // REEMPLAZAR LA FUNCIÓN sendWhatsAppMessage CON ESTA VERSIÓN:
 function sendWhatsAppMessage($phone_number, $message, $db, $order_id = null) {
     try {
-        // DEBUG: Log de inicio
-        logWhatsAppDebug("=== INICIO sendWhatsAppMessage ===");
+        logWhatsAppDebug("=== INICIO sendWhatsAppMessage CORREGIDA ===");
         logWhatsAppDebug("Phone: $phone_number, Order ID: $order_id");
         
-        // PASO 2: Obtener configuraciones
+        // PASO 1: Obtener configuraciones exactamente como en whatsapp-messages.php
         $settings = getSettings();
         $whatsapp_enabled = ($settings['whatsapp_enabled'] ?? '0') === '1';
-        $fallback_enabled = ($settings['whatsapp_fallback_enabled'] ?? '1') === '1';
         
-        // DEBUG: Log de configuraciones
-        logWhatsAppDebug("WhatsApp Settings - Enabled: " . ($whatsapp_enabled ? 'YES' : 'NO') . ", Fallback: " . ($fallback_enabled ? 'YES' : 'NO'));
-        logWhatsAppDebug("Access Token present: " . (empty($settings['whatsapp_access_token']) ? 'NO' : 'YES'));
-        logWhatsAppDebug("Phone Number ID present: " . (empty($settings['whatsapp_phone_number_id']) ? 'NO' : 'YES'));
+        logWhatsAppDebug("WhatsApp enabled: " . ($whatsapp_enabled ? 'YES' : 'NO'));
         
-        // DEBUG: Log del mensaje completo (primeros 200 caracteres)
-        logWhatsAppDebug("Message to send: " . substr($message, 0, 200) . (strlen($message) > 200 ? '...' : ''));
+        if (!$whatsapp_enabled) {
+            logWhatsAppDebug("WhatsApp disabled - usando fallback");
+            return sendWhatsAppFallback($phone_number, $message);
+        }
         
-        // PASO 3: Si WhatsApp API está habilitada, intentar enviar por API
-        if ($whatsapp_enabled) {
-            logWhatsAppDebug("WhatsApp API is ENABLED - proceeding with API send");
+        // PASO 2: Verificar credenciales directamente
+        $access_token = $settings['whatsapp_access_token'] ?? '';
+        $phone_number_id = $settings['whatsapp_phone_number_id'] ?? '';
+        
+        logWhatsAppDebug("Access token present: " . (!empty($access_token) ? 'YES' : 'NO'));
+        logWhatsAppDebug("Phone number ID present: " . (!empty($phone_number_id) ? 'YES' : 'NO'));
+        
+        if (empty($access_token) || empty($phone_number_id)) {
+            logWhatsAppDebug("Credenciales faltantes - usando fallback");
+            return sendWhatsAppFallback($phone_number, $message);
+        }
+        
+        // PASO 3: Limpiar número de teléfono
+        $clean_phone = cleanPhoneNumber($phone_number);
+        logWhatsAppDebug("Phone cleaned: $phone_number -> $clean_phone");
+        
+        // PASO 4: Preparar datos para API (igual que en whatsapp-messages.php)
+        $data = [
+            'messaging_product' => 'whatsapp',
+            'to' => $clean_phone,
+            'type' => 'text',
+            'text' => [
+                'body' => $message
+            ]
+        ];
+        
+        logWhatsAppDebug("API data prepared: " . json_encode($data));
+        
+        // PASO 5: Hacer la petición HTTP directamente (sin usar la clase)
+        $url = "https://graph.facebook.com/v18.0/$phone_number_id/messages";
+        logWhatsAppDebug("API URL: $url");
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $access_token,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => 30
+        ]);
+        
+        logWhatsAppDebug("cURL initialized, sending request...");
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+        
+        logWhatsAppDebug("cURL response - HTTP Code: $http_code");
+        logWhatsAppDebug("cURL error: " . ($curl_error ?: 'None'));
+        logWhatsAppDebug("API response: " . substr($response, 0, 200) . '...');
+        
+        if ($curl_error) {
+            logWhatsAppDebug("cURL error occurred - usando fallback");
+            return sendWhatsAppFallback($phone_number, $message);
+        }
+        
+        $decoded = json_decode($response, true);
+        
+        if ($http_code === 200 && isset($decoded['messages'])) {
+            logWhatsAppDebug("API SUCCESS - Message sent successfully");
             
-            try {
-                $whatsapp = new WhatsAppAPI();
-                logWhatsAppDebug("WhatsAppAPI class instantiated successfully");
-                
-                if ($whatsapp->isConfigured()) {
-                    logWhatsAppDebug("WhatsApp API is CONFIGURED - attempting to send message");
-                    
-                    // DEBUG: Verificar el número de teléfono antes del envío
-                    logWhatsAppDebug("Original phone: $phone_number");
-                    
-                    $result = $whatsapp->sendTextMessage($phone_number, $message);
-                    
-                    logWhatsAppDebug("API call completed. Result: " . json_encode($result));
-                    
-                    if ($result['success']) {
-                        logWhatsAppDebug("WhatsApp API: Message sent SUCCESSFULLY");
-                        logWhatsAppDebug("Message ID: " . ($result['message_id'] ?? 'No ID provided'));
-                        
-                        // Guardar mensaje en base de datos
-                        $save_result = saveWhatsAppMessage($db, $phone_number, $message, $result['message_id'] ?? null, $order_id);
-                        logWhatsAppDebug("Database save result: " . ($save_result ? 'SUCCESS' : 'FAILED'));
-                        
-                        logWhatsAppDebug("=== RESULTADO: ENVIADO POR API ===");
-                        
-                        return [
-                            'success' => true,
-                            'method' => 'api',
-                            'message_id' => $result['message_id'] ?? null,
-                            'auto_sent' => true
-                        ];
-                    } else {
-                        logWhatsAppDebug("WhatsApp API FAILED");
-                        logWhatsAppDebug("Error details: " . json_encode($result));
-                        
-                        // Si falla la API y el fallback está habilitado
-                        if ($fallback_enabled) {
-                            logWhatsAppDebug("Using fallback method (WhatsApp Web)");
-                            $fallback_result = sendWhatsAppFallback($phone_number, $message);
-                            logWhatsAppDebug("=== RESULTADO: FALLBACK A WHATSAPP WEB ===");
-                            return $fallback_result;
-                        } else {
-                            logWhatsAppDebug("Fallback disabled - returning API error");
-                            logWhatsAppDebug("=== RESULTADO: ERROR SIN FALLBACK ===");
-                            return [
-                                'success' => false,
-                                'method' => 'api',
-                                'error' => $result['error'] ?? 'Error de API',
-                                'auto_sent' => false
-                            ];
-                        }
-                    }
-                } else {
-                    logWhatsAppDebug("WhatsApp API NOT CONFIGURED");
-                    logWhatsAppDebug("isConfigured() returned false");
-                    
-                    if ($fallback_enabled) {
-                        logWhatsAppDebug("Using fallback (API not configured)");
-                        $fallback_result = sendWhatsAppFallback($phone_number, $message);
-                        logWhatsAppDebug("=== RESULTADO: FALLBACK (API NO CONFIGURADA) ===");
-                        return $fallback_result;
-                    } else {
-                        logWhatsAppDebug("=== RESULTADO: ERROR (API NO CONFIGURADA, FALLBACK DESHABILITADO) ===");
-                        return [
-                            'success' => false,
-                            'method' => 'none',
-                            'error' => 'WhatsApp API no configurada y fallback deshabilitado',
-                            'auto_sent' => false
-                        ];
-                    }
-                }
-            } catch (Exception $api_exception) {
-                logWhatsAppDebug("EXCEPTION in API handling: " . $api_exception->getMessage());
-                logWhatsAppDebug("API Exception trace: " . $api_exception->getTraceAsString());
-                
-                if ($fallback_enabled) {
-                    logWhatsAppDebug("Using fallback due to API exception");
-                    $fallback_result = sendWhatsAppFallback($phone_number, $message);
-                    logWhatsAppDebug("=== RESULTADO: FALLBACK (EXCEPTION EN API) ===");
-                    return $fallback_result;
-                } else {
-                    logWhatsAppDebug("=== RESULTADO: ERROR (EXCEPTION EN API, FALLBACK DESHABILITADO) ===");
-                    return [
-                        'success' => false,
-                        'method' => 'error',
-                        'error' => $api_exception->getMessage(),
-                        'auto_sent' => false
-                    ];
-                }
-            }
+            $message_id = $decoded['messages'][0]['id'] ?? ('sent_' . time() . '_' . rand(1000, 9999));
+            logWhatsAppDebug("Message ID: $message_id");
+            
+            // PASO 6: Guardar en base de datos
+            $save_result = saveWhatsAppMessage($db, $phone_number, $message, $message_id, $order_id);
+            logWhatsAppDebug("Database save result: " . ($save_result ? 'SUCCESS' : 'FAILED'));
+            
+            logWhatsAppDebug("=== RESULTADO: ENVIADO POR API ===");
+            
+            return [
+                'success' => true,
+                'method' => 'api',
+                'message_id' => $message_id,
+                'auto_sent' => true
+            ];
         } else {
-            logWhatsAppDebug("WhatsApp API is DISABLED in settings");
+            logWhatsAppDebug("API FAILED - HTTP $http_code");
+            logWhatsAppDebug("Error response: " . json_encode($decoded));
             
-            // Si la API está deshabilitada, usar fallback si está habilitado
-            if ($fallback_enabled) {
-                logWhatsAppDebug("Using fallback (API disabled)");
-                $fallback_result = sendWhatsAppFallback($phone_number, $message);
-                logWhatsAppDebug("=== RESULTADO: FALLBACK (API DESHABILITADA) ===");
-                return $fallback_result;
-            } else {
-                logWhatsAppDebug("=== RESULTADO: ERROR (API DESHABILITADA, FALLBACK DESHABILITADO) ===");
-                return [
-                    'success' => false,
-                    'method' => 'none',
-                    'error' => 'WhatsApp deshabilitado',
-                    'auto_sent' => false
-                ];
-            }
+            // En caso de error, usar fallback
+            logWhatsAppDebug("Using fallback due to API error");
+            return sendWhatsAppFallback($phone_number, $message);
         }
         
     } catch (Exception $e) {
-        logWhatsAppDebug("MAIN EXCEPTION: " . $e->getMessage());
+        logWhatsAppDebug("EXCEPTION in sendWhatsAppMessage: " . $e->getMessage());
         logWhatsAppDebug("Exception trace: " . $e->getTraceAsString());
         
-        // En caso de error, usar fallback si está habilitado
-        $settings = getSettings();
-        $fallback_enabled = ($settings['whatsapp_fallback_enabled'] ?? '1') === '1';
+        // En caso de excepción, usar fallback
+        return sendWhatsAppFallback($phone_number, $message);
         
-        if ($fallback_enabled) {
-            logWhatsAppDebug("Using fallback due to main exception");
-            $fallback_result = sendWhatsAppFallback($phone_number, $message);
-            logWhatsAppDebug("=== RESULTADO: FALLBACK (MAIN EXCEPTION) ===");
-            return $fallback_result;
-        } else {
-            logWhatsAppDebug("=== RESULTADO: ERROR (MAIN EXCEPTION, FALLBACK DESHABILITADO) ===");
-            return [
-                'success' => false,
-                'method' => 'error',
-                'error' => $e->getMessage(),
-                'auto_sent' => false
-            ];
-        }
     } finally {
         logWhatsAppDebug("=== FIN sendWhatsAppMessage ===\n");
     }
+}
+
+// FUNCIÓN AUXILIAR para limpiar números (igual que en whatsapp_api.php)
+function cleanPhoneNumber($phone) {
+    // Remover todo excepto números
+    $clean = preg_replace('/[^0-9]/', '', $phone);
+    
+    // Remover 0 inicial si existe
+    $clean = ltrim($clean, '0');
+    
+    // Para Argentina: convertir a formato 549XXXXXXXXX
+    
+    // Si ya tiene formato correcto
+    if (preg_match('/^549\d{9}$/', $clean)) {
+        return $clean;
+    }
+    
+    // Corregir formato con 9 duplicado: 5493482599994 -> 549348259994
+    if (preg_match('/^549(\d{3})9(\d{6})$/', $clean, $matches)) {
+        return '549' . $matches[1] . $matches[2];
+    }
+    
+    // Sin código de país: 3482599994 -> 549348259994
+    if (preg_match('/^9?(\d{3})(\d{6})$/', $clean, $matches)) {
+        return '549' . $matches[1] . $matches[2];
+    }
+    
+    // Con 54 pero formato incorrecto
+    if (preg_match('/^54(\d+)$/', $clean, $matches)) {
+        $remaining = $matches[1];
+        if (preg_match('/^9?(\d{3})(\d{6})$/', $remaining, $submatches)) {
+            return '549' . $submatches[1] . $submatches[2];
+        }
+    }
+    
+    return $clean;
 }
 
 $auth = new Auth();

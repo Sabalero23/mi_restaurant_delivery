@@ -943,6 +943,25 @@ p {
 .nav-link:hover {
     color: #f8f9fa !important;
 }
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); 
+    }
+    70% { 
+        transform: scale(1.05); 
+        box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); 
+    }
+    100% { 
+        transform: scale(1); 
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); 
+    }
+}
 </style>
 </head>
 <body>
@@ -1243,15 +1262,38 @@ p {
             <div class="modal-content text-center">
                 <div class="modal-body p-4">
                     <div id="order-success" class="d-none">
-                        <i class="fas fa-check-circle success-icon"></i>
-                        <h4 class="text-success mb-3">¡Pedido Enviado!</h4>
-                        <p class="mb-3">Su pedido <strong id="order-number-display"></strong> ha sido enviado correctamente.</p>
-                        <p class="text-muted mb-4">Recibirá una confirmación por WhatsApp en los próximos minutos con el tiempo estimado de entrega.</p>
-                        <div class="alert alert-info">
-                            <i class="fas fa-clock me-2"></i>
-                            Tiempo estimado: <strong>30-45 minutos</strong>
-                        </div>
-                    </div>
+    <i class="fas fa-check-circle success-icon"></i>
+    <h4 class="text-success mb-3">¡Pedido Registrado!</h4>
+    <p class="mb-3">Su pedido <strong id="order-number-display"></strong> ha sido registrado correctamente.</p>
+    
+    <div class="alert alert-warning mb-4">
+        <i class="fas fa-whatsapp me-2"></i>
+        <strong>PASO FINAL OBLIGATORIO:</strong><br>
+        Debe enviar el WhatsApp para confirmar su pedido y recibir actualizaciones.
+    </div>
+    
+    <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>¿Por qué es necesario?</strong><br>
+        Para poder enviarle confirmación, tiempo de entrega y actualizaciones del estado de su pedido.
+    </div>
+    
+    <div class="alert alert-success mb-3">
+        <i class="fas fa-clock me-2"></i>
+        Tiempo estimado: <strong>30-45 minutos</strong> (una vez confirmado)
+    </div>
+    
+    <!-- BOTÓN PARA ABRIR WHATSAPP -->
+    <div class="text-center mb-3">
+        <button id="open-whatsapp-btn" class="btn btn-success btn-lg pulse" 
+                style="background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); border: none;">
+            <i class="fab fa-whatsapp me-2"></i>
+            Enviar WhatsApp Ahora
+        </button>
+    </div>
+    
+    <small class="text-muted">Al hacer clic se abrirá WhatsApp con el mensaje preparado</small>
+</div>
                     
                     <div id="order-error" class="d-none">
                         <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 4rem;"></i>
@@ -1872,12 +1914,37 @@ p {
             } : null
         };
         
-        console.log('Enviando pedido:', orderData);
+
+        
+        // Validaciones adicionales
+        if (!orderData.customer_name || orderData.customer_name.length === 0) {
+            throw new Error('Nombre del cliente vacío');
+        }
+        
+        if (!orderData.customer_phone || orderData.customer_phone.length === 0) {
+            throw new Error('Teléfono del cliente vacío');
+        }
+        
+        if (!orderData.customer_address || orderData.customer_address.length === 0) {
+            throw new Error('Dirección del cliente vacía');
+        }
+        
+        if (!orderData.items || orderData.items.length === 0) {
+            throw new Error('No hay items en el carrito');
+        }
+        
+        // Validar que todos los items tengan los campos necesarios
+        orderData.items.forEach((item, index) => {
+            if (!item.id || !item.name || !item.price || !item.quantity) {
+                throw new Error(`Item ${index + 1} tiene datos incompletos: ${JSON.stringify(item)}`);
+            }
+        });
         
         document.getElementById('loadingOverlay').style.display = 'flex';
         
         const customerModal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
         customerModal.hide();
+
         
         const response = await fetch('admin/api/online-orders.php', {
             method: 'POST',
@@ -1887,7 +1954,17 @@ p {
             body: JSON.stringify(orderData)
         });
         
-        const result = await response.json();
+        // Intentar leer la respuesta como texto primero
+        const responseText = await response.text();
+        
+        // Intentar parsear como JSON
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('Error parseando respuesta JSON:', parseError);
+            throw new Error('Respuesta del servidor no es JSON válido: ' + responseText.substring(0, 200));
+        }
         
         document.getElementById('loadingOverlay').style.display = 'none';
         
@@ -1895,6 +1972,16 @@ p {
             document.getElementById('order-number-display').textContent = result.order_number;
             document.getElementById('order-success').classList.remove('d-none');
             document.getElementById('order-error').classList.add('d-none');
+            
+            // Preparar datos para WhatsApp
+            const whatsappData = {
+                orderNumber: result.order_number,
+                customerName: name,
+                customerPhone: formattedPhone,
+                customerAddress: fullAddress,
+                items: cart,
+                total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+            };
             
             // Limpiar carrito y formulario
             clearCart();
@@ -1912,25 +1999,41 @@ p {
             // Limpiar Google Maps de forma segura
             try {
                 if (window.addressAutocomplete && typeof window.addressAutocomplete.setComponentRestrictions === 'function') {
-                    // Limpiar el input en lugar de establecer place como null
                     const addressInput = document.getElementById('customerAddress');
                     if (addressInput) {
                         addressInput.value = '';
                     }
-                    // Resetear la función que obtiene detalles de dirección
                     window.getSelectedAddressDetails = () => null;
                 }
             } catch (mapsError) {
                 console.warn('Error al limpiar Google Maps (no crítico):', mapsError);
-                // No es un error crítico, el pedido ya se procesó correctamente
             }
             
             const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
             statusModal.show();
             
+            // Configurar botón de WhatsApp después de mostrar el modal
+            setTimeout(() => {
+                const whatsappBtn = document.getElementById('open-whatsapp-btn');
+                if (whatsappBtn) {
+                    whatsappBtn.addEventListener('click', function() {
+                        sendWhatsAppNotification(window.pendingWhatsAppData);
+                    });
+                    
+                    // Auto-click después de 1 segundo para que sea "automático"
+                    setTimeout(() => {
+                        whatsappBtn.click();
+                    }, 1000);
+                }
+            }, 500);
+            
+            // Guardar datos para WhatsApp globalmente
+            window.pendingWhatsAppData = whatsappData;
+            
             trackEvent('purchase', 'ecommerce', result.order_number);
             
         } else {
+            console.error('Error en la respuesta:', result);
             document.getElementById('error-message').textContent = result.message || 'Error al procesar el pedido';
             document.getElementById('order-success').classList.add('d-none');
             document.getElementById('order-error').classList.remove('d-none');
@@ -1939,15 +2042,14 @@ p {
             statusModal.show();
         }
     } catch (error) {
+        console.error('Error completo:', error);
         document.getElementById('loadingOverlay').style.display = 'none';
-        document.getElementById('error-message').textContent = 'Error de conexión. Verifique su internet y vuelva a intentar.';
+        document.getElementById('error-message').textContent = 'Error: ' + error.message;
         document.getElementById('order-success').classList.add('d-none');
         document.getElementById('order-error').classList.remove('d-none');
         
         const statusModal = new bootstrap.Modal(document.getElementById('orderStatusModal'));
         statusModal.show();
-        
-        console.error('Error al enviar pedido:', error);
     } finally {
         isSubmitting = false;
     }
@@ -2108,6 +2210,93 @@ p {
                 console.log(`${num} -> ${formatted} (${isValid ? 'Válido' : 'Inválido'})`);
             });
         }
+        
+        function sendWhatsAppNotification(orderData) {
+    try {
+        // Número de WhatsApp del restaurante
+        const restaurantWhatsApp = '<?php echo preg_replace("/[^0-9]/", "", $whatsapp_number ?? ""); ?>';
+        
+        console.log('Número de WhatsApp del restaurante:', restaurantWhatsApp);
+        
+        if (!restaurantWhatsApp || restaurantWhatsApp.length < 10) {
+            alert('Error: Número de WhatsApp del restaurante no configurado correctamente.');
+            return;
+        }
+        
+        // Construir mensaje
+        let message = `🍽️ *NUEVO PEDIDO ONLINE*\n\n`;
+        message += `📋 *Pedido:* ${orderData.orderNumber}\n`;
+        message += `👤 *Cliente:* ${orderData.customerName}\n`;
+        message += `📱 *Teléfono:* ${orderData.customerPhone}\n`;
+        message += `📍 *Dirección:* ${orderData.customerAddress}\n\n`;
+        
+        message += `🛍️ *PRODUCTOS:*\n`;
+        orderData.items.forEach(item => {
+            message += `• ${item.name} x${item.quantity} - ${formatPrice(item.price * item.quantity)}\n`;
+        });
+        
+        message += `\n💰 *TOTAL: ${formatPrice(orderData.total)}*\n\n`;
+        message += `⏰ Pedido realizado: ${new Date().toLocaleString('es-AR')}\n\n`;
+        message += `✅ Pedido confirmado desde la página web`;
+        
+        // URL de WhatsApp
+        const whatsappUrl = `https://wa.me/${restaurantWhatsApp}?text=${encodeURIComponent(message)}`;
+        
+        // Detectar dispositivo móvil
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            // En móviles, intentar abrir la app primero
+            const whatsappApp = `whatsapp://send?phone=${restaurantWhatsApp}&text=${encodeURIComponent(message)}`;
+            window.location.href = whatsappApp;
+            
+            // Fallback a web después de 2 segundos
+            setTimeout(() => {
+                window.open(whatsappUrl, '_blank');
+            }, 2000);
+        } else {
+            // En desktop, abrir WhatsApp Web
+            window.open(whatsappUrl, '_blank');
+        }
+        
+        // Cambiar texto del botón
+        const btn = document.getElementById('open-whatsapp-btn');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>WhatsApp Abierto';
+            btn.disabled = true;
+            btn.classList.remove('pulse');
+        }
+        
+        console.log('WhatsApp abierto para pedido:', orderData.orderNumber);
+        trackEvent('whatsapp_opened', 'communication', orderData.orderNumber);
+        
+    } catch (error) {
+        console.error('Error enviando WhatsApp:', error);
+        alert('Error al abrir WhatsApp: ' + error.message);
+    }
+}
+
+
+// 3. AGREGAR FUNCIÓN AUXILIAR PARA OBTENER NÚMERO DE WHATSAPP:
+
+function getRestaurantWhatsApp() {
+    // Esta función puede ser útil para validar el número
+    const whatsappNumber = '<?php echo $whatsapp_number ?? ""; ?>';
+    const cleanNumber = whatsappNumber.replace(/[^0-9]/g, '');
+    
+    // Formatear número argentino para WhatsApp
+    if (cleanNumber.startsWith('54')) {
+        return cleanNumber;
+    } else if (cleanNumber.startsWith('9') && cleanNumber.length > 10) {
+        return '54' + cleanNumber;
+    } else if (cleanNumber.length === 10) {
+        return '549' + cleanNumber;
+    } else if (cleanNumber.length >= 8) {
+        return '5493482' + cleanNumber; // Código de área por defecto
+    }
+    
+    return cleanNumber;
+}
     </script>
     
     

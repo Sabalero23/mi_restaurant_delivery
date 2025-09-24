@@ -357,8 +357,11 @@ function validateArgentinePhone($phone) {
     // Limpiar número
     $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
     
-    // Debe empezar con 54 (código de Argentina)
-    if (!str_starts_with($cleanPhone, '54')) {
+    error_log("Validando teléfono: $phone -> $cleanPhone (longitud: " . strlen($cleanPhone) . ")");
+    
+    // El número debe empezar con 549 (como lo formatea el frontend)
+    if (!str_starts_with($cleanPhone, '549')) {
+        error_log("Teléfono no empieza con 549");
         return false;
     }
     
@@ -371,7 +374,7 @@ function validateArgentinePhone($phone) {
         '341',  // Rosario
         '351',  // Córdoba
         '381',  // Tucumán
-        '3482', // Santa Fe - Esperanza/Rafaela
+        '3482', // Santa Fe - Esperanza/Rafaela/Avellaneda
         '3476', // Santa Fe - Reconquista
         '342',  // Santa Fe Capital
         '376',  // Misiones
@@ -394,40 +397,54 @@ function validateArgentinePhone($phone) {
         '3858', // Marcos Juárez
     ];
     
-    // Remover código de país (54)
-    $phoneWithoutCountry = substr($cleanPhone, 2);
+    // Remover código de país (549)
+    $phoneWithoutCountry = substr($cleanPhone, 3);
+    
+    error_log("Teléfono sin código de país: $phoneWithoutCountry");
     
     // Verificar si empieza con un código de área válido
     foreach ($valid_area_codes as $areaCode) {
         if (str_starts_with($phoneWithoutCountry, $areaCode)) {
             $remaining = substr($phoneWithoutCountry, strlen($areaCode));
+            $remainingLength = strlen($remaining);
+            
+            error_log("Código de área encontrado: $areaCode, número restante: $remaining (longitud: $remainingLength)");
+            
             // El número local debe tener entre 6 y 8 dígitos
-            if (strlen($remaining) >= 6 && strlen($remaining) <= 8) {
+            if ($remainingLength >= 6 && $remainingLength <= 8) {
+                error_log("Teléfono válido");
                 return true;
+            } else {
+                error_log("Longitud del número local inválida: $remainingLength");
             }
         }
     }
     
+    error_log("No se encontró código de área válido");
     return false;
 }
 
+// También actualizar la función formatPhoneForDisplay para ser consistente
 function formatPhoneForDisplay($phone) {
     $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
     
-    if (str_starts_with($cleanPhone, '54')) {
-        // Formato: +54 XXXX XXXXXX
-        $country = '+54';
-        $phoneWithoutCountry = substr($cleanPhone, 2);
+    if (str_starts_with($cleanPhone, '549')) {
+        // Formato: +54 9 XXXX XXXXXX
+        $country = '+54 9';
+        $phoneWithoutCountry = substr($cleanPhone, 3); // Remover '549'
         
         // Detectar código de área
-        $area_codes = ['11', '221', '223', '261', '341', '351', '381', '3482', '3476', '342'];
+        $area_codes = [
+            '11', '221', '223', '261', '341', '351', '381', 
+            '3482', '3476', '342', '376', '388', '299', '2966'
+        ];
         
         foreach ($area_codes as $areaCode) {
             if (str_starts_with($phoneWithoutCountry, $areaCode)) {
                 $area = $areaCode;
                 $local = substr($phoneWithoutCountry, strlen($areaCode));
                 
-                // Formatear número local
+                // Formatear número local según longitud
                 if (strlen($local) == 8) {
                     $local = substr($local, 0, 4) . '-' . substr($local, 4);
                 } elseif (strlen($local) == 7) {
@@ -441,11 +458,14 @@ function formatPhoneForDisplay($phone) {
         }
         
         // Si no encuentra código de área conocido, formato simple
-        return "$country " . substr($phoneWithoutCountry, 0, 4) . " " . substr($phoneWithoutCountry, 4);
+        if (strlen($phoneWithoutCountry) >= 8) {
+            return "$country " . substr($phoneWithoutCountry, 0, 4) . " " . substr($phoneWithoutCountry, 4);
+        }
     }
     
     return $phone; // Retornar original si no tiene formato esperado
 }
+
 
 function calculateTimeElapsed($created_at) {
     $created = new DateTime($created_at);
