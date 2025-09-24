@@ -392,8 +392,6 @@ Sistema completo de gestión de perfiles personales para todos los usuarios del 
 - **Responsividad completa** para móviles y tablets
 - **Accesibilidad mejorada** con labels y ARIA
 
-```
-
 Este módulo proporciona a cada usuario control total sobre su información personal y configuración de cuenta, manteniendo la seguridad y consistencia del sistema.
 
 ### ⚙️ Configuración Avanzada
