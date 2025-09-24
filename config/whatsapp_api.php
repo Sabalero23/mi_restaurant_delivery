@@ -1,5 +1,5 @@
 <?php
-// config/whatsapp_api.php - Configuración WhatsApp Business API
+// config/whatsapp_api.php - ConfiguraciÃ³n WhatsApp Business API - VERSIÓN CORREGIDA
 
 class WhatsAppAPI {
     private $access_token;
@@ -67,39 +67,39 @@ class WhatsAppAPI {
      * Limpiar número de teléfono - Corregido para Argentina
      */
     private function cleanPhoneNumber($phone) {
-    // Remover todo excepto números
-    $clean = preg_replace('/[^0-9]/', '', $phone);
-    
-    // Remover 0 inicial si existe
-    $clean = ltrim($clean, '0');
-    
-    // Para Argentina: convertir a formato 549XXXXXXXXX
-    
-    // Si ya tiene formato correcto
-    if (preg_match('/^549\d{9}$/', $clean)) {
+        // Remover todo excepto números
+        $clean = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Remover 0 inicial si existe
+        $clean = ltrim($clean, '0');
+        
+        // Para Argentina: convertir a formato 549XXXXXXXXX
+        
+        // Si ya tiene formato correcto
+        if (preg_match('/^549\d{9}$/', $clean)) {
+            return $clean;
+        }
+        
+        // Corregir formato con 9 duplicado: 5493482599994 -> 549348259994
+        if (preg_match('/^549(\d{3})9(\d{6})$/', $clean, $matches)) {
+            return '549' . $matches[1] . $matches[2];
+        }
+        
+        // Sin código de país: 3482599994 -> 549348259994
+        if (preg_match('/^9?(\d{3})(\d{6})$/', $clean, $matches)) {
+            return '549' . $matches[1] . $matches[2];
+        }
+        
+        // Con 54 pero formato incorrecto
+        if (preg_match('/^54(\d+)$/', $clean, $matches)) {
+            $remaining = $matches[1];
+            if (preg_match('/^9?(\d{3})(\d{6})$/', $remaining, $submatches)) {
+                return '549' . $submatches[1] . $submatches[2];
+            }
+        }
+        
         return $clean;
     }
-    
-    // Corregir formato con 9 duplicado: 5493482599994 -> 549348259994
-    if (preg_match('/^549(\d{3})9(\d{6})$/', $clean, $matches)) {
-        return '549' . $matches[1] . $matches[2];
-    }
-    
-    // Sin código de país: 3482599994 -> 549348259994
-    if (preg_match('/^9?(\d{3})(\d{6})$/', $clean, $matches)) {
-        return '549' . $matches[1] . $matches[2];
-    }
-    
-    // Con 54 pero formato incorrecto
-    if (preg_match('/^54(\d+)$/', $clean, $matches)) {
-        $remaining = $matches[1];
-        if (preg_match('/^9?(\d{3})(\d{6})$/', $remaining, $submatches)) {
-            return '549' . $submatches[1] . $submatches[2];
-        }
-    }
-    
-    return $clean;
-}
     
     /**
      * Realizar petición HTTP a la API
@@ -207,45 +207,6 @@ class WhatsAppAPI {
     }
 }
 
-// Función helper para enviar WhatsApp con fallback
-function sendWhatsAppMessage($phone, $message, $fallback = true) {
-    $whatsapp = new WhatsAppAPI();
-    
-    if (!$whatsapp->isConfigured()) {
-        if ($fallback) {
-            // Fallback al método actual
-            return [
-                'success' => true,
-                'method' => 'fallback',
-                'url' => generateWhatsAppUrl($phone, $message)
-            ];
-        } else {
-            return [
-                'success' => false,
-                'error' => 'WhatsApp API no configurada'
-            ];
-        }
-    }
-    
-    $result = $whatsapp->sendTextMessage($phone, $message);
-    
-    if (!$result['success'] && $fallback) {
-        // Si falla la API, usar método de fallback
-        return [
-            'success' => true,
-            'method' => 'fallback',
-            'url' => generateWhatsAppUrl($phone, $message),
-            'api_error' => $result['error']
-        ];
-    }
-    
-    $result['method'] = 'api';
-    return $result;
-}
-
-// Función para generar URL de WhatsApp (método actual como fallback)
-function generateWhatsAppUrl($phone, $message) {
-    $clean_phone = preg_replace('/[^0-9]/', '', $phone);
-    return "https://wa.me/" . $clean_phone . "?text=" . urlencode($message);
-}
+// TODAS LAS FUNCIONES HELPER ESTÁN EN online-orders.php PARA EVITAR DUPLICADOS
+// ESTE ARCHIVO SOLO CONTIENE LA CLASE WhatsAppAPI
 ?>

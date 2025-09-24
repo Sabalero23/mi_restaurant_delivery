@@ -370,22 +370,39 @@ foreach ($required_colors as $color) {
     <!-- Bootstrap CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
     <!-- Tema dinámico -->
-    <?php if (file_exists('../assets/css/generate-theme.php')): ?>
-        <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
-    <?php endif; ?>
-    
+<?php if (file_exists('../assets/css/generate-theme.php')): ?>
+    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+<?php endif; ?>
+
+<?php
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
+?>
     <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
-            --sidebar-width: 280px;
-            --white: #ffffff;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --muted: #6c757d;
-            --border: #e9ecef;
-        }
+/* Extensiones específicas del dashboard */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
         body {
             background: var(--light) !important;
@@ -820,7 +837,25 @@ foreach ($required_colors as $color) {
                 height: 35px;
             }
         }
-    </style>
+    .system-header .container-fluid {
+    height: 60px;
+    display: flex
+;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: white;
+}
+.dropdown-menu.show {
+    display: block;
+    background: var(--primary-gradient);
+}
+
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    background: var(--primary-gradient) !important;
+    border-radius: 10px 10px 0 0;
+}
+</style>
 </head>
 
 <body>

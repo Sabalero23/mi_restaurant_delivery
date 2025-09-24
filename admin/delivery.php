@@ -216,53 +216,80 @@ if (file_exists($theme_file)) {
     );
 }
 ?>
-    <style>
+<style>
         :root {
-    --primary-gradient: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
-    --kitchen-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
-    --sidebar-mobile-width: 100%;
-}
+            --primary-gradient: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
+            --sidebar-width: 280px;
+            --white: #ffffff;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --muted: #6c757d;
+            --border: #e9ecef;
+        }
 
         body {
-    background: #f8f9fa !important;
-    color: #212529 !important;
-    overflow-x: hidden;
-}
+            background: var(--light) !important;
+            overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark) !important;
+        }
 
+        /* FORZAR COLORES CLAROS EN TODOS LOS ELEMENTOS */
+        * {
+            color: #212529 !important;
+        }
+
+        /* Mobile Top Bar */
         .mobile-topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1040;
-    background: linear-gradient(135deg, <?php echo $current_theme['warning_color']; ?>, <?php echo $current_theme['accent_color']; ?>);
-    color: var(--text-white) !important;
-    padding: 1rem;
-    display: none;
-}
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            background: var(--primary-gradient);
+            color: var(--white) !important;
+            padding: 1rem;
+            display: none;
+        }
 
+        .mobile-topbar h5, .mobile-topbar * {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--white) !important;
+        }
 
         .menu-toggle {
             background: none;
             border: none;
-            color: white;
+            color: var(--white) !important;
             font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.3s;
         }
 
-        /* Sidebar */
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: var(--kitchen-sidebar-width);
-    height: 100vh;
-    background: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
-    color: var(--text-white) !important;
-    z-index: 1030;
-    transition: transform var(--transition-base);
-    overflow-y: auto;
-    padding: 1.5rem;
-}
+        .menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Sidebar - mantener colores del tema */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--primary-gradient);
+            color: var(--white) !important;
+            z-index: 1030;
+            transition: transform 0.3s ease-in-out;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar * {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
 
         .sidebar-backdrop {
             position: fixed;
@@ -273,10 +300,17 @@ if (file_exists($theme_file)) {
             background: rgba(0, 0, 0, 0.5);
             z-index: 1020;
             display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
         }
 
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, 0.8) !important;
             padding: 0.75rem 1rem;
             border-radius: 8px;
             margin-bottom: 0.25rem;
@@ -289,7 +323,7 @@ if (file_exists($theme_file)) {
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background: rgba(255, 255, 255, 0.1);
-            color: white;
+            color: var(--white) !important;
         }
 
         .sidebar-close {
@@ -298,36 +332,138 @@ if (file_exists($theme_file)) {
             right: 1rem;
             background: rgba(255, 255, 255, 0.1);
             border: none;
-            color: white;
+            color: var(--white) !important;
             width: 40px;
             height: 40px;
             border-radius: 50%;
             display: none;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* Main content - FORZAR FONDO CLARO */
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 2rem;
             min-height: 100vh;
             transition: margin-left 0.3s ease-in-out;
+            background: #f8f9fa !important;
+            color: #212529 !important;
         }
 
+        .main-content * {
+            color: #212529 !important;
+        }
+
+        /* Page header - FORZAR COLORES CLAROS */
         .page-header {
-            background: white;
+            background: #ffffff !important;
+            color: #212529 !important;
             border-radius: 15px;
             padding: 1.5rem;
             margin-bottom: 2rem;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         }
 
+        .page-header h1, .page-header h2, .page-header h3, .page-header h4, .page-header h5, .page-header h6,
+        .page-header p, .page-header span, .page-header div {
+            color: #212529 !important;
+        }
+
+        /* Color picker corregido */
+        .color-input-group {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+        }
+
+        .color-preview {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            border: 3px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background: #ffffff;
+            display: block;
+        }
+
+        .color-preview:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border-color: <?php echo $current_theme['primary_color']; ?>;
+        }
+
+        .color-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            border: none;
+            z-index: 10;
+            background: none;
+        }
+
+        .color-tooltip {
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: var(--white) !important;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .color-tooltip::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-bottom-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .color-input-group:hover .color-tooltip {
+            opacity: 1;
+        }
+
+        /* Statistics cards - FORZAR COLORES CLAROS */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
         .stat-card {
-            background: white;
+            background: #ffffff !important;
+            color: #212529 !important;
             border-radius: 15px;
             padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             text-align: center;
-            transition: transform 0.3s;
-            height: 100%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-card * {
+            color: #212529 !important;
         }
 
         .stat-card:hover {
@@ -338,20 +474,61 @@ if (file_exists($theme_file)) {
             font-size: 2rem;
             font-weight: bold;
             margin-bottom: 0.5rem;
+            color: #212529 !important;
         }
 
         .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            margin-bottom: 1rem;
         }
 
+        /* Cards genéricas - FORZAR COLORES CLAROS */
+        .card {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card * {
+            color: #212529 !important;
+        }
+
+        .card-header {
+            background: #f8f9fa !important;
+            color: #212529 !important;
+            border-bottom: 1px solid #e9ecef;
+            border-radius: 15px 15px 0 0 !important;
+        }
+
+        .card-header * {
+            color: #212529 !important;
+        }
+
+        .card-body {
+            background: #ffffff !important;
+            color: #212529 !important;
+        }
+
+        .card-body * {
+            color: #212529 !important;
+        }
+
+        /* Delivery cards - FORZAR COLORES CLAROS */
         .delivery-card {
-            border: none;
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #e9ecef;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             margin-bottom: 1.5rem;
             transition: all 0.3s ease;
             border-left: 5px solid #28a745;
+        }
+
+        .delivery-card * {
+            color: #212529 !important;
         }
 
         .delivery-card:hover {
@@ -370,6 +547,7 @@ if (file_exists($theme_file)) {
             100% { border-left-color: #dc3545; }
         }
 
+        /* Time badges */
         .time-badge {
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
@@ -379,17 +557,17 @@ if (file_exists($theme_file)) {
 
         .time-normal {
             background: #d4edda;
-            color: #155724;
+            color: #155724 !important;
         }
 
         .time-warning {
             background: #fff3cd;
-            color: #856404;
+            color: #856404 !important;
         }
 
         .time-urgent {
             background: #f8d7da;
-            color: #721c24;
+            color: #721c24 !important;
             animation: pulse 2s infinite;
         }
 
@@ -399,42 +577,91 @@ if (file_exists($theme_file)) {
             100% { transform: scale(1); }
         }
 
+        /* Customer info */
         .customer-info {
-            background: #f8f9fa;
+            background: #f8f9fa !important;
+            color: #212529 !important;
             border-radius: 10px;
             padding: 1rem;
             margin-bottom: 1rem;
+            border: 1px solid #e9ecef;
         }
 
+        .customer-info * {
+            color: #212529 !important;
+        }
+
+        /* Action buttons */
         .action-buttons {
             gap: 0.5rem;
         }
 
         .btn-deliver {
-            background: var(--delivery-gradient);
+            background: linear-gradient(135deg, #28a745, #20c997);
             border: none;
-            color: white;
+            color: white !important;
             transition: all 0.3s;
+        }
+
+        .btn-deliver * {
+            color: white !important;
         }
 
         .btn-deliver:hover {
             background: linear-gradient(135deg, #20c997, #28a745);
-            color: white;
+            color: white !important;
             transform: scale(1.05);
         }
 
+        /* Empty state */
         .empty-state {
             text-align: center;
             padding: 3rem;
-            color: #6c757d;
+            color: #6c757d !important;
+            background: #ffffff !important;
+            border-radius: 15px;
         }
 
         .empty-state i {
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
+            color: #6c757d !important;
         }
 
+        /* Text colors forzados */
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #212529 !important;
+        }
+
+        p, span, div, label, small {
+            color: #212529 !important;
+        }
+
+        /* Form elements - FORZAR COLORES CLAROS */
+        .form-control, .form-select {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+        }
+
+        .form-label {
+            color: #212529 !important;
+            font-weight: 500;
+        }
+
+        /* Responsive */
         @media (max-width: 991.98px) {
             .mobile-topbar {
                 display: flex;
@@ -505,7 +732,25 @@ if (file_exists($theme_file)) {
                 margin-bottom: 0.5rem;
             }
         }
-    </style>
+    .system-header .container-fluid {
+    height: 60px;
+    display: flex
+;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: white;
+}
+.dropdown-menu.show {
+    display: block;
+    background: var(--primary-gradient);
+}
+
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    background: var(--primary-gradient) !important;
+    border-radius: 10px 10px 0 0;
+}
+</style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>

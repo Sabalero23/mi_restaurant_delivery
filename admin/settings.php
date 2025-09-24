@@ -793,6 +793,24 @@ p {
     margin: 0.25rem 0 0 0;
     color: #6c757d;
 }
+.system-header .container-fluid {
+    height: 60px;
+    display: flex
+;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: white;
+}
+.dropdown-menu.show {
+    display: block;
+    background: var(--primary-gradient);
+}
+
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    background: var(--primary-gradient) !important;
+    border-radius: 10px 10px 0 0;
+}
 </style>
 </head>
 <body>

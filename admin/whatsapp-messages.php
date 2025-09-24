@@ -677,7 +677,25 @@ p {
         .conversation-read .messages-container {
             background: #f5f5f5;
         }
-    </style>
+    .system-header .container-fluid {
+    height: 60px;
+    display: flex
+;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: white;
+}
+.dropdown-menu.show {
+    display: block;
+    background: var(--primary-gradient);
+}
+
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    background: var(--primary-gradient) !important;
+    border-radius: 10px 10px 0 0;
+}
+</style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
@@ -1193,6 +1211,146 @@ function closeSidebar() {
     document.body.style.overflow = '';
 }
     </script>
-    </script>
+    <?php
+// Agregar estas funciones al final de whatsapp-messages.php (antes del </body>)
+
+// FUNCIÓN MEJORADA PARA ENVIAR RESPUESTAS DESDE WHATSAPP-MESSAGES
+function sendWhatsAppReply($phone_number, $message, $db) {
+    try {
+        require_once '../config/whatsapp_api.php';
+        
+        $whatsapp = new WhatsAppAPI();
+        
+        if (!$whatsapp->isConfigured()) {
+            return [
+                'success' => false,
+                'error' => 'WhatsApp API no configurada'
+            ];
+        }
+        
+        $result = $whatsapp->sendTextMessage($phone_number, $message);
+        
+        if ($result['success']) {
+            // Guardar mensaje en la conversación
+            $message_id = $result['message_id'] ?? 'sent_' . time() . '_' . rand(1000, 9999);
+            
+            $insert_query = "INSERT INTO whatsapp_messages 
+                (message_id, phone_number, message_type, content, is_from_customer, is_read, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, NOW())";
+            
+            $stmt = $db->prepare($insert_query);
+            $insert_result = $stmt->execute([
+                $message_id,
+                $phone_number,
+                'text',
+                $message,
+                0, // No es del cliente
+                1  // Ya está leído
+            ]);
+            
+            $result['saved_to_db'] = $insert_result;
+            if ($insert_result) {
+                $result['db_message_id'] = $db->lastInsertId();
+            }
+        }
+        
+        return $result;
+        
+    } catch (Exception $e) {
+        error_log("Error sending WhatsApp reply: " . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
+
+// FUNCIÓN PARA CREAR TABLAS SI NO EXISTEN (para whatsapp-messages)
+function ensureWhatsAppTablesExist($db) {
+    try {
+        // Verificar si las tablas ya existen
+        $check_messages = $db->query("SHOW TABLES LIKE 'whatsapp_messages'");
+        $check_logs = $db->query("SHOW TABLES LIKE 'whatsapp_logs'");
+        
+        if ($check_messages->rowCount() == 0) {
+            $sql = "CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id VARCHAR(255) UNIQUE NOT NULL,
+                phone_number VARCHAR(20) NOT NULL,
+                message_type ENUM('text', 'image', 'document', 'audio', 'video', 'location', 'contact') DEFAULT 'text',
+                content TEXT,
+                media_url VARCHAR(500),
+                order_id VARCHAR(50),
+                is_from_customer BOOLEAN DEFAULT 1,
+                is_read BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone_number),
+                INDEX idx_order (order_id),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3";
+            
+            $db->exec($sql);
+        }
+        
+        if ($check_logs->rowCount() == 0) {
+            $sql_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone_number VARCHAR(20) NOT NULL,
+                message_type VARCHAR(50) DEFAULT 'text',
+                message_data TEXT,
+                status ENUM('success', 'error') DEFAULT 'success',
+                api_response TEXT,
+                message_id VARCHAR(255),
+                delivery_status VARCHAR(20),
+                status_updated_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone_number),
+                INDEX idx_message_id (message_id),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3";
+            
+            $db->exec($sql_logs);
+        }
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Error creating WhatsApp tables: " . $e->getMessage());
+        return false;
+    }
+}
+
+// FUNCIÓN PARA LIMPIAR NÚMEROS DE TELÉFONO
+function cleanPhoneNumber($phone) {
+    $clean = preg_replace('/[^0-9]/', '', $phone);
+    $clean = ltrim($clean, '0');
+    
+    if (preg_match('/^549\d{9}$/', $clean)) {
+        return $clean;
+    }
+    
+    if (preg_match('/^549(\d{3})9(\d{6})$/', $clean, $matches)) {
+        return '549' . $matches[1] . $matches[2];
+    }
+    
+    if (preg_match('/^9?(\d{3})(\d{6})$/', $clean, $matches)) {
+        return '549' . $matches[1] . $matches[2];
+    }
+    
+    return $clean;
+}
+
+// Agregar esta función al archivo whatsapp-messages.php
+// (junto con las otras funciones auxiliares que te di anteriormente)
+
+/**
+ * Función para generar URL de WhatsApp Web
+ * Útil como fallback o para abrir conversaciones manualmente
+ */
+function generateWhatsAppUrl($phone, $message) {
+    $clean_phone = preg_replace('/[^0-9]/', '', $phone);
+    return "https://wa.me/" . $clean_phone . "?text=" . urlencode($message);
+}
+?>
 </body>
 </html>

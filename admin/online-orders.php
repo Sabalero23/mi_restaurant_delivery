@@ -4,6 +4,174 @@ require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../config/auth.php';
 require_once '../config/functions.php';
+require_once '../config/whatsapp_api.php';
+
+// AGREGAR ESTA FUNCIÓN AL INICIO DE online-orders.php (después de los require_once)
+function logWhatsAppDebug($message) {
+    $log_file = __DIR__ . '/whatsapp_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($log_file, "[$timestamp] $message\n", FILE_APPEND | LOCK_EX);
+}
+
+// REEMPLAZAR LA FUNCIÓN sendWhatsAppMessage CON ESTA VERSIÓN:
+function sendWhatsAppMessage($phone_number, $message, $db, $order_id = null) {
+    try {
+        // DEBUG: Log de inicio
+        logWhatsAppDebug("=== INICIO sendWhatsAppMessage ===");
+        logWhatsAppDebug("Phone: $phone_number, Order ID: $order_id");
+        
+        // PASO 2: Obtener configuraciones
+        $settings = getSettings();
+        $whatsapp_enabled = ($settings['whatsapp_enabled'] ?? '0') === '1';
+        $fallback_enabled = ($settings['whatsapp_fallback_enabled'] ?? '1') === '1';
+        
+        // DEBUG: Log de configuraciones
+        logWhatsAppDebug("WhatsApp Settings - Enabled: " . ($whatsapp_enabled ? 'YES' : 'NO') . ", Fallback: " . ($fallback_enabled ? 'YES' : 'NO'));
+        logWhatsAppDebug("Access Token present: " . (empty($settings['whatsapp_access_token']) ? 'NO' : 'YES'));
+        logWhatsAppDebug("Phone Number ID present: " . (empty($settings['whatsapp_phone_number_id']) ? 'NO' : 'YES'));
+        
+        // DEBUG: Log del mensaje completo (primeros 200 caracteres)
+        logWhatsAppDebug("Message to send: " . substr($message, 0, 200) . (strlen($message) > 200 ? '...' : ''));
+        
+        // PASO 3: Si WhatsApp API está habilitada, intentar enviar por API
+        if ($whatsapp_enabled) {
+            logWhatsAppDebug("WhatsApp API is ENABLED - proceeding with API send");
+            
+            try {
+                $whatsapp = new WhatsAppAPI();
+                logWhatsAppDebug("WhatsAppAPI class instantiated successfully");
+                
+                if ($whatsapp->isConfigured()) {
+                    logWhatsAppDebug("WhatsApp API is CONFIGURED - attempting to send message");
+                    
+                    // DEBUG: Verificar el número de teléfono antes del envío
+                    logWhatsAppDebug("Original phone: $phone_number");
+                    
+                    $result = $whatsapp->sendTextMessage($phone_number, $message);
+                    
+                    logWhatsAppDebug("API call completed. Result: " . json_encode($result));
+                    
+                    if ($result['success']) {
+                        logWhatsAppDebug("WhatsApp API: Message sent SUCCESSFULLY");
+                        logWhatsAppDebug("Message ID: " . ($result['message_id'] ?? 'No ID provided'));
+                        
+                        // Guardar mensaje en base de datos
+                        $save_result = saveWhatsAppMessage($db, $phone_number, $message, $result['message_id'] ?? null, $order_id);
+                        logWhatsAppDebug("Database save result: " . ($save_result ? 'SUCCESS' : 'FAILED'));
+                        
+                        logWhatsAppDebug("=== RESULTADO: ENVIADO POR API ===");
+                        
+                        return [
+                            'success' => true,
+                            'method' => 'api',
+                            'message_id' => $result['message_id'] ?? null,
+                            'auto_sent' => true
+                        ];
+                    } else {
+                        logWhatsAppDebug("WhatsApp API FAILED");
+                        logWhatsAppDebug("Error details: " . json_encode($result));
+                        
+                        // Si falla la API y el fallback está habilitado
+                        if ($fallback_enabled) {
+                            logWhatsAppDebug("Using fallback method (WhatsApp Web)");
+                            $fallback_result = sendWhatsAppFallback($phone_number, $message);
+                            logWhatsAppDebug("=== RESULTADO: FALLBACK A WHATSAPP WEB ===");
+                            return $fallback_result;
+                        } else {
+                            logWhatsAppDebug("Fallback disabled - returning API error");
+                            logWhatsAppDebug("=== RESULTADO: ERROR SIN FALLBACK ===");
+                            return [
+                                'success' => false,
+                                'method' => 'api',
+                                'error' => $result['error'] ?? 'Error de API',
+                                'auto_sent' => false
+                            ];
+                        }
+                    }
+                } else {
+                    logWhatsAppDebug("WhatsApp API NOT CONFIGURED");
+                    logWhatsAppDebug("isConfigured() returned false");
+                    
+                    if ($fallback_enabled) {
+                        logWhatsAppDebug("Using fallback (API not configured)");
+                        $fallback_result = sendWhatsAppFallback($phone_number, $message);
+                        logWhatsAppDebug("=== RESULTADO: FALLBACK (API NO CONFIGURADA) ===");
+                        return $fallback_result;
+                    } else {
+                        logWhatsAppDebug("=== RESULTADO: ERROR (API NO CONFIGURADA, FALLBACK DESHABILITADO) ===");
+                        return [
+                            'success' => false,
+                            'method' => 'none',
+                            'error' => 'WhatsApp API no configurada y fallback deshabilitado',
+                            'auto_sent' => false
+                        ];
+                    }
+                }
+            } catch (Exception $api_exception) {
+                logWhatsAppDebug("EXCEPTION in API handling: " . $api_exception->getMessage());
+                logWhatsAppDebug("API Exception trace: " . $api_exception->getTraceAsString());
+                
+                if ($fallback_enabled) {
+                    logWhatsAppDebug("Using fallback due to API exception");
+                    $fallback_result = sendWhatsAppFallback($phone_number, $message);
+                    logWhatsAppDebug("=== RESULTADO: FALLBACK (EXCEPTION EN API) ===");
+                    return $fallback_result;
+                } else {
+                    logWhatsAppDebug("=== RESULTADO: ERROR (EXCEPTION EN API, FALLBACK DESHABILITADO) ===");
+                    return [
+                        'success' => false,
+                        'method' => 'error',
+                        'error' => $api_exception->getMessage(),
+                        'auto_sent' => false
+                    ];
+                }
+            }
+        } else {
+            logWhatsAppDebug("WhatsApp API is DISABLED in settings");
+            
+            // Si la API está deshabilitada, usar fallback si está habilitado
+            if ($fallback_enabled) {
+                logWhatsAppDebug("Using fallback (API disabled)");
+                $fallback_result = sendWhatsAppFallback($phone_number, $message);
+                logWhatsAppDebug("=== RESULTADO: FALLBACK (API DESHABILITADA) ===");
+                return $fallback_result;
+            } else {
+                logWhatsAppDebug("=== RESULTADO: ERROR (API DESHABILITADA, FALLBACK DESHABILITADO) ===");
+                return [
+                    'success' => false,
+                    'method' => 'none',
+                    'error' => 'WhatsApp deshabilitado',
+                    'auto_sent' => false
+                ];
+            }
+        }
+        
+    } catch (Exception $e) {
+        logWhatsAppDebug("MAIN EXCEPTION: " . $e->getMessage());
+        logWhatsAppDebug("Exception trace: " . $e->getTraceAsString());
+        
+        // En caso de error, usar fallback si está habilitado
+        $settings = getSettings();
+        $fallback_enabled = ($settings['whatsapp_fallback_enabled'] ?? '1') === '1';
+        
+        if ($fallback_enabled) {
+            logWhatsAppDebug("Using fallback due to main exception");
+            $fallback_result = sendWhatsAppFallback($phone_number, $message);
+            logWhatsAppDebug("=== RESULTADO: FALLBACK (MAIN EXCEPTION) ===");
+            return $fallback_result;
+        } else {
+            logWhatsAppDebug("=== RESULTADO: ERROR (MAIN EXCEPTION, FALLBACK DESHABILITADO) ===");
+            return [
+                'success' => false,
+                'method' => 'error',
+                'error' => $e->getMessage(),
+                'auto_sent' => false
+            ];
+        }
+    } finally {
+        logWhatsAppDebug("=== FIN sendWhatsAppMessage ===\n");
+    }
+}
 
 $auth = new Auth();
 $auth->requireLogin();
@@ -44,125 +212,166 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
 
         switch ($action) {
             case 'accept':
-                $estimated_time = $_POST['estimated_time'] ?? 30;
-                
-                $query = "UPDATE online_orders SET 
-                         status = 'accepted', 
-                         accepted_at = NOW(), 
-                         accepted_by = :user_id,
-                         estimated_time = :estimated_time
-                         WHERE id = :id";
-                
-                $stmt = $db->prepare($query);
-                $result = $stmt->execute([
-                    'user_id' => $_SESSION['user_id'],
-                    'estimated_time' => $estimated_time,
-                    'id' => $order_id
-                ]);
-                
-                if ($result) {
-                    // Obtener datos del pedido para WhatsApp
-                    $order_query = "SELECT * FROM online_orders WHERE id = :id";
-                    $order_stmt = $db->prepare($order_query);
-                    $order_stmt->execute(['id' => $order_id]);
-                    $order = $order_stmt->fetch();
-                    
-                    $whatsapp_message = generateAcceptanceMessage($order, $estimated_time);
-                    
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Pedido aceptado correctamente',
-                        'whatsapp_message' => $whatsapp_message,
-                        'whatsapp_url' => generateWhatsAppUrl($order['customer_phone'], $whatsapp_message)
-                    ]);
-                } else {
-                    throw new Exception('Error al aceptar el pedido');
-                }
-                break;
-                
-            case 'reject':
-                $rejection_reason = $_POST['reason'] ?? 'No especificado';
-                
-                $query = "UPDATE online_orders SET 
-                         status = 'rejected', 
-                         rejection_reason = :reason,
-                         rejected_at = NOW(),
-                         rejected_by = :user_id
-                         WHERE id = :id";
-                
-                $stmt = $db->prepare($query);
-                $result = $stmt->execute([
-                    'reason' => $rejection_reason,
-                    'user_id' => $_SESSION['user_id'],
-                    'id' => $order_id
-                ]);
-                
-                if ($result) {
-                    $order_query = "SELECT * FROM online_orders WHERE id = :id";
-                    $order_stmt = $db->prepare($order_query);
-                    $order_stmt->execute(['id' => $order_id]);
-                    $order = $order_stmt->fetch();
-                    
-                    $whatsapp_message = generateRejectionMessage($order, $rejection_reason);
-                    
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Pedido rechazado',
-                        'whatsapp_message' => $whatsapp_message,
-                        'whatsapp_url' => generateWhatsAppUrl($order['customer_phone'], $whatsapp_message)
-                    ]);
-                } else {
-                    throw new Exception('Error al rechazar el pedido');
-                }
-                break;
-                
-            case 'preparing':
-                $query = "UPDATE online_orders SET status = 'preparing', started_preparing_at = NOW() WHERE id = :id";
-                $stmt = $db->prepare($query);
-                $result = $stmt->execute(['id' => $order_id]);
-                
-                if ($result) {
-                    $order_query = "SELECT * FROM online_orders WHERE id = :id";
-                    $order_stmt = $db->prepare($order_query);
-                    $order_stmt->execute(['id' => $order_id]);
-                    $order = $order_stmt->fetch();
-                    
-                    $whatsapp_message = generatePreparingMessage($order);
-                    
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Pedido marcado como en preparación',
-                        'whatsapp_message' => $whatsapp_message,
-                        'whatsapp_url' => generateWhatsAppUrl($order['customer_phone'], $whatsapp_message)
-                    ]);
-                } else {
-                    throw new Exception('Error al actualizar estado');
-                }
-                break;
-                
-            case 'ready':
-                $query = "UPDATE online_orders SET status = 'ready', ready_at = NOW() WHERE id = :id";
-                $stmt = $db->prepare($query);
-                $result = $stmt->execute(['id' => $order_id]);
-                
-                if ($result) {
-                    $order_query = "SELECT * FROM online_orders WHERE id = :id";
-                    $order_stmt = $db->prepare($order_query);
-                    $order_stmt->execute(['id' => $order_id]);
-                    $order = $order_stmt->fetch();
-                    
-                    $whatsapp_message = generateReadyMessage($order);
-                    
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Pedido listo para entrega',
-                        'whatsapp_message' => $whatsapp_message,
-                        'whatsapp_url' => generateWhatsAppUrl($order['customer_phone'], $whatsapp_message)
-                    ]);
-                } else {
-                    throw new Exception('Error al actualizar estado');
-                }
-                break;
+    $estimated_time = $_POST['estimated_time'] ?? 30;
+    
+    $query = "UPDATE online_orders SET 
+             status = 'accepted', 
+             accepted_at = NOW(), 
+             accepted_by = :user_id,
+             estimated_time = :estimated_time
+             WHERE id = :id";
+    
+    $stmt = $db->prepare($query);
+    $result = $stmt->execute([
+        'user_id' => $_SESSION['user_id'],
+        'estimated_time' => $estimated_time,
+        'id' => $order_id
+    ]);
+    
+    if ($result) {
+        // Obtener datos del pedido
+        $order_query = "SELECT * FROM online_orders WHERE id = :id";
+        $order_stmt = $db->prepare($order_query);
+        $order_stmt->execute(['id' => $order_id]);
+        $order = $order_stmt->fetch();
+        
+        $whatsapp_message = generateAcceptanceMessage($order, $estimated_time);
+        
+        // Enviar WhatsApp (API o Web)
+        $whatsapp_result = sendWhatsAppMessage(
+            $order['customer_phone'], 
+            $whatsapp_message, 
+            $db, 
+            $order_id
+        );
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Pedido aceptado correctamente',
+            'whatsapp_message' => $whatsapp_message,
+            'whatsapp_method' => $whatsapp_result['method'],
+            'whatsapp_url' => $whatsapp_result['whatsapp_url'] ?? null,
+            'auto_sent' => $whatsapp_result['method'] === 'api'
+        ]);
+    } else {
+        throw new Exception('Error al aceptar el pedido');
+    }
+    break;
+
+case 'reject':
+    $rejection_reason = $_POST['reason'] ?? 'No especificado';
+    
+    $query = "UPDATE online_orders SET 
+             status = 'rejected', 
+             rejection_reason = :reason,
+             rejected_at = NOW(),
+             rejected_by = :user_id
+             WHERE id = :id";
+    
+    $stmt = $db->prepare($query);
+    $result = $stmt->execute([
+        'reason' => $rejection_reason,
+        'user_id' => $_SESSION['user_id'],
+        'id' => $order_id
+    ]);
+    
+    if ($result) {
+        $order_query = "SELECT * FROM online_orders WHERE id = :id";
+        $order_stmt = $db->prepare($order_query);
+        $order_stmt->execute(['id' => $order_id]);
+        $order = $order_stmt->fetch();
+        
+        $whatsapp_message = generateRejectionMessage($order, $rejection_reason);
+        
+        // Enviar WhatsApp
+        $whatsapp_result = sendWhatsAppMessage(
+            $order['customer_phone'], 
+            $whatsapp_message, 
+            $db, 
+            $order_id
+        );
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Pedido rechazado',
+            'whatsapp_message' => $whatsapp_message,
+            'whatsapp_method' => $whatsapp_result['method'],
+            'whatsapp_url' => $whatsapp_result['whatsapp_url'] ?? null,
+            'auto_sent' => $whatsapp_result['method'] === 'api'
+        ]);
+    } else {
+        throw new Exception('Error al rechazar el pedido');
+    }
+    break;
+
+case 'preparing':
+    $query = "UPDATE online_orders SET status = 'preparing', started_preparing_at = NOW() WHERE id = :id";
+    $stmt = $db->prepare($query);
+    $result = $stmt->execute(['id' => $order_id]);
+    
+    if ($result) {
+        $order_query = "SELECT * FROM online_orders WHERE id = :id";
+        $order_stmt = $db->prepare($order_query);
+        $order_stmt->execute(['id' => $order_id]);
+        $order = $order_stmt->fetch();
+        
+        $whatsapp_message = generatePreparingMessage($order);
+        
+        // Enviar WhatsApp
+        $whatsapp_result = sendWhatsAppMessage(
+            $order['customer_phone'], 
+            $whatsapp_message, 
+            $db, 
+            $order_id
+        );
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Pedido marcado como en preparación',
+            'whatsapp_message' => $whatsapp_message,
+            'whatsapp_method' => $whatsapp_result['method'],
+            'whatsapp_url' => $whatsapp_result['whatsapp_url'] ?? null,
+            'auto_sent' => $whatsapp_result['method'] === 'api'
+        ]);
+    } else {
+        throw new Exception('Error al actualizar estado');
+    }
+    break;
+
+case 'ready':
+    $query = "UPDATE online_orders SET status = 'ready', ready_at = NOW() WHERE id = :id";
+    $stmt = $db->prepare($query);
+    $result = $stmt->execute(['id' => $order_id]);
+    
+    if ($result) {
+        $order_query = "SELECT * FROM online_orders WHERE id = :id";
+        $order_stmt = $db->prepare($order_query);
+        $order_stmt->execute(['id' => $order_id]);
+        $order = $order_stmt->fetch();
+        
+        $whatsapp_message = generateReadyMessage($order);
+        
+        // Enviar WhatsApp
+        $whatsapp_result = sendWhatsAppMessage(
+            $order['customer_phone'], 
+            $whatsapp_message, 
+            $db, 
+            $order_id
+        );
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Pedido listo para entrega',
+            'whatsapp_message' => $whatsapp_message,
+            'whatsapp_method' => $whatsapp_result['method'],
+            'whatsapp_url' => $whatsapp_result['whatsapp_url'] ?? null,
+            'auto_sent' => $whatsapp_result['method'] === 'api'
+        ]);
+    } else {
+        throw new Exception('Error al actualizar estado');
+    }
+    break;
+
                 
             case 'delivered':
                 $query = "UPDATE online_orders SET status = 'delivered', delivered_at = NOW(), delivered_by = :user_id WHERE id = :id";
@@ -301,6 +510,194 @@ function generateReadyMessage($order) {
     
     return $message;
 }
+
+
+
+
+
+// FUNCIÓN FALLBACK PARA WHATSAPP WEB:
+function sendWhatsAppFallback($phone_number, $message) {
+    $clean_phone = preg_replace('/[^0-9]/', '', $phone_number);
+    $whatsapp_url = "https://wa.me/" . $clean_phone . "?text=" . urlencode($message);
+    
+    error_log("WhatsApp Fallback: Generated URL for $phone_number");
+    
+    return [
+        'success' => true,
+        'method' => 'web',
+        'whatsapp_url' => $whatsapp_url,
+        'message_id' => null,
+        'auto_sent' => false
+    ];
+}
+
+
+// FUNCIÓN PARA GUARDAR MENSAJES EN LA BASE DE DATOS:
+function saveWhatsAppMessage($db, $phone_number, $message, $message_id = null, $order_id = null) {
+    try {
+        logWhatsAppDebug("=== GUARDANDO MENSAJE EN BD ===");
+        logWhatsAppDebug("Phone: $phone_number");
+        logWhatsAppDebug("Message ID: " . ($message_id ?? 'NULL'));
+        logWhatsAppDebug("Order ID: " . ($order_id ?? 'NULL'));
+        
+        // PASO 1: Crear tablas si no existen
+        $tables_created = createWhatsAppTablesIfNotExist($db);
+        logWhatsAppDebug("Tables creation result: " . ($tables_created ? 'SUCCESS' : 'FAILED/EXISTS'));
+        
+        // PASO 2: Generar ID si no se proporciona
+        if (!$message_id) {
+            $message_id = 'sent_' . time() . '_' . rand(1000, 9999);
+            logWhatsAppDebug("Generated message ID: $message_id");
+        }
+        
+        // PASO 3: Preparar order_id para la tabla
+        $whatsapp_order_id = null;
+        if ($order_id) {
+            $whatsapp_order_id = 'online_' . $order_id;
+            logWhatsAppDebug("WhatsApp order ID: $whatsapp_order_id");
+        }
+        
+        // PASO 4: Verificar que la tabla existe
+        $check_table = $db->query("SHOW TABLES LIKE 'whatsapp_messages'");
+        if ($check_table->rowCount() == 0) {
+            logWhatsAppDebug("ERROR: whatsapp_messages table does not exist!");
+            return false;
+        }
+        logWhatsAppDebug("Table whatsapp_messages exists");
+        
+        // PASO 5: Preparar datos para insertar
+        $insert_data = [
+            'message_id' => $message_id,
+            'phone_number' => $phone_number,
+            'content' => $message,
+            'order_id' => $whatsapp_order_id
+        ];
+        logWhatsAppDebug("Insert data prepared: " . json_encode($insert_data));
+        
+        // PASO 6: Insertar mensaje
+        $query = "INSERT INTO whatsapp_messages (
+            message_id, phone_number, message_type, content, 
+            order_id, is_from_customer, is_read, created_at
+        ) VALUES (?, ?, 'text', ?, ?, 0, 1, NOW())";
+        
+        logWhatsAppDebug("Executing query: $query");
+        
+        $stmt = $db->prepare($query);
+        if (!$stmt) {
+            $error = $db->errorInfo();
+            logWhatsAppDebug("PREPARE FAILED: " . json_encode($error));
+            return false;
+        }
+        
+        $result = $stmt->execute([
+            $message_id,
+            $phone_number,
+            $message,
+            $whatsapp_order_id
+        ]);
+        
+        if ($result) {
+            $inserted_id = $db->lastInsertId();
+            logWhatsAppDebug("INSERT SUCCESS: Row ID $inserted_id");
+            logWhatsAppDebug("=== MENSAJE GUARDADO EXITOSAMENTE ===");
+            return true;
+        } else {
+            $error = $stmt->errorInfo();
+            logWhatsAppDebug("INSERT FAILED: " . json_encode($error));
+            return false;
+        }
+        
+    } catch (Exception $e) {
+        logWhatsAppDebug("EXCEPTION in saveWhatsAppMessage: " . $e->getMessage());
+        logWhatsAppDebug("Exception trace: " . $e->getTraceAsString());
+        return false;
+    }
+}
+
+// TAMBIÉN MEJORA la función createWhatsAppTablesIfNotExist
+function createWhatsAppTablesIfNotExist($db) {
+    try {
+        logWhatsAppDebug("=== VERIFICANDO/CREANDO TABLAS ===");
+        
+        // Verificar si las tablas ya existen
+        $check_messages = $db->query("SHOW TABLES LIKE 'whatsapp_messages'");
+        $check_logs = $db->query("SHOW TABLES LIKE 'whatsapp_logs'");
+        
+        $messages_exists = ($check_messages->rowCount() > 0);
+        $logs_exists = ($check_logs->rowCount() > 0);
+        
+        logWhatsAppDebug("whatsapp_messages exists: " . ($messages_exists ? 'YES' : 'NO'));
+        logWhatsAppDebug("whatsapp_logs exists: " . ($logs_exists ? 'YES' : 'NO'));
+        
+        if (!$messages_exists) {
+            logWhatsAppDebug("Creating whatsapp_messages table...");
+            $sql = "CREATE TABLE IF NOT EXISTS whatsapp_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id VARCHAR(255) UNIQUE NOT NULL,
+                phone_number VARCHAR(20) NOT NULL,
+                message_type ENUM('text', 'image', 'document', 'audio', 'video', 'location', 'contact') DEFAULT 'text',
+                content TEXT,
+                media_url VARCHAR(500),
+                order_id VARCHAR(50),
+                is_from_customer BOOLEAN DEFAULT 1,
+                is_read BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone_number),
+                INDEX idx_order (order_id),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3";
+            
+            $result = $db->exec($sql);
+            if ($result !== false) {
+                logWhatsAppDebug("whatsapp_messages table created successfully");
+            } else {
+                $error = $db->errorInfo();
+                logWhatsAppDebug("Failed to create whatsapp_messages table: " . json_encode($error));
+                return false;
+            }
+        }
+        
+        if (!$logs_exists) {
+            logWhatsAppDebug("Creating whatsapp_logs table...");
+            $sql_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone_number VARCHAR(20) NOT NULL,
+                message_type VARCHAR(50) DEFAULT 'text',
+                message_data TEXT,
+                status ENUM('success', 'error') DEFAULT 'success',
+                api_response TEXT,
+                message_id VARCHAR(255),
+                delivery_status VARCHAR(20),
+                status_updated_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_phone (phone_number),
+                INDEX idx_message_id (message_id),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3";
+            
+            $result = $db->exec($sql_logs);
+            if ($result !== false) {
+                logWhatsAppDebug("whatsapp_logs table created successfully");
+            } else {
+                $error = $db->errorInfo();
+                logWhatsAppDebug("Failed to create whatsapp_logs table: " . json_encode($error));
+                return false;
+            }
+        }
+        
+        logWhatsAppDebug("=== TABLAS VERIFICADAS/CREADAS ===");
+        return true;
+        
+    } catch (Exception $e) {
+        logWhatsAppDebug("EXCEPTION in createWhatsAppTablesIfNotExist: " . $e->getMessage());
+        return false;
+    }
+}
+
+
+// FUNCIÓN PARA CREAR TABLAS SI NO EXISTEN:
+
+
 
 function generateWhatsAppUrl($phone, $message) {
     $clean_phone = preg_replace('/[^0-9]/', '', $phone);
@@ -1069,6 +1466,24 @@ p, small {
     box-shadow: 0 0 20px rgba(220, 53, 69, 0.3);
     border-left: 5px solid var(--danger-color, #dc3545) !important;
 }
+.system-header .container-fluid {
+    height: 60px;
+    display: flex
+;
+    align-items: center;
+    padding: 0 1rem;
+    background-color: white;
+}
+.dropdown-menu.show {
+    display: block;
+    background: var(--primary-gradient);
+}
+
+.dropdown-header {
+    padding: 0.75rem 1rem;
+    background: var(--primary-gradient) !important;
+    border-radius: 10px 10px 0 0;
+}
 </style>
 </head>
 <body>
@@ -1480,191 +1895,214 @@ p, small {
         }
 
         async function confirmAcceptOrder() {
-            if (!currentOrderForAction) return;
-            
-            const estimatedTime = document.getElementById('estimatedTime').value;
-            
-            try {
-                const formData = new FormData();
-                formData.append('ajax_action', 'accept');
-                formData.append('order_id', currentOrderForAction);
-                formData.append('estimated_time', estimatedTime);
-                
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess('Pedido aceptado correctamente');
-                    
-                    // Cerrar el modal de aceptación
-                    const acceptModal = bootstrap.Modal.getInstance(document.getElementById('acceptModal'));
-                    if (acceptModal) {
-                        acceptModal.hide();
-                    }
-                    
-                    // Mostrar WhatsApp sin recarga automática
-                    setTimeout(() => {
-                        if (data.whatsapp_message) {
-                            showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
-                        } else {
-                            location.reload();
-                        }
-                    }, 500);
-                    
-                } else {
-                    showError('Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Error de conexión');
+    if (!currentOrderForAction) return;
+    
+    const estimatedTime = document.getElementById('estimatedTime').value;
+    
+    try {
+        const formData = new FormData();
+        formData.append('ajax_action', 'accept');
+        formData.append('order_id', currentOrderForAction);
+        formData.append('estimated_time', estimatedTime);
+        
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const responseText = await response.text();
+        console.log('Respuesta del servidor:', responseText);
+        
+        const data = await JSON.parse(responseText);
+        
+        if (data.success) {
+            // Cerrar el modal de aceptación
+            const acceptModal = bootstrap.Modal.getInstance(document.getElementById('acceptModal'));
+            if (acceptModal) {
+                acceptModal.hide();
             }
+            
+            // VERIFICAR SI SE ENVIÓ AUTOMÁTICAMENTE
+            if (data.auto_sent) {
+                showSuccess('✅ Pedido aceptado y WhatsApp enviado automáticamente');
+                setTimeout(() => location.reload(), 2000);
+            } else if (data.whatsapp_url) {
+                // Solo mostrar modal de WhatsApp si no se envió automáticamente
+                setTimeout(() => {
+                    showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
+                }, 500);
+            } else {
+                showSuccess('Pedido aceptado correctamente');
+                setTimeout(() => location.reload(), 2000);
+            }
+        } else {
+            showError('Error: ' + data.message);
         }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión');
+    }
+}
 
-        async function confirmRejectOrder() {
-            if (!currentOrderForAction) return;
-            
-            let reason = document.getElementById('rejectionReason').value;
-            if (reason === 'Otro') {
-                const customReason = document.getElementById('customReason').value.trim();
-                if (!customReason) {
-                    showError('Debe especificar el motivo del rechazo');
-                    return;
-                }
-                reason = customReason;
-            }
-            
-            try {
-                const formData = new FormData();
-                formData.append('ajax_action', 'reject');
-                formData.append('order_id', currentOrderForAction);
-                formData.append('reason', reason);
-                
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess('Pedido rechazado correctamente');
-                    
-                    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
-                    if (rejectModal) {
-                        rejectModal.hide();
-                    }
-                    
-                    setTimeout(() => {
-                        if (data.whatsapp_message) {
-                            showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
-                        } else {
-                            location.reload();
-                        }
-                    }, 500);
-                    
-                } else {
-                    showError('Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Error de conexión');
-            }
+
+async function confirmRejectOrder() {
+    if (!currentOrderForAction) return;
+    
+    let reason = document.getElementById('rejectionReason').value;
+    if (reason === 'Otro') {
+        const customReason = document.getElementById('customReason').value.trim();
+        if (!customReason) {
+            showError('Debe especificar el motivo del rechazo');
+            return;
         }
+        reason = customReason;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('ajax_action', 'reject');
+        formData.append('order_id', currentOrderForAction);
+        formData.append('reason', reason);
+        
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+            if (rejectModal) {
+                rejectModal.hide();
+            }
+            
+            // VERIFICAR SI SE ENVIÓ AUTOMÁTICAMENTE
+            if (data.auto_sent) {
+                showSuccess('✅ Pedido rechazado y WhatsApp enviado automáticamente');
+                setTimeout(() => location.reload(), 2000);
+            } else if (data.whatsapp_url) {
+                setTimeout(() => {
+                    showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
+                }, 500);
+            } else {
+                showSuccess('Pedido rechazado correctamente');
+                setTimeout(() => location.reload(), 2000);
+            }
+        } else {
+            showError('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión');
+    }
+}
 
-        async function updateOrderStatus(orderId, status) {
-            const confirmMessages = {
-                'preparing': '¿Confirmar que el pedido está en preparación?',
-                'ready': '¿Confirmar que el pedido está listo para entrega?',
-                'delivered': '¿Confirmar que el pedido fue entregado?'
+
+async function updateOrderStatus(orderId, status) {
+    const confirmMessages = {
+        'preparing': '¿Confirmar que el pedido está en preparación?',
+        'ready': '¿Confirmar que el pedido está listo para entrega?',
+        'delivered': '¿Confirmar que el pedido fue entregado?'
+    };
+    
+    if (!confirm(confirmMessages[status])) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('ajax_action', status);
+        formData.append('order_id', orderId);
+        
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // VERIFICAR SI SE ENVIÓ AUTOMÁTICAMENTE
+            if (data.auto_sent) {
+                showSuccess('✅ Estado actualizado y WhatsApp enviado automáticamente');
+                setTimeout(() => location.reload(), 2000);
+            } else if (data.whatsapp_message && data.whatsapp_url) {
+                showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
+            } else {
+                showSuccess(data.message);
+                setTimeout(() => location.reload(), 1000);
+            }
+        } else {
+            showError('Error: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión');
+    }
+}
+
+
+function showWhatsAppMessage(message, url, allowReload = false) {
+    // Solo mostrar modal si hay URL (WhatsApp Web) - Si no hay URL, significa que se envió automáticamente
+    if (!url) {
+        if (allowReload) {
+            setTimeout(() => location.reload(), 1000);
+        }
+        return;
+    }
+    
+    // Cerrar otros modales primero
+    const allModals = document.querySelectorAll('.modal');
+    allModals.forEach(modal => {
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    });
+    
+    setTimeout(() => {
+        document.getElementById('whatsappMessage').value = message;
+        
+        document.getElementById('sendWhatsappBtn').onclick = () => {
+            window.open(url, '_blank');
+            
+            const whatsappModal = bootstrap.Modal.getInstance(document.getElementById('whatsappModal'));
+            if (whatsappModal) {
+                whatsappModal.hide();
+            }
+            
+            if (allowReload) {
+                setTimeout(() => location.reload(), 1000);
+            }
+        };
+        
+        const closeBtn = document.querySelector('#whatsappModal .btn-secondary');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                const whatsappModal = bootstrap.Modal.getInstance(document.getElementById('whatsappModal'));
+                if (whatsappModal) {
+                    whatsappModal.hide();
+                }
+                if (allowReload) {
+                    setTimeout(() => location.reload(), 500);
+                }
             };
-            
-            if (!confirm(confirmMessages[status])) return;
-            
-            try {
-                const formData = new FormData();
-                formData.append('ajax_action', status);
-                formData.append('order_id', orderId);
-                
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showSuccess(data.message);
-                    
-                    if (data.whatsapp_message) {
-                        showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
-                    } else {
-                        setTimeout(() => location.reload(), 1000);
-                    }
-                } else {
-                    showError('Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Error de conexión');
+        }
+        
+        const whatsappModalElement = document.getElementById('whatsappModal');
+        whatsappModalElement.addEventListener('hidden.bs.modal', function() {
+            if (allowReload) {
+                setTimeout(() => location.reload(), 500);
             }
-        }
+        }, { once: true });
+        
+        const modal = new bootstrap.Modal(document.getElementById('whatsappModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        modal.show();
+    }, 300);
+}
 
-        function showWhatsAppMessage(message, url, allowReload = false) {
-            const allModals = document.querySelectorAll('.modal');
-            allModals.forEach(modal => {
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-            });
-            
-            setTimeout(() => {
-                document.getElementById('whatsappMessage').value = message;
-                
-                document.getElementById('sendWhatsappBtn').onclick = () => {
-                    window.open(url, '_blank');
-                    
-                    const whatsappModal = bootstrap.Modal.getInstance(document.getElementById('whatsappModal'));
-                    if (whatsappModal) {
-                        whatsappModal.hide();
-                    }
-                    
-                    if (allowReload) {
-                        setTimeout(() => location.reload(), 1000);
-                    }
-                };
-                
-                const closeBtn = document.querySelector('#whatsappModal .btn-secondary');
-                if (closeBtn) {
-                    closeBtn.onclick = () => {
-                        const whatsappModal = bootstrap.Modal.getInstance(document.getElementById('whatsappModal'));
-                        if (whatsappModal) {
-                            whatsappModal.hide();
-                        }
-                        if (allowReload) {
-                            setTimeout(() => location.reload(), 500);
-                        }
-                    };
-                }
-                
-                const whatsappModalElement = document.getElementById('whatsappModal');
-                whatsappModalElement.addEventListener('hidden.bs.modal', function() {
-                    if (allowReload) {
-                        setTimeout(() => location.reload(), 500);
-                    }
-                }, { once: true });
-                
-                const modal = new bootstrap.Modal(document.getElementById('whatsappModal'), {
-                    backdrop: 'static',
-                    keyboard: false
-                });
-                modal.show();
-            }, 300);
-        }
 
         function sendCustomWhatsApp(phone) {
             const message = 'Hola! Le escribo desde el restaurante. ¿En qué podemos ayudarle?';
@@ -1673,12 +2111,40 @@ p, small {
         }
 
         function showSuccess(message) {
-            alert('✅ ' + message);
+    // Crear una notificación más visual
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
         }
+    }, 4000);
+}
 
-        function showError(message) {
-            alert('❌ ' + message);
+function showError(message) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    alert.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
         }
+    }, 5000);
+}
     </script>
     <script>
 // Función para actualizar el tiempo de cada pedido sin recargar la página

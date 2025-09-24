@@ -113,6 +113,7 @@ mi_restaurant_delivery/
 │ ├── kitchen.php # Panel de cocina
 │ ├── users.php # Gestión de usuarios y roles
 │ ├── tables.php # Gestión de mesas
+│ ├── profile.php # Gestión del perfil de usuario con avatar y configuración personal
 │ ├── order-create.php # Crear o editar órdenes
 │ ├── logout.php # Cerrar sesión
 │ ├── order-details.php # Detalle de una orden
@@ -331,6 +332,70 @@ El sistema incluye roles predefinidos, pero puede:
 - **Activación/desactivación** de usuarios
 - **Interfaz táctil** optimizada
 
+### 👤 Perfil de Usuario
+
+Sistema completo de gestión de perfiles personales para todos los usuarios del sistema.
+
+#### Características del Perfil
+
+- **Información personal completa**:
+  - Edición de nombre completo
+  - Actualización de email con validación
+  - Gestión de número de teléfono
+  - Visualización del rol asignado
+
+- **Sistema de avatars avanzado**:
+  - Subida de imágenes de perfil (JPG, PNG, GIF)
+  - Límite de 2MB por archivo
+  - Generación automática de iniciales si no hay avatar
+  - Vista previa antes de subir
+  - Eliminación automática de avatars anteriores
+
+- **Cambio de contraseña seguro**:
+  - Verificación de contraseña actual
+  - Indicador visual de fortaleza de contraseña
+  - Validación de coincidencia en tiempo real
+  - Requisito mínimo de 6 caracteres
+  - Opción de mostrar/ocultar contraseñas
+
+- **Estadísticas personales**:
+  - Fecha de registro en el sistema
+  - Días activo en la plataforma
+  - Último acceso registrado
+  - Estado actual de la cuenta
+
+#### Funcionalidades Técnicas
+
+- **Validación en tiempo real** con JavaScript
+- **Compatibilidad automática** con base de datos existente
+- **Creación automática** de columnas `avatar` y `last_login` si no existen
+- **Interfaz responsive** optimizada para dispositivos móviles
+- **Integración completa** con sistema de temas dinámico
+- **Gestión segura** de archivos subidos
+- **Validaciones robustas** del lado servidor y cliente
+
+#### Seguridad Implementada
+
+- **Verificación de contraseña actual** antes de cambios
+- **Validación de formato** de emails
+- **Verificación de unicidad** de emails
+- **Límites de tamaño** y tipo de archivos
+- **Sanitización** de datos de entrada
+- **Protección contra** sobrescritura de archivos
+
+#### Interfaz de Usuario
+
+- **Diseño moderno** con gradientes y efectos visuales
+- **Animaciones suaves** para mejor experiencia
+- **Feedback visual inmediato** en formularios
+- **Indicadores de estado** para todas las acciones
+- **Responsividad completa** para móviles y tablets
+- **Accesibilidad mejorada** con labels y ARIA
+
+```
+
+Este módulo proporciona a cada usuario control total sobre su información personal y configuración de cuenta, manteniendo la seguridad y consistencia del sistema.
+
 ### ⚙️ Configuración Avanzada
 - **Configuración general** del restaurante
 - **Configuración de negocio** (impuestos, delivery)
@@ -477,6 +542,7 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 #### Características del Sistema WhatsApp
 
 - **API de WhatsApp Business** completamente integrada
+- **Envío automático** de notificaciones de pedidos (confirmación, preparación, listo, entregado)
 - **Webhook automático** para recibir mensajes entrantes con configuración segura
 - **Respuestas automáticas configurables** desde panel web con variables dinámicas
 - **Panel de gestión de conversaciones** con interface tipo chat
@@ -485,22 +551,24 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 - **Logs completos** de envíos y recepciones
 - **Configuración dinámica** del restaurante
 - **Limpieza automática** de números telefónicos argentinos
-- **Sistema de fallback** a WhatsApp Web
+- **Sistema de fallback** a WhatsApp Web si falla la API
 - **Guardado de conversaciones completas** para seguimiento
 
 #### Funcionalidades de Mensajería
 
 **Envío Automático:**
-- Confirmaciones de pedidos online
-- Actualizaciones de estado en tiempo real
-- Notificaciones de entrega
-- Mensajes de prueba del sistema
+- ✅ **Confirmaciones automáticas** de pedidos online al aceptar
+- ✅ **Actualizaciones de estado** en tiempo real (preparando, listo)
+- ✅ **Notificaciones de entrega** automáticas
+- ✅ **Mensajes de rechazo** con motivo especificado
+- ✅ **Guardado automático** en conversaciones para seguimiento
+- ✅ **Fallback inteligente** a WhatsApp Web si la API falla
 
 **Sistema de Respuestas Automáticas Avanzado:**
 - **Editor web de respuestas** con variables dinámicas
 - **Tipos de coincidencia**: Contiene, exacto, empieza con, termina con
 - **Sistema de prioridades** (mayor número = mayor prioridad)
-- **Variables automáticas**: {restaurant_name}, {restaurant_web}, {restaurant_phone}, etc.
+- **Variables automáticas**: `{restaurant_name}`, `{restaurant_web}`, `{restaurant_phone}`, etc.
 - **Estadísticas de uso** para cada respuesta
 - **Activación/desactivación** individual
 - **Contador de usos** y fechas de creación/actualización
@@ -549,9 +617,11 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 #### Configuración y Seguridad
 
 **Configuración en Meta for Developers:**
-- Callback URL: `https://tu-dominio.com/admin/whatsapp-webhook.php`
-- Verify Token: Configurable desde el panel (sin hardcodear)
-- Webhook Fields: messages, messaging_postbacks, message_deliveries
+```
+Callback URL: https://tu-dominio.com/admin/whatsapp-webhook.php
+Verify Token: Configurable desde el panel (sin hardcodear)
+Webhook Fields: messages, messaging_postbacks, message_deliveries
+```
 
 **Credenciales seguras:**
 - Access Token de WhatsApp Business API (almacenado en BD)
@@ -560,14 +630,14 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 - **Sin credenciales hardcodeadas** en el código
 
 **Funciones de prueba integradas:**
-- Prueba de envío de mensajes
-- Verificación de webhook
-- Validación de configuración
-- Logs detallados de errores
+- ✅ Prueba de envío de mensajes
+- ✅ Verificación de webhook
+- ✅ Validación de configuración
+- ✅ Logs detallados de errores
 
 #### Características Técnicas Mejoradas
 
-- **Configuración centralizada** usando archivos config/config.php y config/database.php
+- **Configuración centralizada** usando `config/config.php` y `config/database.php`
 - **Limpieza automática** de números telefónicos argentinos (formato 549XXXXXXXXX)
 - **Detección automática** de pedidos relacionados por teléfono
 - **Rate limiting** (máximo 1 respuesta automática por minuto por número)
@@ -577,6 +647,31 @@ El sistema incluye integración completa con WhatsApp Business API para comunica
 - **Webhook seguro** con validación de origen
 - **API REST** para integración con otros sistemas
 - **Creación automática** de tablas si no existen
+
+#### Archivos del Sistema WhatsApp
+
+```
+admin/
+├── whatsapp-settings.php     # Configuración de WhatsApp Business API
+├── whatsapp-messages.php     # Panel de gestión de conversaciones  
+├── whatsapp-answers.php      # Configuración de respuestas automáticas
+└── whatsapp-webhook.php      # Webhook para recibir mensajes
+
+config/
+└── whatsapp_api.php         # Clase de integración con WhatsApp Business API
+```
+
+#### Variables de Configuración
+
+```php
+// Configuración en la base de datos
+'whatsapp_enabled' => '1'                    // Habilitar envío automático
+'whatsapp_fallback_enabled' => '1'          // Fallback a WhatsApp Web
+'whatsapp_auto_responses' => '1'             // Respuestas automáticas
+'whatsapp_access_token' => 'EAAxxxxxxxxx'    // Token de Meta
+'whatsapp_phone_number_id' => '123456789'    // ID del número de WhatsApp
+'whatsapp_webhook_token' => 'mi-token-123'   // Token del webhook
+```
 
 
 
