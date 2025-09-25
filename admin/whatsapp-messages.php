@@ -1,9 +1,45 @@
 <?php
-// admin/whatsapp-messages.php - Versión completa con soporte multimedia
+// admin/whatsapp-messages.php - Versión completa con soporte multimedia y BD optimizada
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../config/auth.php';
 require_once '../config/functions.php';
+require_once '../config/whatsapp_database.php';
+
+// Configuración de errores para debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // No mostrar errores en pantalla
+ini_set('log_errors', 1);
+
+// Función para enviar respuesta JSON limpia
+function sendJsonResponse($data) {
+    // Limpiar cualquier output previo
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Función para log de errores detallado
+function logError($message, $context = []) {
+    $timestamp = date('Y-m-d H:i:s');
+    $log_message = "[$timestamp] $message";
+    if (!empty($context)) {
+        $log_message .= " Context: " . json_encode($context);
+    }
+    error_log($log_message);
+}
+
+// Forzar cierre de conexiones al finalizar
+register_shutdown_function(function() {
+    if (class_exists('Database')) {
+        $db = null;
+    }
+    gc_collect_cycles();
+});
 
 $auth = new Auth();
 $auth->requireLogin();
@@ -14,147 +50,303 @@ $db = $database->getConnection();
 
 // Procesar acciones AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Si es upload de archivo multimedia
-    if (isset($_FILES['media_file'])) {
-        $phone_number = $_POST['phone_number'] ?? '';
-        $caption = $_POST['caption'] ?? '';
-        
-        try {
-            require_once '../config/whatsapp_api.php';
-            $whatsapp = new WhatsAppAPI();
+    try {
+        // Si es upload de archivo multimedia
+        if (isset($_FILES['media_file'])) {
+            $phone_number = $_POST['phone_number'] ?? '';
+            $caption = $_POST['caption'] ?? '';
             
-            if (!$whatsapp->isConfigured()) {
-                echo json_encode(['success' => false, 'error' => 'API no configurada']);
-                exit;
+            logError("Media upload attempt", [
+                'phone' => $phone_number,
+                'file_info' => $_FILES['media_file'] ?? null,
+                'post_data' => $_POST
+            ]);
+            
+            // Validaciones básicas
+            if (empty($phone_number)) {
+                sendJsonResponse(['success' => false, 'error' => 'Número de teléfono requerido']);
             }
             
+            if (!isset($_FILES['media_file']) || $_FILES['media_file']['error'] !== UPLOAD_ERR_OK) {
+                $upload_errors = [
+                    UPLOAD_ERR_INI_SIZE => 'El archivo excede el tamaño máximo permitido por PHP',
+                    UPLOAD_ERR_FORM_SIZE => 'El archivo excede el tamaño máximo del formulario',
+                    UPLOAD_ERR_PARTIAL => 'El archivo se subió parcialmente',
+                    UPLOAD_ERR_NO_FILE => 'No se seleccionó archivo',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Falta directorio temporal',
+                    UPLOAD_ERR_CANT_WRITE => 'Error al escribir archivo',
+                    UPLOAD_ERR_EXTENSION => 'Extensión de PHP bloqueó el archivo'
+                ];
+                
+                $error_code = $_FILES['media_file']['error'] ?? UPLOAD_ERR_NO_FILE;
+                $error_message = $upload_errors[$error_code] ?? 'Error desconocido en upload';
+                
+                logError("Upload error", ['error_code' => $error_code, 'error_message' => $error_message]);
+                sendJsonResponse(['success' => false, 'error' => $error_message]);
+            }
+            
+            // Verificar tamaño de archivo
             $file = $_FILES['media_file'];
+            $file_size = $file['size'];
+            $original_filename = $file['name'];
+            $temp_file_path = $file['tmp_name'];
+            $max_size = 16 * 1024 * 1024; // 16MB por defecto
             
-            // Validar archivo
-            $validation = $whatsapp->validateMediaFile($file['tmp_name']);
-            if (!$validation['valid']) {
-                echo json_encode(['success' => false, 'error' => $validation['error']]);
-                exit;
+            if ($file_size > $max_size) {
+                sendJsonResponse(['success' => false, 'error' => 'Archivo muy grande. Máximo 16MB']);
             }
             
-            // Subir a WhatsApp
-            $upload_result = $whatsapp->uploadMedia($file['tmp_name'], $validation['category']);
-            if (!$upload_result['success']) {
-                echo json_encode(['success' => false, 'error' => 'Error al subir: ' . $upload_result['error']]);
-                exit;
+            // Log información detallada para debugging
+            logError("File upload details", [
+                'original_name' => $original_filename,
+                'temp_path' => $temp_file_path,
+                'size' => $file_size,
+                'reported_type' => $file['type']
+            ]);
+            
+            // CREAR ARCHIVO TEMPORAL CON EXTENSIÓN CORRECTA
+            $original_extension = strtolower(pathinfo($original_filename, PATHINFO_EXTENSION));
+            if (empty($original_extension)) {
+                sendJsonResponse(['success' => false, 'error' => 'Archivo sin extensión válida: ' . $original_filename]);
             }
             
-            $media_id = $upload_result['media_id'];
+            // Crear archivo temporal con la extensión correcta
+            $temp_dir = sys_get_temp_dir();
+            $temp_file_with_extension = $temp_dir . '/whatsapp_' . uniqid() . '.' . $original_extension;
             
-            // Enviar según tipo
-            switch ($validation['category']) {
-                case 'images':
-                    $send_result = $whatsapp->sendImageMessage($phone_number, $media_id, $caption);
-                    break;
-                case 'documents':
-                    $send_result = $whatsapp->sendDocumentMessage($phone_number, $media_id, $file['name'], $caption);
-                    break;
-                case 'audio':
-                    $send_result = $whatsapp->sendAudioMessage($phone_number, $media_id);
-                    break;
-                default:
-                    echo json_encode(['success' => false, 'error' => 'Tipo de archivo no soportado']);
-                    exit;
+            if (!copy($temp_file_path, $temp_file_with_extension)) {
+                sendJsonResponse(['success' => false, 'error' => 'Error al procesar archivo temporal']);
             }
             
-            if ($send_result['success']) {
-                // Guardar en base de datos
-                $message_id = $send_result['message_id'] ?? 'sent_' . time() . '_' . rand(1000, 9999);
-                
-                $insert_query = "INSERT INTO whatsapp_messages 
-                    (message_id, phone_number, message_type, content, media_url, media_filename, media_mime_type, media_size, media_caption, is_from_customer, is_read, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, NOW())";
-                
-                $content = $caption ?: '[' . ucfirst($validation['category']) . ': ' . $file['name'] . ']';
-                $message_type = $validation['category'] === 'images' ? 'image' : ($validation['category'] === 'audio' ? 'audio' : 'document');
-                
-                $stmt = $db->prepare($insert_query);
-                $stmt->execute([
-                    $message_id,
-                    $phone_number,
-                    $message_type,
-                    $content,
-                    $media_id,
-                    $file['name'],
-                    $validation['mime_type'],
-                    $validation['file_size'],
-                    $caption
-                ]);
-                
-                echo json_encode([
-                    'success' => true, 
-                    'message' => 'Archivo enviado correctamente',
-                    'media_id' => $media_id,
-                    'message_id' => $message_id
-                ]);
-            } else {
-                echo json_encode(['success' => false, 'error' => 'Error al enviar: ' . $send_result['error']]);
-            }
-            
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => 'Error: ' . $e->getMessage()]);
-        }
-        exit;
-    }
-    
-    // Procesar otras acciones JSON
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    if (isset($input['action'])) {
-        switch ($input['action']) {
-            case 'refresh_conversations':
-                echo json_encode(getConversationsData($db, $input));
-                exit;
-                
-            case 'mark_conversation_read':
-                $phone_number = $input['phone_number'];
-                try {
-                    $query = "UPDATE whatsapp_messages SET is_read = 1 WHERE phone_number = ? AND is_from_customer = 1";
-                    $stmt = $db->prepare($query);
-                    $stmt->execute([$phone_number]);
-                    echo json_encode(['success' => true]);
-                } catch (Exception $e) {
-                    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-                }
-                exit;
-                
-            case 'send_reply':
-                $phone_number = trim($input['phone_number']);
-                $message = trim($input['message']);
-                
+            try {
                 require_once '../config/whatsapp_api.php';
                 $whatsapp = new WhatsAppAPI();
                 
-                if ($whatsapp->isConfigured()) {
+                if (!$whatsapp->isConfigured()) {
+                    unlink($temp_file_with_extension); // Limpiar archivo temporal
+                    logError("WhatsApp API not configured");
+                    sendJsonResponse(['success' => false, 'error' => 'API de WhatsApp no configurada']);
+                }
+                
+                // Validar archivo usando el archivo temporal con extensión
+                logError("Validating file", [
+                    'temp_file_with_extension' => $temp_file_with_extension,
+                    'original_extension' => $original_extension
+                ]);
+                
+                $validation = $whatsapp->validateMediaFile($temp_file_with_extension);
+                if (!$validation['valid']) {
+                    unlink($temp_file_with_extension); // Limpiar archivo temporal
+                    logError("File validation failed", $validation);
+                    sendJsonResponse(['success' => false, 'error' => $validation['error']]);
+                }
+                
+                // ===== CORRECCIÓN PRINCIPAL: GUARDAR LOCALMENTE ANTES DE ENVIAR =====
+                
+                // 1. CREAR DIRECTORIO LOCAL PRIMERO
+                $local_dir = '../uploads/whatsapp/' . $validation['category'] . '/';
+                if (!is_dir($local_dir)) {
+                    mkdir($local_dir, 0755, true);
+                }
+                
+                // 2. CREAR NOMBRE ÚNICO PARA ARCHIVO LOCAL (usar timestamp en lugar de media_id que aún no existe)
+                $local_filename = 'local_' . time() . '_' . uniqid() . '.' . ($validation['extension'] ?? $original_extension);
+                $local_file_path = $local_dir . $local_filename;
+                
+                // 3. COPIAR ARCHIVO A UBICACIÓN PERMANENTE ANTES DE SUBIRLO A WHATSAPP
+                if (copy($temp_file_with_extension, $local_file_path)) {
+                    logError("File saved locally successfully", [
+                        'local_path' => $local_file_path,
+                        'local_filename' => $local_filename
+                    ]);
+                } else {
+                    logError("Failed to save file locally", [
+                        'temp_path' => $temp_file_with_extension, 
+                        'local_path' => $local_file_path,
+                        'temp_exists' => file_exists($temp_file_with_extension),
+                        'dir_writable' => is_writable($local_dir),
+                        'dir_exists' => is_dir($local_dir)
+                    ]);
+                }
+                
+                // 4. SUBIR A WHATSAPP
+                logError("Uploading file to WhatsApp", [
+                    'category' => $validation['category'],
+                    'mime_type' => $validation['mime_type'],
+                    'extension' => $validation['extension'] ?? $original_extension
+                ]);
+                
+                $upload_result = $whatsapp->uploadMedia($temp_file_with_extension, $validation['category']);
+                
+                // 5. LIMPIAR ARCHIVO TEMPORAL DESPUÉS DE SUBIRLO
+                unlink($temp_file_with_extension);
+                
+                if (!$upload_result['success']) {
+                    logError("WhatsApp upload failed", $upload_result);
+                    sendJsonResponse(['success' => false, 'error' => 'Error al subir: ' . $upload_result['error']]);
+                }
+                
+                $media_id = $upload_result['media_id'];
+                logError("File uploaded successfully", ['media_id' => $media_id]);
+                
+                // Enviar según tipo
+                switch ($validation['category']) {
+                    case 'images':
+                        $send_result = $whatsapp->sendImageMessage($phone_number, $media_id, $caption);
+                        break;
+                    case 'documents':
+                        $send_result = $whatsapp->sendDocumentMessage($phone_number, $media_id, $original_filename, $caption);
+                        break;
+                    case 'audio':
+                        $send_result = $whatsapp->sendAudioMessage($phone_number, $media_id);
+                        break;
+                    case 'video':
+                        $send_result = $whatsapp->sendVideoMessage($phone_number, $media_id, $caption);
+                        break;
+                    default:
+                        sendJsonResponse(['success' => false, 'error' => 'Tipo de archivo no soportado: ' . $validation['category']]);
+                }
+                
+                if (!$send_result['success']) {
+                    logError("WhatsApp send failed", $send_result);
+                    sendJsonResponse(['success' => false, 'error' => 'Error al enviar: ' . $send_result['error']]);
+                }
+
+                // ===== GUARDAR CORRECTAMENTE EN BASE DE DATOS =====
+                try {
+                    $message_id = $send_result['message_id'] ?? 'sent_' . time() . '_' . rand(1000, 9999);
+                    
+                    // Determinar el tipo de mensaje correcto para la BD
+                    $message_type_map = [
+                        'images' => 'image',
+                        'documents' => 'document', 
+                        'audio' => 'audio',
+                        'video' => 'video'
+                    ];
+                    $message_type = $message_type_map[$validation['category']] ?? 'document';
+                    
+                    // Crear contenido del mensaje
+                    $content_map = [
+                        'image' => '[Imagen: ' . $original_filename . ']',
+                        'document' => '[Documento: ' . $original_filename . ']',
+                        'audio' => '[Audio: ' . $original_filename . ']',
+                        'video' => '[Video: ' . $original_filename . ']'
+                    ];
+                    $message_content = $content_map[$message_type] ?? '[Archivo: ' . $original_filename . ']';
+                    
+                    // Agregar caption si existe
+                    if (!empty($caption)) {
+                        $message_content .= "\n" . $caption;
+                    }
+                    
+                    // Guardar en base de datos con el archivo local correcto
+                    WhatsAppDatabase::insertMessage([
+                        'message_id' => $message_id,
+                        'phone_number' => $phone_number,
+                        'message_type' => $message_type,
+                        'content' => $message_content,
+                        'media_url' => $media_id, // ID de WhatsApp para referencia
+                        'media_filename' => $local_filename, // ARCHIVO LOCAL CORRECTO
+                        'media_mime_type' => $validation['mime_type'],
+                        'media_size' => $validation['file_size'],
+                        'media_caption' => $caption,
+                        'is_from_customer' => 0, // Es mensaje enviado por nosotros
+                        'is_read' => 1 // Ya está leído porque lo enviamos nosotros
+                    ]);
+                    
+                    logError("Message saved to database successfully", [
+                        'message_id' => $message_id,
+                        'type' => $message_type,
+                        'local_filename' => $local_filename,
+                        'local_path' => $local_file_path
+                    ]);
+                    
+                } catch (Exception $e) {
+                    logError("Database save error", ['exception' => $e->getMessage()]);
+                    // No fallar el envío si no se puede guardar en BD
+                }
+
+                sendJsonResponse([
+                    'success' => true, 
+                    'message' => 'Archivo enviado correctamente',
+                    'media_id' => $media_id,
+                    'message_id' => $message_id,
+                    'local_filename' => $local_filename,
+                    'local_path' => $local_file_path,
+                    'file_info' => [
+                        'original_name' => $original_filename,
+                        'extension' => $validation['extension'] ?? $original_extension,
+                        'mime_type' => $validation['mime_type'],
+                        'category' => $validation['category']
+                    ]
+                ]);
+
+                
+            } catch (Exception $e) {
+                // Limpiar archivo temporal en caso de error
+                if (file_exists($temp_file_with_extension)) {
+                    unlink($temp_file_with_extension);
+                }
+                
+                logError("Exception in media upload", [
+                    'exception' => $e->getMessage(), 
+                    'trace' => $e->getTraceAsString()
+                ]);
+                sendJsonResponse(['success' => false, 'error' => 'Error interno: ' . $e->getMessage()]);
+            }
+        }
+        
+        // Procesar otras acciones JSON
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (isset($input['action'])) {
+            switch ($input['action']) {
+                case 'refresh_conversations':
+                    sendJsonResponse(getConversationsData($db, $input));
+                    
+                case 'mark_conversation_read':
+                    $phone_number = $input['phone_number'];
+                    try {
+                        $query = "UPDATE whatsapp_messages SET is_read = 1 WHERE phone_number = ? AND is_from_customer = 1";
+                        WhatsAppDatabase::safeQuery($query, [$phone_number]);
+                        sendJsonResponse(['success' => true]);
+                    } catch (Exception $e) {
+                        logError("Mark conversation read failed", ['exception' => $e->getMessage()]);
+                        sendJsonResponse(['success' => false, 'error' => $e->getMessage()]);
+                    }
+                    break;
+                    
+                case 'send_reply':
+                    $phone_number = trim($input['phone_number']);
+                    $message = trim($input['message']);
+                    
+                    if (empty($message)) {
+                        sendJsonResponse(['success' => false, 'error' => 'Mensaje vacío']);
+                    }
+                    
+                    require_once '../config/whatsapp_api.php';
+                    $whatsapp = new WhatsAppAPI();
+                    
+                    if (!$whatsapp->isConfigured()) {
+                        sendJsonResponse(['success' => false, 'error' => 'API no configurada']);
+                    }
+                    
                     $result = $whatsapp->sendTextMessage($phone_number, $message);
                     
                     if ($result['success']) {
                         try {
                             $message_id = $result['message_id'] ?? 'sent_' . time() . '_' . rand(1000, 9999);
                             
-                            $insert_query = "INSERT INTO whatsapp_messages 
-                                (message_id, phone_number, message_type, content, is_from_customer, is_read, created_at) 
-                                VALUES (?, ?, ?, ?, ?, ?, NOW())";
-                            
-                            $stmt = $db->prepare($insert_query);
-                            $insert_result = $stmt->execute([
-                                $message_id,
-                                $phone_number,
-                                'text',
-                                $message,
-                                0, // No es del cliente
-                                1  // Ya está leído
+                            WhatsAppDatabase::insertMessage([
+                                'message_id' => $message_id,
+                                'phone_number' => $phone_number,
+                                'message_type' => 'text',
+                                'content' => $message,
+                                'is_from_customer' => 0,
+                                'is_read' => 1
                             ]);
                             
-                            $result['saved_to_db'] = $insert_result;
-                            if ($insert_result) {
-                                $result['db_message_id'] = $db->lastInsertId();
-                            }
+                            $result['saved_to_db'] = true;
                             
                         } catch (Exception $e) {
                             $result['saved_to_db'] = false;
@@ -162,12 +354,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     
-                    echo json_encode($result);
-                } else {
-                    echo json_encode(['success' => false, 'error' => 'API no configurada']);
-                }
-                exit;
+                    sendJsonResponse($result);
+                    break;
+            }
         }
+        
+    } catch (Exception $e) {
+        logError("General POST error", ['exception' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+        sendJsonResponse(['success' => false, 'error' => 'Error del servidor: ' . $e->getMessage()]);
     }
 }
 
@@ -279,7 +473,6 @@ function formatBytes($size, $precision = 2) {
 }
 
 // Función para renderizar mensajes multimedia
-// Función para renderizar mensajes multimedia - VERSIÓN CORREGIDA
 function renderMediaMessage($message) {
     $html = '';
     
@@ -415,7 +608,7 @@ $initial_data = getConversationsData($db, $_GET);
 $conversations = $initial_data['conversations'];
 $stats = $initial_data['stats'];
 
-$settings = getSettings();
+$settings = WhatsAppDatabase::getSettingsFromFile();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
 
 $phone_filter = $_GET['phone'] ?? '';

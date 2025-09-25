@@ -1,5 +1,5 @@
 <?php
-// config/whatsapp_api.php - WhatsApp Business API con soporte multimedia
+// config/whatsapp_api.php - WhatsApp Business API con soporte multimedia - VERSIÓN CORREGIDA
 
 class WhatsAppAPI {
     private $access_token;
@@ -9,13 +9,159 @@ class WhatsAppAPI {
     private $upload_dir = '../uploads/whatsapp/';
     
     public function __construct() {
-        // Obtener configuraciones desde la base de datos
-        $settings = getSettings();
+        // Usar el gestor específico de WhatsApp para evitar problemas de conexión
+        require_once __DIR__ . '/whatsapp_database.php';
+        $settings = WhatsAppDatabase::getSettingsFromFile();
+        
         $this->access_token = $settings['whatsapp_access_token'] ?? '';
         $this->phone_number_id = $settings['whatsapp_phone_number_id'] ?? '';
         
         // Crear directorio de uploads si no existe
         $this->ensureUploadDirectories();
+    }
+    
+    /**
+     * Obtener configuraciones de forma segura (manejo de errores de BD)
+     */
+    private function getSettingsSafe() {
+        try {
+            return getSettings();
+        } catch (Exception $e) {
+            error_log("WhatsApp API: Error loading settings - " . $e->getMessage());
+            // Devolver configuración por defecto o vacía
+            return [
+                'whatsapp_access_token' => '',
+                'whatsapp_phone_number_id' => ''
+            ];
+        }
+    }
+    
+    /**
+     * Función alternativa para detectar tipo MIME cuando mime_content_type() no está disponible
+     */
+    private function getMimeType($file_path) {
+        // Obtener extensión primero para validación
+        $extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+        
+        // Método 1: Usar finfo si está disponible
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo) {
+                $mime = finfo_file($finfo, $file_path);
+                finfo_close($finfo);
+                
+                // Validar que el MIME detectado sea consistente con la extensión
+                if ($mime && $mime !== 'application/octet-stream') {
+                    return $mime;
+                }
+            }
+        }
+        
+        // Método 2: mime_content_type si está disponible
+        if (function_exists('mime_content_type')) {
+            $mime = mime_content_type($file_path);
+            if ($mime && $mime !== 'application/octet-stream') {
+                return $mime;
+            }
+        }
+        
+        // Método 3: Lectura de headers del archivo
+        $mime_from_header = $this->getMimeFromFileHeader($file_path);
+        if ($mime_from_header) {
+            return $mime_from_header;
+        }
+        
+        // Método 4: Basarse en la extensión (fallback confiable)
+        $mime_types = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'txt' => 'text/plain',
+            'rtf' => 'application/rtf',
+            'mp3' => 'audio/mpeg',
+            'm4a' => 'audio/mp4',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+            'wav' => 'audio/wav',
+            'mp4' => 'video/mp4',
+            '3gp' => 'video/3gpp',
+            'avi' => 'video/x-msvideo',
+            'mov' => 'video/quicktime'
+        ];
+        
+        if (isset($mime_types[$extension])) {
+            return $mime_types[$extension];
+        }
+        
+        // Log para debugging
+        error_log("Could not determine MIME type for file: $file_path (extension: $extension)");
+        
+        // Por defecto, asumir documento si no podemos detectar
+        return 'application/pdf'; // Cambiar default a PDF en lugar de octet-stream
+    }
+    
+    /**
+     * Detectar MIME type leyendo los primeros bytes del archivo
+     */
+    private function getMimeFromFileHeader($file_path) {
+        if (!is_readable($file_path)) {
+            return false;
+        }
+        
+        $handle = fopen($file_path, 'rb');
+        if (!$handle) {
+            return false;
+        }
+        
+        $header = fread($handle, 12);
+        fclose($handle);
+        
+        if (strlen($header) < 4) {
+            return false;
+        }
+        
+        // Signatures de archivos comunes
+        $signatures = [
+            "\xFF\xD8\xFF" => 'image/jpeg',                    // JPEG
+            "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A" => 'image/png', // PNG
+            "\x47\x49\x46\x38" => 'image/gif',                 // GIF
+            "\x52\x49\x46\x46" => 'audio/wav',                 // WAV (primeros 4 bytes)
+            "\x25\x50\x44\x46" => 'application/pdf',           // PDF
+            "\x50\x4B\x03\x04" => 'application/zip',           // ZIP/Office docs
+            "\xD0\xCF\x11\xE0" => 'application/msword',        // DOC
+            "\x49\x44\x33" => 'audio/mpeg'                     // MP3
+        ];
+        
+        foreach ($signatures as $signature => $mime_type) {
+            if (strpos($header, $signature) === 0) {
+                return $mime_type;
+            }
+        }
+        
+        // Para archivos Office modernos (que son ZIP)
+        if (strpos($header, "\x50\x4B\x03\x04") === 0) {
+            $extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+            switch ($extension) {
+                case 'docx':
+                    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                case 'xlsx':
+                    return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                case 'pptx':
+                    return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                default:
+                    return 'application/zip';
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -99,32 +245,36 @@ class WhatsAppAPI {
     }
     
     /**
-     * Enviar audio
+     * Enviar video
      */
-    public function sendAudioMessage($to, $media_id_or_url) {
+    public function sendVideoMessage($to, $media_id_or_url, $caption = '') {
         $to = $this->cleanPhoneNumber($to);
         
-        $audio_data = [
+        $video_data = [
             'id' => $media_id_or_url
         ];
         
         // Si es URL en lugar de media_id
         if (filter_var($media_id_or_url, FILTER_VALIDATE_URL)) {
-            $audio_data = ['link' => $media_id_or_url];
+            $video_data = ['link' => $media_id_or_url];
+        }
+        
+        if (!empty($caption)) {
+            $video_data['caption'] = $caption;
         }
         
         $data = [
             'messaging_product' => 'whatsapp',
             'to' => $to,
-            'type' => 'audio',
-            'audio' => $audio_data
+            'type' => 'video',
+            'video' => $video_data
         ];
         
         return $this->sendRequest('messages', $data);
     }
     
     /**
-     * Subir archivo multimedia a WhatsApp
+     * Subir archivo multimedia a WhatsApp - VERSIÓN CORREGIDA
      */
     public function uploadMedia($file_path, $type = 'auto') {
         if (!file_exists($file_path)) {
@@ -134,19 +284,52 @@ class WhatsAppAPI {
             ];
         }
         
-        // Detectar tipo automáticamente
+        // Detectar tipo automáticamente usando nuestra función segura
+        $detected_mime = $this->getMimeType($file_path);
         if ($type === 'auto') {
-            $mime_type = mime_content_type($file_path);
-            $type = $this->getMimeTypeCategory($mime_type);
+            $type = $this->getMimeTypeCategory($detected_mime);
+        }
+        
+        // Validar que el MIME type sea aceptado por WhatsApp
+        $whatsapp_accepted_types = [
+            'audio/aac', 'audio/mp4', 'audio/mpeg', 'audio/amr', 'audio/ogg', 'audio/opus',
+            'application/vnd.ms-powerpoint', 'application/msword', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/pdf', 'text/plain', 'application/vnd.ms-excel',
+            'image/jpeg', 'image/png', 'image/webp',
+            'video/mp4', 'video/3gpp'
+        ];
+        
+        // Si no es un tipo aceptado, intentar corregirlo por extensión
+        if (!in_array($detected_mime, $whatsapp_accepted_types)) {
+            $extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+            $corrected_mime = $this->getWhatsAppCompatibleMime($extension);
+            
+            if ($corrected_mime) {
+                $detected_mime = $corrected_mime;
+                error_log("MIME type corrected from octet-stream to $corrected_mime based on extension: $extension");
+            } else {
+                return [
+                    'success' => false,
+                    'error' => "Tipo de archivo no soportado por WhatsApp: $detected_mime (extensión: $extension)"
+                ];
+            }
         }
         
         $url = $this->base_url . '/' . $this->api_version . '/' . $this->phone_number_id . '/media';
         
+        // Crear CURLFile con el MIME type correcto
+        $curlFile = new CURLFile($file_path, $detected_mime);
+        
         $post_data = [
             'messaging_product' => 'whatsapp',
             'type' => $type,
-            'file' => new CURLFile($file_path)
+            'file' => $curlFile
         ];
+        
+        error_log("Uploading to WhatsApp - Type: $type, MIME: $detected_mime, File: $file_path");
         
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -182,12 +365,50 @@ class WhatsAppAPI {
                 'response' => $decoded
             ];
         } else {
+            error_log("WhatsApp upload failed - HTTP: $http_code, Response: $response");
             return [
                 'success' => false,
                 'error' => $decoded['error']['message'] ?? 'Upload failed',
                 'response' => $decoded
             ];
         }
+    }
+    
+    /**
+     * Obtener MIME type compatible con WhatsApp basado en extensión
+     */
+    private function getWhatsAppCompatibleMime($extension) {
+        $whatsapp_mime_map = [
+            // Images
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            
+            // Documents
+            'pdf' => 'application/pdf',
+            'txt' => 'text/plain',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            
+            // Audio
+            'aac' => 'audio/aac',
+            'm4a' => 'audio/mp4',
+            'mp3' => 'audio/mpeg',
+            'amr' => 'audio/amr',
+            'ogg' => 'audio/ogg',
+            'opus' => 'audio/opus',
+            
+            // Video
+            'mp4' => 'video/mp4',
+            '3gp' => 'video/3gpp'
+        ];
+        
+        return $whatsapp_mime_map[$extension] ?? null;
     }
     
     /**
@@ -361,23 +582,17 @@ class WhatsAppAPI {
     }
     
     /**
-     * Registrar envío en la base de datos
+     * Registrar envío en la base de datos con manejo de errores
      */
     private function logWhatsAppSend($to, $data, $status, $response) {
         try {
-            $database = new Database();
-            $db = $database->getConnection();
+            require_once __DIR__ . '/whatsapp_database.php';
             
-            $query = "INSERT INTO whatsapp_logs (phone_number, message_type, message_data, status, api_response, created_at) 
-                     VALUES (?, ?, ?, ?, ?, NOW())";
-            
-            $stmt = $db->prepare($query);
-            $stmt->execute([
-                $to,
-                $data['type'] ?? 'text',
-                json_encode($data),
-                $status,
-                json_encode($response)
+            WhatsAppDatabase::logSend([
+                'to' => $to,
+                'type' => $data['type'] ?? 'text',
+                'status' => $status,
+                'response' => $response
             ]);
         } catch (Exception $e) {
             error_log('Error logging WhatsApp send: ' . $e->getMessage());
@@ -399,7 +614,7 @@ class WhatsAppAPI {
         
         foreach ($directories as $dir) {
             if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
+                @mkdir($dir, 0755, true);
             }
         }
     }
@@ -439,7 +654,7 @@ class WhatsAppAPI {
     }
     
     /**
-     * Validar archivo multimedia
+     * Validar archivo multimedia - VERSIÓN CORREGIDA PARA DETECCIÓN DE EXTENSIÓN
      */
     public function validateMediaFile($file_path, $type = 'auto') {
         if (!file_exists($file_path)) {
@@ -447,39 +662,52 @@ class WhatsAppAPI {
         }
         
         $file_size = filesize($file_path);
-        $mime_type = mime_content_type($file_path);
         
-        if ($type === 'auto') {
-            $type = $this->getMimeTypeCategory($mime_type);
+        // Obtener extensión de múltiples formas
+        $extension = $this->getFileExtension($file_path);
+        
+        if (empty($extension)) {
+            return [
+                'valid' => false, 
+                'error' => 'No se pudo determinar la extensión del archivo: ' . basename($file_path)
+            ];
         }
         
-        // Límites de tamaño por tipo
+        // Primero determinar el MIME correcto para WhatsApp
+        $whatsapp_mime = $this->getWhatsAppCompatibleMime($extension);
+        
+        if (!$whatsapp_mime) {
+            return [
+                'valid' => false, 
+                'error' => "Extensión de archivo no soportada: .$extension (archivo: " . basename($file_path) . ")"
+            ];
+        }
+        
+        // Determinar categoría por extensión (más confiable que por MIME)
+        if ($type === 'auto') {
+            if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
+                $type = 'images';
+            } elseif (in_array($extension, ['pdf', 'txt', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])) {
+                $type = 'documents';
+            } elseif (in_array($extension, ['aac', 'm4a', 'mp3', 'amr', 'ogg', 'opus'])) {
+                $type = 'audio';
+            } elseif (in_array($extension, ['mp4', '3gp'])) {
+                $type = 'video';
+            } else {
+                return [
+                    'valid' => false,
+                    'error' => "Tipo de archivo no determinado para extensión: .$extension"
+                ];
+            }
+        }
+        
+        // Límites de tamaño por tipo (según WhatsApp)
         $size_limits = [
             'images' => 5 * 1024 * 1024,    // 5MB
             'documents' => 100 * 1024 * 1024, // 100MB  
             'audio' => 16 * 1024 * 1024,     // 16MB
             'video' => 16 * 1024 * 1024      // 16MB
         ];
-        
-        $allowed_types = [
-            'images' => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-            'documents' => [
-                'application/pdf', 'text/plain', 'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ],
-            'audio' => ['audio/aac', 'audio/mp4', 'audio/mpeg', 'audio/amr', 'audio/ogg'],
-            'video' => ['video/mp4', 'video/3gpp']
-        ];
-        
-        // Validar tipo MIME
-        if (!in_array($mime_type, $allowed_types[$type] ?? [])) {
-            return [
-                'valid' => false, 
-                'error' => "Tipo de archivo no permitido: $mime_type para categoría $type"
-            ];
-        }
         
         // Validar tamaño
         if ($file_size > ($size_limits[$type] ?? 1024 * 1024)) {
@@ -492,10 +720,85 @@ class WhatsAppAPI {
         
         return [
             'valid' => true,
-            'mime_type' => $mime_type,
+            'mime_type' => $whatsapp_mime, // Devolver el MIME correcto para WhatsApp
             'file_size' => $file_size,
-            'category' => $type
+            'category' => $type,
+            'extension' => $extension
         ];
+    }
+    
+    /**
+     * Obtener extensión de archivo de forma robusta
+     */
+    private function getFileExtension($file_path) {
+        // Método 1: pathinfo normal
+        $extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+        
+        if (!empty($extension)) {
+            return $extension;
+        }
+        
+        // Método 2: Usar basename y buscar el último punto
+        $basename = basename($file_path);
+        $pos = strrpos($basename, '.');
+        
+        if ($pos !== false && $pos < strlen($basename) - 1) {
+            $extension = strtolower(substr($basename, $pos + 1));
+            if (!empty($extension)) {
+                return $extension;
+            }
+        }
+        
+        // Método 3: Detectar por contenido del archivo
+        $content_extension = $this->detectExtensionByContent($file_path);
+        if ($content_extension) {
+            return $content_extension;
+        }
+        
+        // Log para debugging
+        error_log("Could not determine extension for file: $file_path (basename: $basename)");
+        
+        return '';
+    }
+    
+    /**
+     * Detectar extensión por contenido del archivo
+     */
+    private function detectExtensionByContent($file_path) {
+        if (!is_readable($file_path)) {
+            return false;
+        }
+        
+        $handle = fopen($file_path, 'rb');
+        if (!$handle) {
+            return false;
+        }
+        
+        $header = fread($handle, 12);
+        fclose($handle);
+        
+        if (strlen($header) < 4) {
+            return false;
+        }
+        
+        // Signatures de archivos comunes
+        $signatures = [
+            "\xFF\xD8\xFF" => 'jpg',                    // JPEG
+            "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A" => 'png', // PNG
+            "\x47\x49\x46\x38" => 'gif',                 // GIF
+            "\x25\x50\x44\x46" => 'pdf',                 // PDF
+            "\x50\x4B\x03\x04" => 'zip',                 // ZIP/Office docs
+            "\xD0\xCF\x11\xE0" => 'doc',                 // DOC
+            "\x49\x44\x33" => 'mp3'                      // MP3
+        ];
+        
+        foreach ($signatures as $signature => $extension) {
+            if (strpos($header, $signature) === 0) {
+                return $extension;
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -513,7 +816,9 @@ class WhatsAppAPI {
             'configured' => $this->isConfigured(),
             'has_token' => !empty($this->access_token),
             'has_phone_id' => !empty($this->phone_number_id),
-            'upload_dir_writable' => is_writable($this->upload_dir)
+            'upload_dir_writable' => is_writable($this->upload_dir),
+            'php_finfo_available' => function_exists('finfo_open'),
+            'php_mime_content_type_available' => function_exists('mime_content_type')
         ];
     }
 }
