@@ -1,5 +1,5 @@
 <?php
-// admin/whatsapp-webhook.php - Versión completa con respuestas automáticas desde base de datos
+// admin/whatsapp-webhook.php - VERSIÓN CORREGIDA con descarga automática de multimedia
 require_once '../config/config.php';
 require_once '../config/database.php';
 
@@ -19,6 +19,35 @@ function getWebhookToken() {
     } catch (Exception $e) {
         error_log("Error getting webhook token: " . $e->getMessage());
         return 'whatsapp-webhook-comias';
+    }
+}
+
+// Función para obtener configuración de WhatsApp API
+function getWhatsAppCredentials() {
+    try {
+        $database = new Database();
+        $db = $database->getConnection();
+        
+        $query = "SELECT setting_key, setting_value FROM settings 
+                  WHERE setting_key IN ('whatsapp_access_token', 'whatsapp_phone_number_id')";
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+        
+        $credentials = ['access_token' => '', 'phone_number_id' => ''];
+        
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            if ($row['setting_key'] === 'whatsapp_access_token') {
+                $credentials['access_token'] = $row['setting_value'];
+            } elseif ($row['setting_key'] === 'whatsapp_phone_number_id') {
+                $credentials['phone_number_id'] = $row['setting_value'];
+            }
+        }
+        
+        return $credentials;
+        
+    } catch (Exception $e) {
+        error_log("Error getting WhatsApp credentials: " . $e->getMessage());
+        return ['access_token' => '', 'phone_number_id' => ''];
     }
 }
 
@@ -91,6 +120,144 @@ function logWebhookDetailed($data) {
     file_put_contents('webhook_detailed.log', json_encode($log_entry) . "\n", FILE_APPEND);
 }
 
+// Crear directorios de uploads si no existen
+function ensureUploadDirectories() {
+    $base_dir = '../uploads/whatsapp/';
+    $directories = [
+        $base_dir,
+        $base_dir . 'images/',
+        $base_dir . 'documents/',
+        $base_dir . 'audio/',
+        $base_dir . 'video/'
+    ];
+    
+    foreach ($directories as $dir) {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+            logWebhook("Created directory: $dir");
+        }
+    }
+}
+
+// NUEVA FUNCIÓN: Descargar archivo multimedia desde WhatsApp
+function downloadMediaFromWhatsApp($media_id, $access_token) {
+    try {
+        // Paso 1: Obtener URL del archivo
+        $url = "https://graph.facebook.com/v18.0/$media_id";
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $access_token
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($http_code !== 200) {
+            logWebhook("Failed to get media URL for $media_id: HTTP $http_code");
+            return false;
+        }
+        
+        $data = json_decode($response, true);
+        if (!isset($data['url'])) {
+            logWebhook("No URL in media response for $media_id");
+            return false;
+        }
+        
+        $file_url = $data['url'];
+        $mime_type = $data['mime_type'] ?? 'application/octet-stream';
+        $file_size = $data['file_size'] ?? 0;
+        
+        logWebhook("Got media URL for $media_id: $file_url (type: $mime_type)");
+        
+        // Paso 2: Descargar el archivo
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $file_url);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $access_token
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        
+        $file_data = curl_exec($ch);
+        $download_http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($download_http_code !== 200 || !$file_data) {
+            logWebhook("Failed to download media file for $media_id: HTTP $download_http_code");
+            return false;
+        }
+        
+        // Paso 3: Guardar archivo
+        $category = getMimeTypeCategory($mime_type);
+        $extension = getExtensionFromMimeType($mime_type);
+        $filename = $media_id . '_' . time() . '.' . $extension;
+        $upload_dir = '../uploads/whatsapp/' . $category . '/';
+        $file_path = $upload_dir . $filename;
+        
+        // Asegurar que el directorio existe
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0755, true);
+        }
+        
+        if (!file_put_contents($file_path, $file_data)) {
+            logWebhook("Failed to save media file: $file_path");
+            return false;
+        }
+        
+        logWebhook("Media file saved successfully: $file_path (" . strlen($file_data) . " bytes)");
+        
+        return [
+            'success' => true,
+            'filename' => $filename,
+            'file_path' => $file_path,
+            'mime_type' => $mime_type,
+            'file_size' => strlen($file_data),
+            'category' => $category
+        ];
+        
+    } catch (Exception $e) {
+        logWebhook("Exception downloading media $media_id: " . $e->getMessage());
+        return false;
+    }
+}
+
+// Función auxiliar para determinar categoría desde MIME type
+function getMimeTypeCategory($mime_type) {
+    if (strpos($mime_type, 'image/') === 0) return 'images';
+    if (strpos($mime_type, 'audio/') === 0) return 'audio';
+    if (strpos($mime_type, 'video/') === 0) return 'video';
+    return 'documents';
+}
+
+// Función auxiliar para obtener extensión desde MIME type
+function getExtensionFromMimeType($mime_type) {
+    $extensions = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        'audio/mpeg' => 'mp3',
+        'audio/mp4' => 'm4a',
+        'audio/aac' => 'aac',
+        'audio/ogg' => 'ogg',
+        'video/mp4' => 'mp4',
+        'video/3gpp' => '3gp',
+        'application/pdf' => 'pdf',
+        'text/plain' => 'txt',
+        'application/msword' => 'doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx'
+    ];
+    
+    return $extensions[$mime_type] ?? 'bin';
+}
+
 // Verificación inicial del webhook (Meta lo llama con GET)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $verify_token = getWebhookToken();
@@ -152,6 +319,7 @@ function processIncomingMessage($value) {
         $db = $database->getConnection();
         
         createTablesIfNotExist($db);
+        ensureUploadDirectories();
         
         if (isset($value['messages'])) {
             foreach ($value['messages'] as $message) {
@@ -177,28 +345,107 @@ function handleIncomingMessage($db, $message) {
     $timestamp = $message['timestamp'];
     $type = $message['type'];
     
+    // Obtener credenciales de WhatsApp para descargas
+    $credentials = getWhatsAppCredentials();
+    $access_token = $credentials['access_token'];
+    
     // Extraer el contenido del mensaje según el tipo
     $content = '';
     $media_url = null;
+    $media_filename = null;
+    $media_mime_type = null;
+    $media_size = null;
+    $media_caption = null;
     
     switch ($type) {
         case 'text':
             $content = $message['text']['body'];
             break;
+            
         case 'image':
-            $content = $message['image']['caption'] ?? '[Imagen]';
+            $content = '[Imagen]';
             $media_url = $message['image']['id'];
+            $media_caption = $message['image']['caption'] ?? '';
+            
+            // DESCARGAR IMAGEN AUTOMÁTICAMENTE
+            if (!empty($access_token) && $media_url) {
+                $download_result = downloadMediaFromWhatsApp($media_url, $access_token);
+                if ($download_result && $download_result['success']) {
+                    $media_filename = $download_result['filename'];
+                    $media_mime_type = $download_result['mime_type'];
+                    $media_size = $download_result['file_size'];
+                    logWebhook("Image downloaded successfully: " . $media_filename);
+                } else {
+                    logWebhook("Failed to download image: " . $media_url);
+                }
+            }
             break;
+            
         case 'document':
-            $content = $message['document']['filename'] ?? '[Documento]';
+            $content = '[Documento]';
             $media_url = $message['document']['id'];
+            $media_caption = $message['document']['caption'] ?? '';
+            $original_filename = $message['document']['filename'] ?? 'documento';
+            
+            // DESCARGAR DOCUMENTO AUTOMÁTICAMENTE
+            if (!empty($access_token) && $media_url) {
+                $download_result = downloadMediaFromWhatsApp($media_url, $access_token);
+                if ($download_result && $download_result['success']) {
+                    $media_filename = $download_result['filename'];
+                    $media_mime_type = $download_result['mime_type'];
+                    $media_size = $download_result['file_size'];
+                    $content = '[Documento: ' . $original_filename . ']';
+                    logWebhook("Document downloaded successfully: " . $media_filename);
+                } else {
+                    logWebhook("Failed to download document: " . $media_url);
+                }
+            }
             break;
+            
         case 'audio':
             $content = '[Audio]';
             $media_url = $message['audio']['id'];
+            
+            // DESCARGAR AUDIO AUTOMÁTICAMENTE
+            if (!empty($access_token) && $media_url) {
+                $download_result = downloadMediaFromWhatsApp($media_url, $access_token);
+                if ($download_result && $download_result['success']) {
+                    $media_filename = $download_result['filename'];
+                    $media_mime_type = $download_result['mime_type'];
+                    $media_size = $download_result['file_size'];
+                    logWebhook("Audio downloaded successfully: " . $media_filename);
+                } else {
+                    logWebhook("Failed to download audio: " . $media_url);
+                }
+            }
             break;
+            
+        case 'video':
+            $content = '[Video]';
+            $media_url = $message['video']['id'];
+            $media_caption = $message['video']['caption'] ?? '';
+            
+            // DESCARGAR VIDEO AUTOMÁTICAMENTE
+            if (!empty($access_token) && $media_url) {
+                $download_result = downloadMediaFromWhatsApp($media_url, $access_token);
+                if ($download_result && $download_result['success']) {
+                    $media_filename = $download_result['filename'];
+                    $media_mime_type = $download_result['mime_type'];
+                    $media_size = $download_result['file_size'];
+                    logWebhook("Video downloaded successfully: " . $media_filename);
+                } else {
+                    logWebhook("Failed to download video: " . $media_url);
+                }
+            }
+            break;
+            
         default:
             $content = "[Mensaje de tipo: $type]";
+    }
+    
+    // Si hay caption, agregarlo al contenido
+    if (!empty($media_caption)) {
+        $content .= "\n" . $media_caption;
     }
     
     // Verificar si es respuesta a un pedido existente
@@ -215,11 +462,12 @@ function handleIncomingMessage($db, $message) {
             return;
         }
         
-        // Guardar mensaje en la base de datos
+        // Guardar mensaje en la base de datos CON INFORMACIÓN DE MULTIMEDIA
         $query = "INSERT INTO whatsapp_messages (
             message_id, phone_number, message_type, content, media_url, 
+            media_filename, media_mime_type, media_size, 
             order_id, is_from_customer, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 1, FROM_UNIXTIME(?))";
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, FROM_UNIXTIME(?))";
         
         $stmt = $db->prepare($query);
         $stmt->execute([
@@ -228,11 +476,15 @@ function handleIncomingMessage($db, $message) {
             $type,
             $content,
             $media_url,
+            $media_filename,
+            $media_mime_type,
+            $media_size,
             $order_id,
             $timestamp
         ]);
         
-        logWebhook("Message saved: From $from, Type: $type, Content: " . substr($content, 0, 50));
+        logWebhook("Message saved: From $from, Type: $type, Content: " . substr($content, 0, 50) . 
+                   ($media_filename ? ", Media: $media_filename" : ""));
         
         // Procesar respuestas automáticas si está habilitado
         processAutoResponse($db, $from, $content, $order_id);
@@ -518,18 +770,9 @@ function getOrderInfo($db, $order_id) {
 
 function sendAutoResponse($db, $to, $message) {
     try {
-        $query = "SELECT setting_key, setting_value FROM settings 
-                  WHERE setting_key IN ('whatsapp_access_token', 'whatsapp_phone_number_id')";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $settings = [];
-        
-        while ($row = $stmt->fetch()) {
-            $settings[$row['setting_key']] = $row['setting_value'];
-        }
-        
-        $access_token = $settings['whatsapp_access_token'] ?? '';
-        $phone_number_id = $settings['whatsapp_phone_number_id'] ?? '';
+        $credentials = getWhatsAppCredentials();
+        $access_token = $credentials['access_token'];
+        $phone_number_id = $credentials['phone_number_id'];
         
         if (empty($access_token) || empty($phone_number_id)) {
             logWebhook("Cannot send auto-response: missing credentials");
@@ -616,60 +859,111 @@ function cleanPhoneNumber($phone) {
 
 function createTablesIfNotExist($db) {
     try {
-        // Tabla de mensajes
-        $sql = "CREATE TABLE IF NOT EXISTS whatsapp_messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            message_id VARCHAR(255) UNIQUE NOT NULL,
-            phone_number VARCHAR(20) NOT NULL,
-            message_type ENUM('text', 'image', 'document', 'audio', 'video', 'location', 'contact') DEFAULT 'text',
-            content TEXT,
-            media_url VARCHAR(500),
-            order_id VARCHAR(50),
-            is_from_customer BOOLEAN DEFAULT 1,
-            is_read BOOLEAN DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_phone (phone_number),
-            INDEX idx_order (order_id),
-            INDEX idx_created (created_at)
-        )";
+        // Primero, verificar si la tabla existe y tiene las columnas necesarias
+        $check_table = "SHOW TABLES LIKE 'whatsapp_messages'";
+        $result = $db->query($check_table);
         
-        $db->exec($sql);
+        if ($result->rowCount() === 0) {
+            // Tabla no existe, crearla completa
+            $sql = "CREATE TABLE whatsapp_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id VARCHAR(255) UNIQUE NOT NULL,
+                phone_number VARCHAR(20) NOT NULL,
+                message_type ENUM('text', 'image', 'document', 'audio', 'video', 'sticker', 'location', 'contact') DEFAULT 'text',
+                content MEDIUMTEXT,
+                media_url VARCHAR(500),
+                order_id VARCHAR(50),
+                is_from_customer TINYINT(1) DEFAULT 1,
+                is_read TINYINT(1) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                media_filename VARCHAR(255),
+                media_mime_type VARCHAR(100),
+                media_size INT,
+                INDEX idx_phone (phone_number),
+                INDEX idx_order (order_id),
+                INDEX idx_unread (is_read),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+            
+            $db->exec($sql);
+            logWebhook("Created whatsapp_messages table with multimedia support");
+        } else {
+            // Tabla existe, verificar/agregar columnas multimedia
+            $columns_to_add = [
+                'media_filename' => 'ALTER TABLE whatsapp_messages ADD COLUMN media_filename VARCHAR(255) DEFAULT NULL',
+                'media_mime_type' => 'ALTER TABLE whatsapp_messages ADD COLUMN media_mime_type VARCHAR(100) DEFAULT NULL', 
+                'media_size' => 'ALTER TABLE whatsapp_messages ADD COLUMN media_size INT DEFAULT NULL'
+            ];
+            
+            foreach ($columns_to_add as $column => $alter_sql) {
+                try {
+                    $check_column = "SHOW COLUMNS FROM whatsapp_messages LIKE '$column'";
+                    $column_result = $db->query($check_column);
+                    
+                    if ($column_result->rowCount() === 0) {
+                        $db->exec($alter_sql);
+                        logWebhook("Added column $column to whatsapp_messages table");
+                    }
+                } catch (Exception $e) {
+                    logWebhook("Error adding column $column: " . $e->getMessage());
+                }
+            }
+        }
         
         // Tabla de logs
         $sql_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             phone_number VARCHAR(20) NOT NULL,
             message_type VARCHAR(50) DEFAULT 'text',
-            message_data TEXT,
-            status ENUM('success', 'error') DEFAULT 'success',
-            api_response TEXT,
+            message_data MEDIUMTEXT,
+            status ENUM('success', 'error', 'pending') DEFAULT 'pending',
+            api_response MEDIUMTEXT,
             message_id VARCHAR(255),
-            delivery_status VARCHAR(20),
+            delivery_status ENUM('sent','delivered','read','failed') DEFAULT 'sent',
             status_updated_at TIMESTAMP NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_phone (phone_number),
             INDEX idx_message_id (message_id),
+            INDEX idx_status (delivery_status),
             INDEX idx_created (created_at)
-        )";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
         $db->exec($sql_logs);
         
         // Tabla de respuestas automáticas
         $sql_responses = "CREATE TABLE IF NOT EXISTS whatsapp_auto_responses (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            trigger_words TEXT NOT NULL,
-            response_message TEXT NOT NULL,
-            match_type ENUM('contains','exact','starts_with','ends_with') DEFAULT 'contains',
-            is_active TINYINT(1) DEFAULT 1,
-            priority INT DEFAULT 0,
-            use_count INT DEFAULT 0,
+            trigger_words TEXT NOT NULL COMMENT 'Palabras que disparan la respuesta (separadas por coma)',
+            response_message TEXT NOT NULL COMMENT 'Mensaje de respuesta automática',
+            match_type ENUM('contains','exact','starts_with','ends_with') DEFAULT 'contains' COMMENT 'Tipo de coincidencia',
+            is_active TINYINT(1) DEFAULT 1 COMMENT 'Si la respuesta está activa',
+            priority INT DEFAULT 0 COMMENT 'Prioridad de la respuesta (mayor número = mayor prioridad)',
+            use_count INT DEFAULT 0 COMMENT 'Contador de veces que se ha usado',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_active (is_active),
             INDEX idx_priority (priority)
-        )";
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         
         $db->exec($sql_responses);
+        
+        // Tabla para uploads de multimedia (opcional, para tracking)
+        $sql_uploads = "CREATE TABLE IF NOT EXISTS whatsapp_media_uploads (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            original_filename VARCHAR(255) NOT NULL,
+            stored_filename VARCHAR(255) NOT NULL,
+            mime_type VARCHAR(100) NOT NULL,
+            file_size INT NOT NULL,
+            upload_path VARCHAR(500) NOT NULL,
+            whatsapp_media_id VARCHAR(255),
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_sent TINYINT(1) DEFAULT 0,
+            sent_at TIMESTAMP NULL,
+            INDEX idx_media_id (whatsapp_media_id),
+            INDEX idx_uploaded (uploaded_at)
+        )";
+        
+        $db->exec($sql_uploads);
         
     } catch (Exception $e) {
         logWebhook("Error creating tables: " . $e->getMessage());
