@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
 // admin/products.php
 require_once '../config/config.php';
 require_once '../config/database.php';
@@ -181,7 +185,14 @@ function toggleAvailability() {
     $id = intval($_POST['id']);
     $is_available = isset($_POST['is_available']) ? 1 : 0;
     
-    if ($productModel->update($id, ['is_available' => $is_available])) {
+    // Verificar que el producto existe
+    $product = $productModel->getById($id);
+    if (!$product) {
+        return ['success' => false, 'message' => 'Producto no encontrado'];
+    }
+    
+    // Usar el nuevo método específico para actualizar disponibilidad
+    if ($productModel->updateAvailability($id, $is_available)) {
         $status = $is_available ? 'disponible' : 'no disponible';
         return ['success' => true, 'message' => "Producto marcado como {$status}"];
     } else {
@@ -2156,21 +2167,87 @@ function deleteProduct(id, name) {
 }
 
 function toggleAvailability(id, available) {
+    // Mostrar confirmación
+    const action = available === 'true' ? 'disponible' : 'no disponible';
+    if (!confirm(`¿Está seguro de marcar este producto como ${action}?`)) {
+        return;
+    }
+    
     const form = document.createElement('form');
     form.method = 'POST';
     form.style.display = 'none';
     
-    const availableInput = available === 'true' ? '<input type="hidden" name="is_available" value="1">' : '';
+    // Crear inputs correctamente
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'toggle_availability';
     
-    form.innerHTML = `
-        <input type="hidden" name="action" value="toggle_availability">
-        <input type="hidden" name="id" value="${id}">
-        ${availableInput}
-    `;
+    const idInput = document.createElement('input');
+    idInput.type = 'hidden';
+    idInput.name = 'id';
+    idInput.value = id;
+    
+    // Solo agregar is_available si es true
+    form.appendChild(actionInput);
+    form.appendChild(idInput);
+    
+    if (available === 'true') {
+        const availableInput = document.createElement('input');
+        availableInput.type = 'hidden';
+        availableInput.name = 'is_available';
+        availableInput.value = '1';
+        form.appendChild(availableInput);
+    }
     
     document.body.appendChild(form);
     form.submit();
 }
+
+function toggleAvailabilityAjax(id, available) {
+    const action = available === 'true' ? 'disponible' : 'no disponible';
+    if (!confirm(`¿Está seguro de marcar este producto como ${action}?`)) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'toggle_availability');
+    formData.append('id', id);
+    
+    if (available === 'true') {
+        formData.append('is_available', '1');
+    }
+    
+    // Mostrar loading
+    const button = event.target.closest('button') || event.target.closest('a');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch('products.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        if (data.includes('success')) {
+            // Actualizar UI en lugar de recargar
+            location.reload();
+        } else {
+            alert('Error al actualizar el estado del producto');
+            console.error('Server response:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error de conexión al actualizar el producto');
+    })
+    .finally(() => {
+        button.innerHTML = originalContent;
+        button.disabled = false;
+    });
+}
+
 
 // ====== MANEJO DE IMÁGENES ======
 function previewImage() {

@@ -88,4 +88,36 @@ public function getAllActive() {
     $stmt->execute();
     return $stmt->fetchAll();
 }
+
+/**
+ * Update only the availability status of a product
+ */
+public function updateAvailability($id, $is_available) {
+    $query = "UPDATE products SET 
+              is_available = :is_available,
+              updated_at = CURRENT_TIMESTAMP 
+              WHERE id = :id";
+    
+    $stmt = $this->db->prepare($query);
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+    $stmt->bindParam(':is_available', $is_available, PDO::PARAM_INT);
+    
+    return $stmt->execute();
+}
+
+/**
+ * Update only the active status of a product
+ */
+public function updateActiveStatus($id, $is_active) {
+    $query = "UPDATE products SET 
+              is_active = :is_active,
+              updated_at = CURRENT_TIMESTAMP 
+              WHERE id = :id";
+    
+    $stmt = $this->db->prepare($query);
+    $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+    $stmt->bindParam(':is_active', $is_active, PDO::PARAM_INT);
+    
+    return $stmt->execute();
+}
 }
