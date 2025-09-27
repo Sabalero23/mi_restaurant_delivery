@@ -13,7 +13,10 @@ Un sistema completo de gestión para restaurantes que incluye punto de venta, pe
 - **Reportes avanzados** con gráficos y exportación
 - **Sistema de usuarios** con roles y permisos
 - **Gestión de productos** y categorías
+- **Control de inventario** con seguimiento en tiempo real
 - **Configuración del sistema** centralizada
+- **Instalador automático** modular en 5 pasos
+- **Control de inventario** con seguimiento en tiempo real
 
 ### 📱 Experiencia del Cliente
 - **Menú online** responsive con carrito de compras
@@ -39,6 +42,7 @@ Un sistema completo de gestión para restaurantes que incluye punto de venta, pe
 - **Gráficos**: Chart.js 3.9
 - **Mapas**: Google Maps API
 - **Tablas**: DataTables
+- **Gestión de Stock**: Sistema de inventario integrado
 
 ## 📂 Estructura del Proyecto
 
@@ -72,6 +76,7 @@ mi_restaurant_delivery/
 ├── admin/ # Panel de administración
 │ ├── api/ # APIs internas para el frontend
 │ │ ├── products.php # API de gestión de productos
+│ │ ├── stock-movements.php # Historial de movimientos de inventario
 │ │ ├── update-item-status.php # Actualización del estado de ítems
 │ │ ├── delivery-stats.php # Estadísticas de delivery
 │ │ ├── delivery.php # API de gestión de deliveries
@@ -142,7 +147,7 @@ mi_restaurant_delivery/
 
 ### Requisitos del Sistema
 
-- **PHP**: 8.0 o superior
+- **PHP**: 7.4 o superior
 - **MySQL**: 8.0 o superior
 - **Apache/Nginx**: Servidor web
 - **Extensiones PHP**:
@@ -151,19 +156,145 @@ mi_restaurant_delivery/
   - GD (para imágenes)
   - JSON
   - Session
+  - mbstring
+  - openssl
+  - curl
 
-### Instalación Automática
+### Instalación Automática (Recomendada)
 
-1. **Clonar o descargar** el proyecto en su servidor web (Solicitar Base de datos)
+El sistema incluye un instalador web modular dividido en pasos para una instalación más organizada y mantenible.
+
+1. **Descargar y extraer** el proyecto en su servidor web
 2. **Crear base de datos** MySQL vacía
-3. **Navegar** a `http://su-dominio.com/install.php`
+3. **Navegar** a `http://su-dominio.com/install/`
 4. **Seguir el asistente** de instalación paso a paso:
-   - Configurar conexión a base de datos
-   - Crear estructura y datos iniciales
-   - Configurar datos del restaurante
-   - Crear usuario administrador
 
-### Instalación Manual
+#### Pasos del Instalador
+
+**Paso 1: Verificación de Requisitos y Configuración de BD**
+- Verificación automática de requisitos del sistema
+- Configuración de conexión a base de datos
+- Generación del archivo `config/config.php`
+
+**Paso 2: Instalación de Estructura de BD**
+- Creación automática de todas las tablas necesarias:
+  - Gestión de usuarios, roles y permisos
+  - Sistema de productos con control de stock
+  - Gestión de órdenes y pagos
+  - Sistema de mesas y llamadas de mesero
+  - Configuración de temas dinámicos
+  - Integración completa de WhatsApp Business API
+  - **Tabla `stock_movements`** para historial de inventario
+- Inserción de datos básicos del sistema
+- Configuración de roles y permisos
+- Instalación de respuestas automáticas de WhatsApp
+- Configuración de temas básicos
+
+**Paso 3: Configuración del Restaurante**
+- Datos básicos del negocio
+- Configuración de delivery y horarios
+- Creación del usuario administrador
+- Configuración de APIs (Google Maps, WhatsApp)
+
+**Paso 4: Datos de Ejemplo (Opcional)**
+- Usuarios de ejemplo con diferentes roles
+- **Productos de muestra con control de stock**:
+  - Productos con y sin seguimiento de inventario
+  - Configuración de alertas de stock bajo
+  - Datos realistas de costos y precios
+- Mesas adicionales
+- **Este paso funciona independientemente** y puede ejecutarse en cualquier momento
+
+**Paso 5: Finalización**
+- Resumen de la instalación
+- Credenciales de acceso
+- Enlaces directos al sistema
+- Instrucciones de seguridad
+
+### Estructura de Archivos de Instalación
+
+```
+install/
+├── index.php              # Archivo principal de instalación
+├── install_common.php     # Funciones compartidas y estructura de BD
+├── step1.php             # Requisitos del sistema y configuración de BD
+├── step2.php             # Instalación de estructura de BD
+├── step3.php             # Configuración del restaurante
+├── step4.php             # Datos de ejemplo (opcional)
+└── step5.php             # Finalización
+```
+
+### Características del Instalador
+
+- **Modular**: Cada paso es independiente y mantenible
+- **Verificación automática**: Requisitos del sistema validados
+- **Progreso visual**: Indicadores de progreso en cada paso
+- **Navegación flexible**: Posibilidad de saltar o repetir pasos
+- **Datos de ejemplo opcionales**: El paso 4 puede ejecutarse después de la instalación principal
+- **Seguridad**: Verificaciones y validaciones en cada paso
+- **Instalación completa**: Incluye todas las tablas necesarias para:
+  - Sistema de productos con control de stock
+  - Gestión de inventario con historial de movimientos
+  - WhatsApp Business API con respuestas automáticas
+  - Sistema de temas dinámicos
+  - Estructura completa de órdenes y pagos
+
+### Base de Datos Instalada
+
+El instalador crea automáticamente las siguientes tablas:
+
+**Sistema Core:**
+- `users`, `roles` - Gestión de usuarios y permisos
+- `settings` - Configuración del sistema
+- `categories`, `products` - Gestión de productos
+- `stock_movements` - **Historial de movimientos de inventario**
+
+**Gestión de Órdenes:**
+- `orders`, `order_items` - Órdenes tradicionales
+- `online_orders` - Pedidos online
+- `payments`, `online_orders_payments` - Sistema de pagos
+- `tables`, `waiter_calls` - Gestión de mesas
+
+**Sistema de Temas:**
+- `theme_settings` - Configuración de temas
+- `custom_themes` - Temas personalizados
+- `theme_history` - Historial de cambios
+
+**WhatsApp Business API:**
+- `whatsapp_messages` - Conversaciones
+- `whatsapp_logs` - Logs de envío
+- `whatsapp_auto_responses` - Respuestas automáticas
+- `whatsapp_media_uploads` - Archivos multimedia
+
+### Post-Instalación
+
+**Importante para la seguridad:**
+- ⚠️ **Eliminar toda la carpeta `install/`** después de completar la instalación
+- Cambiar todas las contraseñas predefinidas
+- Configurar HTTPS en producción
+- Verificar permisos de archivos y carpetas
+
+### Solución de Problemas de Instalación
+
+**El sistema ya está instalado:**
+- Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
+- Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
+
+**Error de conexión a base de datos:**
+- Verificar credenciales de MySQL
+- Asegurar que la base de datos existe y está accesible
+- Comprobar que las extensiones PHP están instaladas
+
+**Permisos de escritura:**
+- Verificar permisos 755 en carpetas de uploads
+- Asegurar que el servidor web puede escribir en `config/`
+
+**Requisitos no cumplidos:**
+- Actualizar PHP a versión 7.4 o superior
+- Instalar extensiones PHP faltantes
+- Verificar configuración del servidor web
+
+### Instalación Manual (Avanzada)
 
 Si prefiere instalar manualmente:
 
@@ -174,7 +305,7 @@ Si prefiere instalar manualmente:
 
 2. **Importar estructura**:
    ```bash
-   mysql -u usuario -p comidasm < database/comidasm.sql
+   mysql -u usuario -p comidasm < database/bd.sql
    ```
 
 3. **Configurar archivo de configuración**:
@@ -184,28 +315,50 @@ Si prefiere instalar manualmente:
    define('DB_NAME', 'comidasm');
    define('DB_USER', 'tu_usuario');
    define('DB_PASS', 'tu_contraseña');
+   
+   define('BASE_URL', 'https://tu-dominio.com/');
+   define('UPLOAD_PATH', 'uploads/');
+   define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
    ```
 
-4. **Crear carpetas de permisos**:
+4. **Crear carpetas con permisos**:
    ```bash
-   chmod 755 uploads/
-   chmod 755 admin/uploads/
+   mkdir -p config uploads uploads/products uploads/categories uploads/avatars whatsapp_media
+   chmod 755 uploads/ admin/uploads/ whatsapp_media/
    ```
 
-## 👥 Usuarios Predefinidos
+5. **Crear archivo de instalación completada**:
+   ```bash
+   echo "$(date)" > config/installed.lock
+   ```
 
-El sistema incluye usuarios de ejemplo para cada rol:
+### Post-Instalación
 
-| Usuario | Contraseña | Rol | Permisos |
-|---------|------------|-----|----------|
-| admin | password | Administrador | Acceso completo |
-| gerente | password | Gerente | Gestión completa excepto configuración |
-| mostrador | password | Mostrador | Órdenes, mesas, cocina, delivery |
-| mesero | password | Mesero | Órdenes y mesas |
-| cocina | password | Cocina | Panel de cocina |
-| delivery | password | Delivery | Gestión de entregas |
+**Importante para la seguridad:**
+- ⚠️ **Eliminar toda la carpeta `install/`** después de completar la instalación
+- Cambiar todas las contraseñas predefinidas
+- Configurar HTTPS en producción
+- Verificar permisos de archivos y carpetas
 
-**⚠️ IMPORTANTE**: Cambiar todas las contraseñas después de la instalación.
+### Solución de Problemas de Instalación
+
+**El sistema ya está instalado:**
+- Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
+- Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
+
+**Error de conexión a base de datos:**
+- Verificar credenciales de MySQL
+- Asegurar que la base de datos existe y está accesible
+- Comprobar que las extensiones PHP están instaladas
+
+**Permisos de escritura:**
+- Verificar permisos 755 en carpetas de uploads
+- Asegurar que el servidor web puede escribir en `config/`
+
+**Requisitos no cumplidos:**
+- Actualizar PHP a versión 7.4 o superior
+- Instalar extensiones PHP faltantes
+- Verificar configuración del servidor web
 
 ## 🔧 Configuración
 
@@ -246,6 +399,117 @@ El sistema incluye roles predefinidos, pero puede:
   - `kitchen`: Panel de cocina
   - `delivery`: Gestión de delivery
   - `settings`: Configuración del sistema
+
+  
+### 📦 Control de Stock e Inventario
+
+Sistema avanzado de gestión de inventario con seguimiento en tiempo real y alertas automáticas.
+
+#### Características del Sistema de Stock
+
+- **Control opcional por producto** - Activar/desactivar gestión de inventario individualmente
+- **Seguimiento en tiempo real** - Actualización automática de cantidades
+- **Alertas de stock bajo** - Notificaciones configurables por producto
+- **Historial de movimientos** - Registro completo de entradas y salidas
+- **Ajustes manuales** - Correcciones de inventario con motivos
+- **Indicadores visuales** - Barras de progreso y badges de estado
+- **Estadísticas de inventario** - Dashboard con métricas en vivo
+
+#### Funcionalidades Principales
+
+**Gestión de Productos con Stock:**
+- ✅ **Activación selectiva** - Control de inventario opcional por producto
+- ✅ **Stock actual** - Cantidad disponible en tiempo real
+- ✅ **Límites de alerta** - Configuración personalizada de stock mínimo
+- ✅ **Estados visuales** - Sin stock, stock bajo, stock normal
+- ✅ **Cálculos automáticos** - Márgenes de ganancia en tiempo real
+- ✅ **Validaciones robustas** - Prevención de stock negativo
+
+**Panel de Ajustes de Stock:**
+- **Modal dedicado** para ajustes rápidos de inventario
+- **Tipos de movimiento**: Entrada (agregar) y Salida (reducir)
+- **Motivos predefinidos**:
+  - Ajuste manual
+  - Inventario físico
+  - Producto dañado/vencido
+  - Venta directa
+  - Compra/Reposición
+  - Corrección de error
+  - Motivos personalizados
+- **Vista previa** del nuevo stock antes de confirmar
+- **Alertas automáticas** si el ajuste genera stock crítico
+
+**Dashboard de Inventario:**
+- **Productos con control** - Cantidad total bajo seguimiento
+- **Stock bueno** - Productos con inventario normal
+- **Stock bajo** - Productos cerca del límite mínimo
+- **Sin stock** - Productos agotados
+- **Alertas prominentes** para productos críticos
+
+**Historial de Movimientos:**
+- **Registro completo** de todos los cambios de stock
+- **Información detallada**: Usuario, fecha, cantidad, motivo
+- **Trazabilidad total** del inventario
+- **Reportes de movimientos** por producto y periodo
+
+#### Características Técnicas del Stock
+
+- **Base de datos optimizada** con tabla `stock_movements`
+- **Transacciones seguras** para prevenir inconsistencias
+- **Validaciones múltiples** en frontend y backend
+- **Interfaz responsive** optimizada para móviles
+- **Integración completa** con sistema de productos existente
+- **API REST** para ajustes programáticos
+- **Logs automáticos** de todas las operaciones
+
+#### Interfaz de Usuario Mejorada
+
+**Tarjetas de Productos:**
+- **Indicadores de stock** en esquina superior
+- **Barras de progreso** mostrando nivel de inventario
+- **Badges dinámicos** (Sin stock, Stock bajo, Disponible)
+- **Botones de acción rápida** para ajustar stock
+- **Colores semánticos** según estado del inventario
+
+**Modal de Productos Expandido:**
+- **Sección dedicada** de gestión de inventario
+- **Switch de activación** para control de stock
+- **Campos de stock actual** y límite de alerta
+- **Indicadores de estado** en tiempo real
+- **Validaciones visuales** instantáneas
+
+**Alertas Inteligentes:**
+- **Notificaciones automáticas** de productos con stock bajo
+- **Lista expandible** con acciones directas
+- **Auto-actualización** cada vez que se modifica inventario
+- **Integración con dashboard** principal
+
+#### Flujo de Trabajo del Stock
+
+1. **Configuración inicial**:
+   - Activar control de stock por producto
+   - Establecer cantidad inicial
+   - Configurar límite de alerta
+
+2. **Operación diaria**:
+   - Visualización automática de alertas
+   - Ajustes rápidos desde tarjetas de productos
+   - Seguimiento en dashboard de inventario
+
+3. **Gestión avanzada**:
+   - Ajustes con motivos específicos
+   - Revisión de historial de movimientos
+   - Reportes de inventario
+
+#### Beneficios del Sistema
+
+- **Control preciso** del inventario sin complejidad excesiva
+- **Alertas proactivas** evitan quiebres de stock
+- **Trazabilidad completa** para auditorías
+- **Interfaz intuitiva** sin curva de aprendizaje
+- **Integración transparente** con flujo de trabajo existente
+- **Flexibilidad total** - usar solo en productos necesarios
+
 
 ## 📊 Módulos del Sistema
 
@@ -730,6 +994,14 @@ config/
 - [ ] Probar sistema de llamadas de mesero
 - [ ] Verificar impresión de tickets
 - [ ] Configurar usuarios del personal
+- [ ] Configurar control de stock en productos necesarios
+- [ ] Establecer límites de alerta de inventario
+- [ ] Verificar funcionamiento de ajustes de stock
+- [ ] Ejecutar instalador completo desde `/install/`
+- [ ] Configurar control de stock en productos necesarios
+- [ ] Establecer límites de alerta de inventario
+- [ ] Verificar funcionamiento de ajustes de stock
+- [ ] **Eliminar carpeta `install/`** por seguridad
 
 ### Variables de Entorno Recomendadas
 
@@ -759,6 +1031,11 @@ define('ENVIRONMENT', 'development');
 - Sistema de impresión de tickets personalizable
 - Configuración avanzada del sistema
 - Interfaz optimizada para dispositivos táctiles
+- Instalador automático modular con verificación de requisitos
+- Sistema completo de control de stock e inventario
+- Tabla `stock_movements` para historial de movimientos
+- Integración de WhatsApp Business API en instalación
+- Configuración automática de temas y respuestas automáticas
 
 
 ### Próximas Versiones

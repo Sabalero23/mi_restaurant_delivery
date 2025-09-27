@@ -61,7 +61,7 @@ if (!checkInstallation()) {
     // Si la instalación no está completa, redirigir al instalador
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
     $base_url = $protocol . $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']);
-    $install_url = rtrim($base_url, '/') . '/install.php';
+    $install_url = rtrim($base_url, '/') . '/install/index.php';
     
     header("Location: $install_url");
     exit('Redirigiendo al instalador...');

@@ -5,6 +5,8 @@ require_once '../config/database.php';
 require_once '../config/auth.php';
 require_once '../config/functions.php';
 require_once '../config/whatsapp_api.php';
+require_once '../config/stock_functions.php';
+
 
 // AGREGAR ESTA FUNCIÓN AL INICIO DE online-orders.php (después de los require_once)
 function logWhatsAppDebug($message) {
@@ -210,6 +212,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
             case 'accept':
     $estimated_time = $_POST['estimated_time'] ?? 30;
     
+    // NUEVO: Verificar stock antes de aceptar
+    $order_query = "SELECT * FROM online_orders WHERE id = :id";
+    $order_stmt = $db->prepare($order_query);
+    $order_stmt->execute(['id' => $order_id]);
+    $order = $order_stmt->fetch();
+    
+    if (!$order) {
+        throw new Exception('Orden no encontrada');
+    }
+    
+    // Decodificar items de la orden
+    $order_items = json_decode($order['items'], true);
+    if (!is_array($order_items)) {
+        throw new Exception('Items de la orden inválidos');
+    }
+    
+    // NUEVO: Verificar disponibilidad de stock
+    $stock_check = checkStockAvailability($db, $order_items, 'online');
+    if (!$stock_check['available']) {
+        $unavailable_list = array_map(function($item) {
+            return $item['name'] . " (solicitado: {$item['requested']}, disponible: {$item['available']})";
+        }, $stock_check['unavailable_items']);
+        
+        throw new Exception('Stock insuficiente para: ' . implode(', ', $unavailable_list));
+    }
+    
+    // Actualizar estado de la orden
     $query = "UPDATE online_orders SET 
              status = 'accepted', 
              accepted_at = NOW(), 
@@ -225,9 +254,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
     ]);
     
     if ($result) {
-        // Obtener datos del pedido
-        $order_query = "SELECT * FROM online_orders WHERE id = :id";
-        $order_stmt = $db->prepare($order_query);
+        // NUEVO: Descontar stock después de aceptar
+        $stock_result = decreaseProductStock($db, $order_items, 'online', $order['order_number']);
+        
+        if (!$stock_result['success']) {
+            // Si falla el descuento de stock, revertir la aceptación
+            $revert_query = "UPDATE online_orders SET status = 'pending', accepted_at = NULL, accepted_by = NULL WHERE id = :id";
+            $revert_stmt = $db->prepare($revert_query);
+            $revert_stmt->execute(['id' => $order_id]);
+            
+            throw new Exception('Error al actualizar inventario: ' . $stock_result['message']);
+        }
+        
+        // Obtener datos actualizados del pedido
         $order_stmt->execute(['id' => $order_id]);
         $order = $order_stmt->fetch();
         
@@ -241,19 +280,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_action'])) {
             $order_id
         );
         
-        echo json_encode([
+        // Preparar respuesta con información de stock
+        $response = [
             'success' => true,
             'message' => 'Pedido aceptado correctamente',
             'whatsapp_message' => $whatsapp_message,
             'whatsapp_method' => $whatsapp_result['method'],
             'whatsapp_url' => $whatsapp_result['whatsapp_url'] ?? null,
-            'auto_sent' => $whatsapp_result['method'] === 'api'
-        ]);
+            'auto_sent' => $whatsapp_result['method'] === 'api',
+            'stock_updated' => true,
+            'processed_items' => $stock_result['processed_items']
+        ];
+        
+        // Agregar alertas de stock bajo si las hay
+        if (!empty($stock_result['low_stock_alerts'])) {
+            $response['low_stock_alerts'] = $stock_result['low_stock_alerts'];
+            $response['message'] .= ' (Hay productos con stock bajo)';
+        }
+        
+        echo json_encode($response);
     } else {
         throw new Exception('Error al aceptar el pedido');
     }
     break;
 
+// MODIFICAR la función de rechazar pedido para NO descontar stock:
 case 'reject':
     $rejection_reason = $_POST['reason'] ?? 'No especificado';
     
@@ -272,6 +323,8 @@ case 'reject':
     ]);
     
     if ($result) {
+        // NOTA: NO se descuenta stock en pedidos rechazados
+        
         $order_query = "SELECT * FROM online_orders WHERE id = :id";
         $order_stmt = $db->prepare($order_query);
         $order_stmt->execute(['id' => $order_id]);
@@ -279,7 +332,6 @@ case 'reject':
         
         $whatsapp_message = generateRejectionMessage($order, $rejection_reason);
         
-        // Enviar WhatsApp
         $whatsapp_result = sendWhatsAppMessage(
             $order['customer_phone'], 
             $whatsapp_message, 
@@ -2192,6 +2244,37 @@ setInterval(updateOrderTimes, 60000);
 
 // Actualizar al cargar la página
 document.addEventListener('DOMContentLoaded', updateOrderTimes);
+</script>
+<script>
+// Agregar al final de online-orders.php y orders.php
+function showStockAlerts(alerts) {
+    if (alerts && alerts.length > 0) {
+        let alertMessage = 'Productos con stock bajo:\n';
+        alerts.forEach(item => {
+            alertMessage += `• ${item.name}: ${item.current_stock} unidades restantes\n`;
+        });
+        
+        setTimeout(() => {
+            if (confirm(alertMessage + '\n¿Desea revisar el inventario?')) {
+                window.open('products.php', '_blank');
+            }
+        }, 2000);
+    }
+}
+
+// Modificar las funciones de confirmación para incluir alertas
+function confirmAcceptOrder() {
+    // ... código existente ...
+    
+    if (data.success) {
+        // Mostrar alertas de stock bajo si las hay
+        if (data.low_stock_alerts) {
+            showStockAlerts(data.low_stock_alerts);
+        }
+        
+        // ... resto del código existente ...
+    }
+}
 </script>
 
 <?php include 'footer.php'; ?>

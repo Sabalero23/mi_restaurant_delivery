@@ -63,6 +63,9 @@ if ($_POST) {
 
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// Ruta de la imagen de fondo
+$background_image = 'includes/bar-comedor-light-1.png';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -104,19 +107,60 @@ if (file_exists($theme_file)) {
 }
 
 body {
-    background: var(--accent-color) !important;
     min-height: 100vh;
     display: flex;
     align-items: center;
     color: #212529 !important;
+    position: relative;
+    
+    /* Color de fallback */
+    background-color: #6c757d;
+    
+    /* Imagen de fondo */
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+        url('<?php echo $background_image; ?>');
+    
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+}
+
+/* Alternativa con pseudo-elemento para mayor control */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('<?php echo $background_image; ?>') center center / cover no-repeat;
+    z-index: -2;
+}
+
+/* Overlay oscuro */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: -1;
 }
 
 .login-card {
-    background: white !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     color: #212529 !important;
     border-radius: 15px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
     overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 10;
+    position: relative;
 }
 
 .login-header {
@@ -136,7 +180,7 @@ body {
 
 .login-body {
     padding: 2rem;
-    background: white !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     color: #212529 !important;
 }
 
@@ -149,7 +193,7 @@ input,
 textarea,
 select {
     color: #212529 !important;
-    background: white !important;
+    background: rgba(255, 255, 255, 0.9) !important;
 }
 
 /* Placeholder oscuro */
@@ -178,14 +222,14 @@ label {
     padding: 12px 20px;
     border: 1px solid #e1e5e9;
     margin-bottom: 1rem;
-    background: white !important;
+    background: rgba(255, 255, 255, 0.9) !important;
     color: #212529 !important;
 }
 
 .form-control:focus {
     box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     border-color: var(--primary-color);
-    background: white !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     color: #212529 !important;
 }
 
@@ -204,6 +248,7 @@ label {
     transform: translateY(-2px);
     color: white !important;
     background: linear-gradient(45deg, var(--secondary-color), var(--accent-color));
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .alert {
@@ -211,13 +256,13 @@ label {
 }
 
 .alert-danger {
-    background: rgba(220, 53, 69, 0.1) !important;
-    color: #dc3545 !important;
+    background: rgba(220, 53, 69, 0.9) !important;
+    color: #721c24 !important;
     border: 1px solid #dc3545;
 }
 
 .input-group-text {
-    background: #f8f9fa !important;
+    background: rgba(248, 249, 250, 0.9) !important;
     border-right: none;
     border-radius: 10px 0 0 10px;
     color: #6c757d !important;
@@ -287,7 +332,7 @@ select option {
 /* Input groups */
 .input-group-text {
     color: #212529 !important;
-    background-color: #f8f9fa !important;
+    background-color: rgba(248, 249, 250, 0.9) !important;
     border-color: #ced4da !important;
 }
 
@@ -302,7 +347,7 @@ select option {
 input:disabled,
 textarea:disabled {
     color: #6c757d !important;
-    background-color: #e9ecef !important;
+    background-color: rgba(233, 236, 239, 0.9) !important;
 }
 
 /* Focus state mantiene color oscuro */
@@ -313,10 +358,16 @@ textarea:focus {
     color: #212529 !important;
 }
 
+    
+    .debug-box {
+        display: none;
+    }
+    
 /* Responsive improvements */
 @media (max-width: 576px) {
     .login-card {
         margin: 1rem;
+        background: rgba(255, 255, 255, 0.98) !important;
     }
     
     .login-header {
@@ -325,6 +376,7 @@ textarea:focus {
     
     .login-body {
         padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.98) !important;
     }
 }
 </style>

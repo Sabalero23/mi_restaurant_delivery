@@ -6,6 +6,7 @@ require_once '../config/auth.php';
 require_once '../config/functions.php';
 require_once '../models/Order.php';
 require_once '../models/Table.php';
+require_once '../config/stock_functions.php';
 
 $auth = new Auth();
 $auth->requireLogin();
@@ -34,22 +35,68 @@ $error = '';
 if ($_POST && isset($_POST['action'])) {
     switch ($_POST['action']) {
         case 'update_status':
-            $order_id = intval($_POST['order_id']);
-            $new_status = $_POST['status'];
+    $order_id = intval($_POST['order_id']);
+    $new_status = $_POST['status'];
+    
+    // Obtener la orden y sus items
+    $order_query = "SELECT o.*, oi.product_id, oi.quantity, p.name as product_name 
+                   FROM orders o 
+                   LEFT JOIN order_items oi ON o.id = oi.order_id 
+                   LEFT JOIN products p ON oi.product_id = p.id 
+                   WHERE o.id = :order_id";
+    $order_stmt = $db->prepare($order_query);
+    $order_stmt->execute(['order_id' => $order_id]);
+    $order_data = $order_stmt->fetchAll();
+    
+    if (empty($order_data)) {
+        throw new Exception('Orden no encontrada');
+    }
+    
+    $order = $order_data[0]; // Datos de la orden
+    $order_items = $order_data; // Items de la orden
+    
+    // NUEVO: Descontar stock cuando se confirma la orden
+    if ($new_status === 'confirmed' && $order['status'] === 'pending') {
+        $stock_check = checkStockAvailability($db, $order_items, 'traditional');
+        if (!$stock_check['available']) {
+            $unavailable_list = array_map(function($item) {
+                return $item['name'] . " (solicitado: {$item['requested']}, disponible: {$item['available']})";
+            }, $stock_check['unavailable_items']);
             
-            if ($orderModel->updateStatus($order_id, $new_status)) {
-                // If marking as delivered and it's a dine-in order, free the table
-                if ($new_status === 'delivered') {
-                    $order = $orderModel->getById($order_id);
-                    if ($order['type'] === 'dine_in' && $order['table_id']) {
-                        $tableModel->releaseTable($order['table_id']);
-                    }
-                }
-                $message = 'Estado de orden actualizado exitosamente';
-            } else {
-                $error = 'Error al actualizar el estado de la orden';
+            throw new Exception('Stock insuficiente para: ' . implode(', ', $unavailable_list));
+        }
+        
+        $stock_result = decreaseProductStock($db, $order_items, 'traditional', $order['order_number']);
+        if (!$stock_result['success']) {
+            throw new Exception('Error al actualizar inventario: ' . $stock_result['message']);
+        }
+    }
+    
+    // Actualizar estado de la orden
+    if ($orderModel->updateStatus($order_id, $new_status)) {
+        // Si se marca como entregado y es dine-in, liberar mesa
+        if ($new_status === 'delivered') {
+            $order = $orderModel->getById($order_id);
+            if ($order['type'] === 'dine_in' && $order['table_id']) {
+                $tableModel->releaseTable($order['table_id']);
             }
-            break;
+        }
+        
+        $response = ['success' => true, 'message' => 'Estado de orden actualizado exitosamente'];
+        
+        // Agregar información de stock si se actualizó
+        if (isset($stock_result)) {
+            $response['stock_updated'] = true;
+            if (!empty($stock_result['low_stock_alerts'])) {
+                $response['low_stock_alerts'] = $stock_result['low_stock_alerts'];
+            }
+        }
+        
+        echo json_encode($response);
+    } else {
+        throw new Exception('Error al actualizar el estado de la orden');
+    }
+    break;
     }
 }
 
@@ -1208,6 +1255,37 @@ if ($priorityStatus['is_priority']): ?>
             }
         });
     </script>
+    <script>
+// Agregar al final de online-orders.php y orders.php
+function showStockAlerts(alerts) {
+    if (alerts && alerts.length > 0) {
+        let alertMessage = 'Productos con stock bajo:\n';
+        alerts.forEach(item => {
+            alertMessage += `• ${item.name}: ${item.current_stock} unidades restantes\n`;
+        });
+        
+        setTimeout(() => {
+            if (confirm(alertMessage + '\n¿Desea revisar el inventario?')) {
+                window.open('products.php', '_blank');
+            }
+        }, 2000);
+    }
+}
+
+// Modificar las funciones de confirmación para incluir alertas
+function confirmAcceptOrder() {
+    // ... código existente ...
+    
+    if (data.success) {
+        // Mostrar alertas de stock bajo si las hay
+        if (data.low_stock_alerts) {
+            showStockAlerts(data.low_stock_alerts);
+        }
+        
+        // ... resto del código existente ...
+    }
+}
+</script>
 
 <?php include 'footer.php'; ?>
 </body>
