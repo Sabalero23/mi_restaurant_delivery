@@ -43,7 +43,8 @@ register_shutdown_function(function() {
 
 $auth = new Auth();
 $auth->requireLogin();
-$auth->requirePermission('all');
+$auth->requirePermission('whatsapp');
+
 
 $database = new Database();
 $db = $database->getConnection();

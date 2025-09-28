@@ -7,7 +7,7 @@ require_once '../config/functions.php';
 
 $auth = new Auth();
 $auth->requireLogin();
-$auth->requirePermission('all');
+$auth->requirePermission('whatsapp');
 
 $database = new Database();
 $db = $database->getConnection();
