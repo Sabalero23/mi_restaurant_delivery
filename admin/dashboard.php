@@ -910,6 +910,28 @@ p {
                 </div>
             <?php endif; ?>
         </div>
+        
+            <!-- Tables Panel for roles with table permissions -->
+            <?php if ($auth->hasPermission('tables')): ?>
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-table me-2"></i>
+                                Estado de Mesas
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="tables-status">
+                                <div class="text-center text-muted py-3">
+                                    <div class="loading-spinner me-2"></div>
+                                    Cargando mesas...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
         <!-- Quick Actions based on Role -->
         <div class="row g-3 g-md-4">
@@ -974,27 +996,6 @@ p {
                 </div>
             <?php endif; ?>
 
-            <!-- Tables Panel for roles with table permissions -->
-            <?php if ($auth->hasPermission('tables')): ?>
-                <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-table me-2"></i>
-                                Estado de Mesas
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="tables-status">
-                                <div class="text-center text-muted py-3">
-                                    <div class="loading-spinner me-2"></div>
-                                    Cargando mesas...
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
 
             <!-- Delivery Panel for delivery role -->
             <?php if ($auth->hasPermission('delivery')): ?>
