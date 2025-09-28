@@ -52,13 +52,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 
     <nav class="nav flex-column">
-        <a class="nav-link <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
+        <a class="nav-link fw-bold <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
             <i class="fas fa-tachometer-alt me-2"></i>
             Dashboard
         </a>
 
         <?php if ($auth->hasPermission('orders')): ?>
-            <a class="nav-link <?php echo ($current_page == 'orders.php') ? 'active' : ''; ?>" href="orders.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'orders.php') ? 'active' : ''; ?>" href="orders.php">
                 <i class="fas fa-receipt me-2"></i>
                 Órdenes
                 <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
@@ -68,7 +68,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php endif; ?>
         
         <?php if ($auth->hasPermission('online_orders')): ?>
-            <a class="nav-link <?php echo ($current_page == 'online-orders.php') ? 'active' : ''; ?>" href="online-orders.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'online-orders.php') ? 'active' : ''; ?>" href="online-orders.php">
                 <i class="fas fa-globe me-2"></i>
                 Órdenes Online
                 <?php if (isset($online_stats['pending_online']) && $online_stats['pending_online'] > 0): ?>
@@ -78,21 +78,21 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php endif; ?>
         
         <?php if ($auth->hasPermission('all') || $auth->hasPermission('online_orders')): ?>
-            <a class="nav-link <?php echo ($current_page == 'whatsapp-messages.php') ? 'active' : ''; ?>" href="whatsapp-messages.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'whatsapp-messages.php') ? 'active' : ''; ?>" href="whatsapp-messages.php">
                 <i class="fab fa-whatsapp me-2"></i>
                 WhatsApp
             </a>
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('tables')): ?>
-            <a class="nav-link <?php echo ($current_page == 'tables.php') ? 'active' : ''; ?>" href="tables.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'tables.php') ? 'active' : ''; ?>" href="tables.php">
                 <i class="fas fa-table me-2"></i>
                 Mesas
             </a>
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('kitchen')): ?>
-            <a class="nav-link <?php echo ($current_page == 'kitchen.php') ? 'active' : ''; ?>" href="kitchen.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'kitchen.php') ? 'active' : ''; ?>" href="kitchen.php">
                 <i class="fas fa-fire me-2"></i>
                 Cocina
                 <?php if (isset($stats['preparing_orders']) && $stats['preparing_orders'] > 0): ?>
@@ -102,7 +102,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('delivery')): ?>
-            <a class="nav-link <?php echo ($current_page == 'delivery.php') ? 'active' : ''; ?>" href="delivery.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'delivery.php') ? 'active' : ''; ?>" href="delivery.php">
                 <i class="fas fa-motorcycle me-2"></i>
                 Delivery
                 <?php if (isset($stats['pending_deliveries']) && $stats['pending_deliveries'] > 0): ?>
@@ -112,21 +112,21 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('products')): ?>
-            <a class="nav-link <?php echo ($current_page == 'products.php') ? 'active' : ''; ?>" href="products.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'products.php') ? 'active' : ''; ?>" href="products.php">
                 <i class="fas fa-utensils me-2"></i>
                 Productos
             </a>
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('users')): ?>
-            <a class="nav-link <?php echo ($current_page == 'users.php') ? 'active' : ''; ?>" href="users.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'users.php') ? 'active' : ''; ?>" href="users.php">
                 <i class="fas fa-users me-2"></i>
                 Usuarios
             </a>
         <?php endif; ?>
 
         <?php if ($auth->hasPermission('reports')): ?>
-            <a class="nav-link <?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>" href="reports.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>" href="reports.php">
                 <i class="fas fa-chart-bar me-2"></i>
                 Reportes
             </a>
@@ -134,36 +134,36 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <?php if ($auth->hasPermission('all')): ?>
             <hr class="text-white-50 my-3">
-            <small class="text-white-50 px-3 mb-2 d-block">CONFIGURACIÓN</small>
+            <small class="text-white-50 px-3 mb-2 d-block fw-bold">CONFIGURACIÓN</small>
 
-            <a class="nav-link <?php echo ($current_page == 'settings.php') ? 'active' : ''; ?>" href="settings.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'settings.php') ? 'active' : ''; ?>" href="settings.php">
                 <i class="fas fa-cog me-2"></i>
                 Configuración
             </a>
 
-            <a class="nav-link <?php echo ($current_page == 'whatsapp-settings.php') ? 'active' : ''; ?>" href="whatsapp-settings.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'whatsapp-settings.php') ? 'active' : ''; ?>" href="whatsapp-settings.php">
                 <i class="fab fa-whatsapp me-2"></i>
                 WhatsApp API
             </a>
 
-            <a class="nav-link <?php echo ($current_page == 'whatsapp-answers.php') ? 'active' : ''; ?>" href="whatsapp-answers.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'whatsapp-answers.php') ? 'active' : ''; ?>" href="whatsapp-answers.php">
                 <i class="fas fa-robot me-2"></i>
                 Respuestas Auto
             </a>
 
-            <a class="nav-link <?php echo ($current_page == 'permissions.php') ? 'active' : ''; ?>" href="permissions.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'permissions.php') ? 'active' : ''; ?>" href="permissions.php">
                 <i class="fas fa-shield-alt me-2"></i>
                 Permisos
             </a>
             
-            <a class="nav-link <?php echo ($current_page == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php">
+            <a class="nav-link fw-bold <?php echo ($current_page == 'theme-settings.php') ? 'active' : ''; ?>" href="theme-settings.php">
                 <i class="fas fa-palette me-2"></i>
                 Tema
             </a>
         <?php endif; ?>
         
         <hr class="text-white-50 my-3">
-        <a class="nav-link" href="logout.php">
+        <a class="nav-link fw-bold" href="logout.php">
             <i class="fas fa-sign-out-alt me-2"></i>
             Cerrar Sesión
         </a>
