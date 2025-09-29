@@ -186,57 +186,38 @@ function generateMapLink($address) {
     <title>Delivery - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <!-- Tema dinámico -->
-<?php if (file_exists('../assets/css/generate-theme.php')): ?>
-    <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
-<?php endif; ?>
+    <?php if (file_exists('../assets/css/generate-theme.php')): ?>
+        <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+    <?php endif; ?>
 
-<?php
-// Incluir sistema de temas
-$theme_file = '../config/theme.php';
-if (file_exists($theme_file)) {
-    require_once $theme_file;
-    try {
+    <?php
+    // Incluir sistema de temas
+    $theme_file = '../config/theme.php';
+    if (file_exists($theme_file)) {
+        require_once $theme_file;
         $theme_manager = new ThemeManager($db);
         $current_theme = $theme_manager->getThemeSettings();
-    } catch (Exception $e) {
+    } else {
         $current_theme = array(
             'primary_color' => '#667eea',
             'secondary_color' => '#764ba2',
+            'accent_color' => '#ff6b6b',
             'success_color' => '#28a745',
-            'sidebar_width' => '280px'
+            'warning_color' => '#ffc107',
+            'danger_color' => '#dc3545',
+            'info_color' => '#17a2b8'
         );
     }
-} else {
-    $current_theme = array(
-        'primary_color' => '#667eea', 
-        'secondary_color' => '#764ba2',
-        'success_color' => '#28a745',
-        'sidebar_width' => '280px'
-    );
-}
-?>
-<style>
+    ?>
+
+    <style>
+        /* Variables CSS para temas */
         :root {
-            --primary-gradient: linear-gradient(180deg, <?php echo $current_theme['primary_color']; ?> 0%, <?php echo $current_theme['secondary_color']; ?> 100%);
-            --sidebar-width: 280px;
-            --white: #ffffff;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --muted: #6c757d;
-            --border: #e9ecef;
-        }
-
-        body {
-            background: var(--light) !important;
-            overflow-x: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--dark) !important;
-        }
-
-        /* FORZAR COLORES CLAROS EN TODOS LOS ELEMENTOS */
-        * {
-            color: #212529 !important;
+            --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+            --sidebar-mobile-width: 100%;
         }
 
         /* Mobile Top Bar */
@@ -247,48 +228,44 @@ if (file_exists($theme_file)) {
             right: 0;
             z-index: 1040;
             background: var(--primary-gradient);
-            color: var(--white) !important;
+            color: var(--text-white) !important;
             padding: 1rem;
             display: none;
         }
 
-        .mobile-topbar h5, .mobile-topbar * {
+        .mobile-topbar h5 {
             margin: 0;
             font-size: 1.1rem;
-            color: var(--white) !important;
+            color: var(--text-white) !important;
         }
 
         .menu-toggle {
             background: none;
             border: none;
-            color: var(--white) !important;
+            color: var(--text-white) !important;
             font-size: 1.2rem;
             padding: 0.5rem;
-            border-radius: 8px;
-            transition: background 0.3s;
+            border-radius: var(--border-radius-base);
+            transition: var(--transition-base);
         }
 
         .menu-toggle:hover {
             background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Sidebar - mantener colores del tema */
+        /* Sidebar */
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
-            width: var(--sidebar-width);
+            width: var(--dashboard-sidebar-width);
             height: 100vh;
             background: var(--primary-gradient);
-            color: var(--white) !important;
+            color: var(--text-white) !important;
             z-index: 1030;
-            transition: transform 0.3s ease-in-out;
+            transition: transform var(--transition-base);
             overflow-y: auto;
             padding: 1.5rem;
-        }
-
-        .sidebar * {
-            color: rgba(255, 255, 255, 0.9) !important;
         }
 
         .sidebar-backdrop {
@@ -301,7 +278,7 @@ if (file_exists($theme_file)) {
             z-index: 1020;
             display: none;
             opacity: 0;
-            transition: opacity 0.3s ease-in-out;
+            transition: opacity var(--transition-base);
         }
 
         .sidebar-backdrop.show {
@@ -312,9 +289,9 @@ if (file_exists($theme_file)) {
         .sidebar .nav-link {
             color: rgba(255, 255, 255, 0.8) !important;
             padding: 0.75rem 1rem;
-            border-radius: 8px;
+            border-radius: var(--border-radius-base);
             margin-bottom: 0.25rem;
-            transition: all 0.3s;
+            transition: var(--transition-base);
             display: flex;
             align-items: center;
             text-decoration: none;
@@ -323,7 +300,11 @@ if (file_exists($theme_file)) {
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             background: rgba(255, 255, 255, 0.1);
-            color: var(--white) !important;
+            color: var(--text-white) !important;
+        }
+
+        .sidebar .nav-link .badge {
+            margin-left: auto;
         }
 
         .sidebar-close {
@@ -332,118 +313,27 @@ if (file_exists($theme_file)) {
             right: 1rem;
             background: rgba(255, 255, 255, 0.1);
             border: none;
-            color: var(--white) !important;
+            color: var(--text-white) !important;
             width: 40px;
             height: 40px;
             border-radius: 50%;
             display: none;
             align-items: center;
             justify-content: center;
+            font-size: 1.1rem;
         }
 
-        /* Main content - FORZAR FONDO CLARO */
+        /* Main content */
         .main-content {
-            margin-left: var(--sidebar-width);
+            margin-left: var(--dashboard-sidebar-width);
             padding: 2rem;
             min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
+            transition: margin-left var(--transition-base);
             background: #f8f9fa !important;
             color: #212529 !important;
         }
 
-        .main-content * {
-            color: #212529 !important;
-        }
-
-        /* Page header - FORZAR COLORES CLAROS */
-        .page-header {
-            background: #ffffff !important;
-            color: #212529 !important;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        .page-header h1, .page-header h2, .page-header h3, .page-header h4, .page-header h5, .page-header h6,
-        .page-header p, .page-header span, .page-header div {
-            color: #212529 !important;
-        }
-
-        /* Color picker corregido */
-        .color-input-group {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-        }
-
-        .color-preview {
-            width: 100%;
-            height: 100%;
-            border-radius: 12px;
-            border: 3px solid var(--border);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            background: #ffffff;
-            display: block;
-        }
-
-        .color-preview:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            border-color: <?php echo $current_theme['primary_color']; ?>;
-        }
-
-        .color-input {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-            border: none;
-            z-index: 10;
-            background: none;
-        }
-
-        .color-tooltip {
-            position: absolute;
-            bottom: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: var(--white) !important;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 1000;
-            white-space: nowrap;
-        }
-
-        .color-tooltip::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-bottom-color: rgba(0, 0, 0, 0.8);
-        }
-
-        .color-input-group:hover .color-tooltip {
-            opacity: 1;
-        }
-
-        /* Statistics cards - FORZAR COLORES CLAROS */
+        /* Statistics cards */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -454,16 +344,12 @@ if (file_exists($theme_file)) {
         .stat-card {
             background: #ffffff !important;
             color: #212529 !important;
-            border-radius: 15px;
+            border-radius: var(--border-radius-large);
             padding: 1.5rem;
             text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            box-shadow: var(--shadow-base);
             transition: transform 0.3s ease;
             border: 1px solid #e9ecef;
-        }
-
-        .stat-card * {
-            color: #212529 !important;
         }
 
         .stat-card:hover {
@@ -474,7 +360,6 @@ if (file_exists($theme_file)) {
             font-size: 2rem;
             font-weight: bold;
             margin-bottom: 0.5rem;
-            color: #212529 !important;
         }
 
         .stat-icon {
@@ -482,53 +367,39 @@ if (file_exists($theme_file)) {
             margin-bottom: 1rem;
         }
 
-        /* Cards genéricas - FORZAR COLORES CLAROS */
+        /* Cards */
         .card {
             background: #ffffff !important;
             color: #212529 !important;
-            border: 1px solid #e9ecef;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        .card * {
-            color: #212529 !important;
+            border: none;
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-base);
         }
 
         .card-header {
             background: #f8f9fa !important;
             color: #212529 !important;
-            border-bottom: 1px solid #e9ecef;
-            border-radius: 15px 15px 0 0 !important;
-        }
-
-        .card-header * {
-            color: #212529 !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+            padding: 1rem 1.5rem;
         }
 
         .card-body {
             background: #ffffff !important;
             color: #212529 !important;
+            padding: 1.5rem;
         }
 
-        .card-body * {
-            color: #212529 !important;
-        }
-
-        /* Delivery cards - FORZAR COLORES CLAROS */
+        /* Delivery cards */
         .delivery-card {
             background: #ffffff !important;
             color: #212529 !important;
             border: 1px solid #e9ecef;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-base);
             margin-bottom: 1.5rem;
             transition: all 0.3s ease;
             border-left: 5px solid #28a745;
-        }
-
-        .delivery-card * {
-            color: #212529 !important;
         }
 
         .delivery-card:hover {
@@ -587,10 +458,6 @@ if (file_exists($theme_file)) {
             border: 1px solid #e9ecef;
         }
 
-        .customer-info * {
-            color: #212529 !important;
-        }
-
         /* Action buttons */
         .action-buttons {
             gap: 0.5rem;
@@ -601,10 +468,6 @@ if (file_exists($theme_file)) {
             border: none;
             color: white !important;
             transition: all 0.3s;
-        }
-
-        .btn-deliver * {
-            color: white !important;
         }
 
         .btn-deliver:hover {
@@ -619,7 +482,7 @@ if (file_exists($theme_file)) {
             padding: 3rem;
             color: #6c757d !important;
             background: #ffffff !important;
-            border-radius: 15px;
+            border-radius: var(--border-radius-large);
         }
 
         .empty-state i {
@@ -629,20 +492,17 @@ if (file_exists($theme_file)) {
             color: #6c757d !important;
         }
 
-        /* Text colors forzados */
-        .text-muted {
-            color: #6c757d !important;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
+        /* Page header */
+        .page-header {
+            background: #ffffff !important;
             color: #212529 !important;
+            border-radius: var(--border-radius-large);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-base);
         }
 
-        p, span, div, label, small {
-            color: #212529 !important;
-        }
-
-        /* Form elements - FORZAR COLORES CLAROS */
+        /* Form elements */
         .form-control, .form-select {
             background: #ffffff !important;
             color: #212529 !important;
@@ -656,9 +516,31 @@ if (file_exists($theme_file)) {
             box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
         }
 
-        .form-label {
+        /* Text colors */
+        h1, h2, h3, h4, h5, h6, p, span, div {
             color: #212529 !important;
-            font-weight: 500;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        /* Scrollbar del sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
 
         /* Responsive */
@@ -671,7 +553,7 @@ if (file_exists($theme_file)) {
 
             .sidebar {
                 transform: translateX(-100%);
-                width: 100%;
+                width: var(--sidebar-mobile-width);
                 max-width: 350px;
             }
 
@@ -681,8 +563,6 @@ if (file_exists($theme_file)) {
 
             .sidebar-close {
                 display: flex;
-                align-items: center;
-                justify-content: center;
             }
 
             .main-content {
@@ -732,25 +612,26 @@ if (file_exists($theme_file)) {
                 margin-bottom: 0.5rem;
             }
         }
-    .system-header .container-fluid {
-    height: 60px;
-    display: flex
-;
-    align-items: center;
-    padding: 0 1rem;
-    background-color: white;
-}
-.dropdown-menu.show {
-    display: block;
-    background: var(--primary-gradient);
-}
 
-.dropdown-header {
-    padding: 0.75rem 1rem;
-    background: var(--primary-gradient) !important;
-    border-radius: 10px 10px 0 0;
-}
-</style>
+        .system-header .container-fluid {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            background-color: white;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            background: var(--primary-gradient);
+        }
+
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+            background: var(--primary-gradient) !important;
+            border-radius: 10px 10px 0 0;
+        }
+    </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>

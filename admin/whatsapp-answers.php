@@ -120,12 +120,148 @@ require_once 'includes/sidebar-data.php';
     <?php if (file_exists('../assets/css/generate-theme.php')): ?>
         <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
     <?php endif; ?>
-    
-    <!-- Estilos del sidebar -->
-    <link rel="stylesheet" href="../assets/css/sidebar.css?v=<?php echo time(); ?>">
-    
+
+    <?php
+    // Incluir sistema de temas
+    $theme_file = '../config/theme.php';
+    if (file_exists($theme_file)) {
+        require_once $theme_file;
+        $theme_manager = new ThemeManager($db);
+        $current_theme = $theme_manager->getThemeSettings();
+    } else {
+        $current_theme = array(
+            'primary_color' => '#667eea',
+            'secondary_color' => '#764ba2',
+            'accent_color' => '#ff6b6b',
+            'success_color' => '#28a745',
+            'warning_color' => '#ffc107',
+            'danger_color' => '#dc3545',
+            'info_color' => '#17a2b8'
+        );
+    }
+    ?>
+
     <style>
-    
+        /* Variables CSS para temas */
+        :root {
+            --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+            --sidebar-mobile-width: 100%;
+        }
+
+        /* Mobile Top Bar */
+        .mobile-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            background: var(--primary-gradient);
+            color: var(--text-white) !important;
+            padding: 1rem;
+            display: none;
+        }
+
+        .mobile-topbar h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text-white) !important;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--text-white) !important;
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: var(--border-radius-base);
+            transition: var(--transition-base);
+        }
+
+        .menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--dashboard-sidebar-width);
+            height: 100vh;
+            background: var(--primary-gradient);
+            color: var(--text-white) !important;
+            z-index: 1030;
+            transition: transform var(--transition-base);
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1020;
+            display: none;
+            opacity: 0;
+            transition: opacity var(--transition-base);
+        }
+
+        .sidebar-backdrop.show {
+            display: block;
+            opacity: 1;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            padding: 0.75rem 1rem;
+            border-radius: var(--border-radius-base);
+            margin-bottom: 0.25rem;
+            transition: var(--transition-base);
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-white) !important;
+        }
+
+        .sidebar .nav-link .badge {
+            margin-left: auto;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--text-white) !important;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: var(--dashboard-sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+            transition: margin-left var(--transition-base);
+            background: #f8f9fa !important;
+            color: #212529 !important;
+        }
+
         .priority-badge {
             min-width: 50px;
             text-align: center;
@@ -178,25 +314,143 @@ require_once 'includes/sidebar-data.php';
         .form-floating textarea {
             min-height: 100px;
         }
-    .system-header .container-fluid {
-    height: 60px;
-    display: flex
-;
-    align-items: center;
-    padding: 0 1rem;
-    background-color: white;
-}
-.dropdown-menu.show {
-    display: block;
-    background: var(--primary-gradient);
-}
 
-.dropdown-header {
-    padding: 0.75rem 1rem;
-    background: var(--primary-gradient) !important;
-    border-radius: 10px 10px 0 0;
-}
-</style>
+        .card {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: none;
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-base);
+        }
+
+        .card-header {
+            background: #f8f9fa !important;
+            color: #212529 !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+
+        .card-body {
+            background: #ffffff !important;
+            color: #212529 !important;
+            padding: 1.5rem;
+        }
+
+        /* Scrollbar del sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 991.98px) {
+            .mobile-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-mobile-width);
+                max-width: 350px;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-close {
+                display: flex;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-top: 5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.5rem;
+                padding-top: 4.5rem;
+            }
+
+            .sidebar {
+                padding: 1rem;
+            }
+
+            .sidebar .nav-link {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+
+        /* Estilos para elementos del formulario */
+        .form-control, .form-select {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.25);
+        }
+
+        /* Texto y elementos */
+        h1, h2, h3, h4, h5, h6, p, span, div {
+            color: #212529 !important;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        /* Page header específico */
+        .page-header {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-radius: var(--border-radius-large);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-base);
+        }
+
+        .system-header .container-fluid {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            background-color: white;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            background: var(--primary-gradient);
+        }
+
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+            background: var(--primary-gradient) !important;
+            border-radius: 10px 10px 0 0;
+        }
+    </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
@@ -475,44 +729,116 @@ require_once 'includes/sidebar-data.php';
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
-    <script>
-        function editResponse(response) {
-            document.getElementById('edit_id').value = response.id;
-            document.getElementById('edit_trigger_words').value = response.trigger_words;
-            document.getElementById('edit_response_message').value = response.response_message;
-            document.getElementById('edit_match_type').value = response.match_type;
-            document.getElementById('edit_priority').value = response.priority;
-            document.getElementById('edit_is_active').checked = response.is_active == 1;
-            
-            const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-            editModal.show();
+<script>
+    // Funcionalidad del menú móvil
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeMobileMenu();
+        initializeEditResponse();
+        initializeAlerts();
+        initializeRowHighlighting();
+    });
+
+    function initializeMobileMenu() {
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        const sidebarClose = document.getElementById('sidebarClose');
+
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                sidebar.classList.toggle('show');
+                sidebarBackdrop.classList.toggle('show');
+                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : '';
+            });
         }
-        
-        // Auto-dismiss alerts after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                setTimeout(function() {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 5000);
+
+        if (sidebarClose) {
+            sidebarClose.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeSidebar();
+            });
+        }
+
+        if (sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeSidebar();
+            });
+        }
+
+        // Cerrar sidebar al hacer click en enlaces (móvil)
+        document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 992) {
+                    setTimeout(closeSidebar, 100);
+                }
             });
         });
-        
-        // Highlight recently updated rows
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('updated')) {
-                const responseId = urlParams.get('updated');
-                const responseCard = document.getElementById('response-' + responseId);
-                if (responseCard) {
-                    responseCard.style.border = '2px solid #28a745';
-                    setTimeout(function() {
-                        responseCard.style.border = '';
-                    }, 3000);
-                }
+
+        // Cerrar sidebar al redimensionar ventana
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 992) {
+                closeSidebar();
             }
         });
-    </script>
+    }
+
+    function closeSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        
+        if (sidebar) sidebar.classList.remove('show');
+        if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    // Funcionalidad existente de editar respuesta
+    function editResponse(response) {
+        document.getElementById('edit_id').value = response.id;
+        document.getElementById('edit_trigger_words').value = response.trigger_words;
+        document.getElementById('edit_response_message').value = response.response_message;
+        document.getElementById('edit_match_type').value = response.match_type;
+        document.getElementById('edit_priority').value = response.priority;
+        document.getElementById('edit_is_active').checked = response.is_active == 1;
+        
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        editModal.show();
+    }
+
+    function initializeEditResponse() {
+        // La función editResponse ya está definida globalmente arriba
+        // Solo necesitamos asegurar que esté disponible
+        window.editResponse = editResponse;
+    }
+
+    function initializeAlerts() {
+        // Auto-dismiss alerts after 5 seconds
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            setTimeout(function() {
+                if (alert && alert.parentNode) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
+        });
+    }
+
+    function initializeRowHighlighting() {
+        // Highlight recently updated rows
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('updated')) {
+            const responseId = urlParams.get('updated');
+            const responseCard = document.getElementById('response-' + responseId);
+            if (responseCard) {
+                responseCard.style.border = '2px solid #28a745';
+                setTimeout(function() {
+                    responseCard.style.border = '';
+                }, 3000);
+            }
+        }
+    }
+</script>
 </body>
 </html>
