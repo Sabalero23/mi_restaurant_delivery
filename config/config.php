@@ -4,11 +4,11 @@
 // Configuración de base de datos
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'restaurant');
-define('DB_USER', 'restaurant');
-define('DB_PASS', 'f2367cc9cb499');
+define('DB_USER', 'user');
+define('DB_PASS', 'tu_password');
 
 // Configuración del sitio
-define('BASE_URL', 'https://comidas.ordenes.com.ar/');
+define('BASE_URL', 'https://tu_dominio/');
 define('UPLOAD_PATH', 'uploads/');
 define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
 
