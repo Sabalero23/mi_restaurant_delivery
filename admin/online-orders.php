@@ -1961,7 +1961,7 @@ p, small {
         const responseText = await response.text();
         console.log('Respuesta del servidor:', responseText);
         
-        const data = await JSON.parse(responseText);
+        const data = JSON.parse(responseText);  // ← AQUÍ se define 'data'
         
         if (data.success) {
             // Cerrar el modal de aceptación
@@ -1970,12 +1970,18 @@ p, small {
                 acceptModal.hide();
             }
             
+            // Mostrar alertas de stock bajo si las hay
+            if (data.low_stock_alerts && data.low_stock_alerts.length > 0) {
+                setTimeout(() => {
+                    showStockAlerts(data.low_stock_alerts);
+                }, 1000);
+            }
+            
             // VERIFICAR SI SE ENVIÓ AUTOMÁTICAMENTE
             if (data.auto_sent) {
                 showSuccess('✅ Pedido aceptado y WhatsApp enviado automáticamente');
                 setTimeout(() => location.reload(), 2000);
             } else if (data.whatsapp_url) {
-                // Solo mostrar modal de WhatsApp si no se envió automáticamente
                 setTimeout(() => {
                     showWhatsAppMessage(data.whatsapp_message, data.whatsapp_url, true);
                 }, 500);
@@ -2262,19 +2268,7 @@ function showStockAlerts(alerts) {
     }
 }
 
-// Modificar las funciones de confirmación para incluir alertas
-function confirmAcceptOrder() {
-    // ... código existente ...
-    
-    if (data.success) {
-        // Mostrar alertas de stock bajo si las hay
-        if (data.low_stock_alerts) {
-            showStockAlerts(data.low_stock_alerts);
-        }
-        
-        // ... resto del código existente ...
-    }
-}
+
 </script>
 
 <?php include 'footer.php'; ?>
