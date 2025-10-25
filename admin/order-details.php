@@ -523,9 +523,13 @@ if (file_exists($theme_file)) {
                         <i class="fas fa-arrow-left me-1"></i>
                         Volver
                     </a>
-                    <button class="btn btn-print" onclick="window.open('print-order.php?id=<?php echo $order['id']; ?>&autoprint=1', '_blank')">
+                    <button class="btn btn-print me-2" onclick="window.open('print-order.php?id=<?php echo $order['id']; ?>&autoprint=1', '_blank')">
                         <i class="fas fa-print me-1"></i>
-                        Imprimir Ticket
+                        <span class="d-none d-md-inline">Imprimir </span>Ticket
+                    </button>
+                    <button class="btn btn-warning" onclick="window.open('print-order-kitchen.php?id=<?php echo $order['id']; ?>&autoprint=1', '_blank')">
+                        <i class="fas fa-utensils me-1"></i>
+                        <span class="d-none d-md-inline">Orden </span>Cocina
                     </button>
                 </div>
             </div>
@@ -832,8 +836,13 @@ if (file_exists($theme_file)) {
                                 Imprimir Ticket
                             </button>
                             
+                            <button class="btn btn-warning" onclick="window.open('print-order-kitchen.php?id=<?php echo $order['id']; ?>&autoprint=1', '_blank')">
+                                <i class="fas fa-utensils me-1"></i>
+                                Imprimir Orden Cocina
+                            </button>
+                            
                             <?php if ($can_edit && $order['status'] !== 'delivered' && $order['status'] !== 'cancelled'): ?>
-                                <a href="order-create.php?order_id=<?php echo $order['id']; ?>" class="btn btn-warning">
+                                <a href="order-create.php?order_id=<?php echo $order['id']; ?>" class="btn btn-secondary">
                                     <i class="fas fa-edit me-1"></i>
                                     Editar Orden
                                 </a>
