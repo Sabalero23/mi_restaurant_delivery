@@ -132,36 +132,36 @@ $type_texts = [
         
         .item {
             background: #fff;
-            border: 3px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
         }
         
         .item-quantity {
             background: #ff6b6b;
             color: white;
-            font-size: 28px;
+            font-size: 18px;
             font-weight: bold;
-            width: 50px;
-            height: 50px;
+            width: 35px;
+            height: 35px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             float: left;
-            margin-right: 15px;
-            margin-top: 5px;
+            margin-right: 10px;
+            margin-top: 2px;
         }
         
         .item-name {
-            font-size: 20px;
+            font-size: 15px;
             font-weight: bold;
             color: #000;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             text-transform: uppercase;
-            line-height: 1.3;
+            line-height: 1.2;
         }
         
         .item-notes {
