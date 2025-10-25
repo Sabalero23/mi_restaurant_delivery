@@ -3,6 +3,7 @@
 require_once '../../config/config.php';
 require_once '../../config/database.php';
 require_once '../../config/auth.php';
+require_once 'MigrationManager.php';
 
 header('Content-Type: application/json');
 
@@ -45,6 +46,12 @@ switch ($action) {
         break;
     case 'generate_system_id':
         generateSystemId($db);
+        break;
+    case 'get_migrations':
+        getMigrations($db);
+        break;
+    case 'retry_migration':
+        retryMigration($db);
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Acción no válida: ' . $action]);
@@ -439,15 +446,31 @@ function performUpdate($db) {
         
         $stats = copyDirectory($sourceDir, $targetDir, $excludeFiles);
         
-        // 5. Limpiar archivos temporales
+        // 5. Ejecutar migraciones SQL pendientes
+        updateUpdateLog($db, $updateId, 'in_progress', 'Ejecutando migraciones de base de datos...');
+        
+        $migrationManager = new MigrationManager($db);
+        $migrationResult = $migrationManager->runPendingMigrations();
+        
+        if (!$migrationResult['success']) {
+            throw new Exception('Error en migraciones: ' . ($migrationResult['error'] ?? 'Error desconocido'));
+        }
+        
+        $migrationsExecuted = count($migrationResult['migrations']);
+        if ($migrationsExecuted > 0) {
+            updateUpdateLog($db, $updateId, 'in_progress', 
+                "Se ejecutaron {$migrationsExecuted} migraciones correctamente");
+        }
+        
+        // 6. Limpiar archivos temporales
         unlink($zipFile);
         deleteDirectory($extractPath);
         
-        // 6. Obtener nuevo commit hash
+        // 7. Obtener nuevo commit hash
         $newCommit = getLatestCommitHash($settings);
         updateSetting($db, 'system_commit', $newCommit);
         
-        // 7. Actualizar log de actualización
+        // 8. Actualizar log de actualización
         updateUpdateLog($db, $updateId, 'completed', 'Actualización completada exitosamente');
         
         $query = "UPDATE system_updates SET 
@@ -475,6 +498,10 @@ function performUpdate($db) {
                 'added' => $stats['added'] ?? 0,
                 'updated' => $stats['modified'] ?? 0,
                 'deleted' => $stats['deleted'] ?? 0
+            ],
+            'migrations' => [
+                'executed' => $migrationsExecuted,
+                'details' => $migrationResult['migrations'] ?? []
             ],
             'new_commit' => substr($newCommit, 0, 7)
         ]);
@@ -817,4 +844,71 @@ function formatBytes($bytes, $precision = 2) {
     }
     
     return round($bytes, $precision) . ' ' . $units[$i];
+}
+
+/**
+ * Obtener historial y estadísticas de migraciones
+ */
+function getMigrations($db) {
+    try {
+        $migrationManager = new MigrationManager($db);
+        
+        // Obtener historial
+        $history = $migrationManager->getMigrationHistory();
+        
+        // Obtener estadísticas
+        $stats = $migrationManager->getStatistics();
+        
+        // Obtener migraciones pendientes
+        $pending = $migrationManager->detectPendingMigrations();
+        
+        echo json_encode([
+            'success' => true,
+            'history' => $history,
+            'statistics' => $stats,
+            'pending' => $pending
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al obtener migraciones: ' . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Reintentar una migración fallida
+ */
+function retryMigration($db) {
+    try {
+        $version = $_POST['version'] ?? '';
+        
+        if (empty($version)) {
+            throw new Exception('Versión no especificada');
+        }
+        
+        $migrationManager = new MigrationManager($db);
+        $result = $migrationManager->retryFailedMigration($version);
+        
+        if ($result['success']) {
+            echo json_encode([
+                'success' => true,
+                'message' => "Migración {$version} ejecutada exitosamente",
+                'execution_time' => $result['execution_time']
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al ejecutar migración',
+                'error' => $result['error']
+            ]);
+        }
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
+    }
 }
