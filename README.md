@@ -1,52 +1,62 @@
-# Sistema de Gestión Gastronómica
+Sistema de Gestión Gastronómica
+Un sistema completo de gestión para restaurantes que incluye punto de venta, pedidos online, gestión de mesas, cocina, delivery, actualización automática desde GitHub y reportes avanzados.
+🌟 Características Principales
+💻 Panel de Administración
 
-Un sistema completo de gestión para restaurantes que incluye punto de venta, pedidos online, gestión de mesas, cocina, delivery y reportes avanzados.
+Dashboard en tiempo real con estadísticas y notificaciones
+Gestión de órdenes tradicionales y online
+Control de mesas con estados visuales
+Panel de cocina con tiempos de preparación
+Gestión de delivery con seguimiento
+Reportes avanzados con gráficos y exportación
+Sistema de usuarios con roles y permisos
+Gestión de productos y categorías
+Control de inventario con seguimiento en tiempo real
+Configuración del sistema centralizada
+Instalador automático modular en 5 pasos
+🆕 Sistema de actualización automática desde GitHub sin Git
 
-## 🌟 Características Principales
+📱 Experiencia del Cliente
 
-### 💻 Panel de Administración
-- **Dashboard en tiempo real** con estadísticas y notificaciones
-- **Gestión de órdenes** tradicionales y online
-- **Control de mesas** con estados visuales
-- **Panel de cocina** con tiempos de preparación
-- **Gestión de delivery** con seguimiento
-- **Reportes avanzados** con gráficos y exportación
-- **Sistema de usuarios** con roles y permisos
-- **Gestión de productos** y categorías
-- **Control de inventario** con seguimiento en tiempo real
-- **Configuración del sistema** centralizada
-- **Instalador automático** modular en 5 pasos
-- **Control de inventario** con seguimiento en tiempo real
+Menú online responsive con carrito de compras
+Menú QR para mesas sin contacto
+Pedidos online con validación de direcciones
+Integración con Google Maps para delivery
+Llamada al mesero desde código QR
+Validación de horarios de atención
 
-### 📱 Experiencia del Cliente
-- **Menú online** responsive con carrito de compras
-- **Menú QR** para mesas sin contacto
-- **Pedidos online** con validación de direcciones
-- **Integración con Google Maps** para delivery
-- **Llamada al mesero** desde código QR
-- **Validación de horarios** de atención
+🔔 Notificaciones en Tiempo Real
 
-### 🔔 Notificaciones en Tiempo Real
-- **Alertas sonoras** para nuevos pedidos
-- **Notificaciones visuales** con animaciones
-- **Sistema de llamadas** de mesa
-- **Actualizaciones automáticas** del estado
+Alertas sonoras para nuevos pedidos
+Notificaciones visuales con animaciones
+Sistema de llamadas de mesa
+Actualizaciones automáticas del estado
 
-## 🛠️ Tecnologías Utilizadas
+🔄 Sistema de Actualización Automática (NUEVO)
 
-- **Backend**: PHP 8.0+
-- **Base de datos**: MySQL 8.0+
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Framework CSS**: Bootstrap 5.3
-- **Iconos**: Font Awesome 6.0
-- **Gráficos**: Chart.js 3.9
-- **Mapas**: Google Maps API
-- **Tablas**: DataTables
-- **Gestión de Stock**: Sistema de inventario integrado
+Actualización con un clic desde el panel de administración
+Verificación automática de nuevas versiones en GitHub
+Backup automático antes de cada actualización
+Sistema de rollback para revertir cambios
+Protección de archivos sensibles (configuración, uploads)
+Historial completo de actualizaciones
+Sin necesidad de Git instalado en el servidor
+Interfaz visual con progreso en tiempo real
 
-## 📂 Estructura del Proyecto
+🛠️ Tecnologías Utilizadas
 
-```
+Backend: PHP 8.0+
+Base de datos: MySQL 8.0+
+Frontend: HTML5, CSS3, JavaScript (ES6+)
+Framework CSS: Bootstrap 5.3
+Iconos: Font Awesome 6.0
+Gráficos: Chart.js 3.9
+Mapas: Google Maps API
+Tablas: DataTables
+Gestión de Stock: Sistema de inventario integrado
+🆕 Actualización: GitHub API REST
+
+📂 Estructura del Proyecto
 mi_restaurant_delivery/
 ├── index.php # Página principal del menú online
 ├── 404.html # Página de error 404
@@ -59,161 +69,177 @@ mi_restaurant_delivery/
 ├── estructura de archivos.txt # Archivo de referencia con la estructura del sistema
 │
 ├── models/ # Modelos de datos del sistema
-│ ├── Product.php # Modelo de productos
-│ ├── Table.php # Modelo de mesas
-│ ├── Category.php # Modelo de categorías
-│ ├── Payment.php # Modelo de pagos
-│ └── Order.php # Modelo de órdenes
+│   ├── Product.php # Modelo de productos
+│   ├── Table.php # Modelo de mesas
+│   ├── Category.php # Modelo de categorías
+│   ├── Payment.php # Modelo de pagos
+│   └── Order.php # Modelo de órdenes
 │
 ├── config/ # Configuración global del sistema
-│ ├── config.php # Configuración general (constantes, variables globales)
-│ ├── database.php # Conexión a la base de datos
-│ ├── auth.php # Sistema de autenticación y sesiones
-│ ├── functions.php # Funciones auxiliares y utilidades
-│ ├── whatsapp_api.php         # Clase de integración con WhatsApp Business API
-│ └── theme.php # Clase ThemeManager con toda la lógica
+│   ├── config.php # Configuración general (constantes, variables globales)
+│   ├── database.php # Conexión a la base de datos
+│   ├── auth.php # Sistema de autenticación y sesiones
+│   ├── functions.php # Funciones auxiliares y utilidades
+│   ├── whatsapp_api.php # Clase de integración con WhatsApp Business API
+│   └── theme.php # Clase ThemeManager con toda la lógica
 │
 ├── admin/ # Panel de administración
-│ ├── api/ # APIs internas para el frontend
-│ │ ├── products.php # API de gestión de productos
-│ │ ├── stock-movements.php # Historial de movimientos de inventario
-│ │ ├── update-item-status.php # Actualización del estado de ítems
-│ │ ├── delivery-stats.php # Estadísticas de delivery
-│ │ ├── delivery.php # API de gestión de deliveries
-│ │ ├── online-orders-stats.php # Estadísticas de pedidos online
-│ │ ├── online-orders.php # API de pedidos online
-│ │ ├── update-delivery.php # Actualización de estado de entregas
-│ │ ├── orders.php # API de órdenes tradicionales
-│ │ ├── kitchen.php # API del panel de cocina
-│ │ ├── update-order-status.php # Actualización del estado de órdenes
-│ │ ├── create-order.php # Creación de órdenes desde el sistema
-│ │ ├── tables.php # API de gestión de mesas
-│ │ ├── regenerate-css.php # API para regenerar archivos CSS
-│ │ ├── whatsapp-stats.php   # API de estadísticas de WhatsApp
-│ │ └── online-orders-recent.php # Listado de pedidos online recientes
-│ │
-│ ├── receipts/ # Archivos de recibos generados
-│ │ └── customer_ORD-.txt # Ejemplo de recibo de cliente
-│ │
-│ ├── tickets/ # Tickets impresos para cocina/delivery
-│ │ └── kitchen_ORD-.txt # Ticket de orden en cocina
-│ │
-│ ├── pages/ # Páginas estáticas del panel
-│ │ └── 403.php # Página de error 403 (acceso denegado)
-│ │
-│ ├── uploads/ # Archivos subidos en el panel
-│ │ └── products/ # Imágenes de productos
-│ │
-│ ├── products.php # Gestión de productos
-│ ├── settings.php # Configuración general del sistema
-│ ├── permissions.php # Gestión de permisos y roles
-│ ├── check_calls.php # Verificación de llamadas de mesero
-│ ├── delivery.php # Panel de gestión de deliveries
-│ ├── attend_call.php # Atender llamadas de mesero
-│ ├── online-orders.php # Gestión de pedidos online
-│ ├── online-order-details.php # Detalle de un pedido online
-│ ├── dashboard.php # Dashboard principal con estadísticas
-│ ├── reports.php # Reportes avanzados del sistema
-│ ├── orders.php # Gestión de órdenes tradicionales
-│ ├── kitchen.php # Panel de cocina
-│ ├── users.php # Gestión de usuarios y roles
-│ ├── tables.php # Gestión de mesas
-│ ├── profile.php # Gestión del perfil de usuario con avatar y configuración personal
-│ ├── order-create.php # Crear o editar órdenes
-│ ├── logout.php # Cerrar sesión
-│ ├── order-details.php # Detalle de una orden
-│ ├── print-order.php # Impresión de órdenes
-│ ├── theme-settings.php # Panel principal de configuración de temas
-│ ├── whatsapp-answers.php      # Panel de configuración de respuestas automáticas
-│ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
-│ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
-│ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
-│ └── login.php # Página de login
+│   ├── api/ # APIs internas para el frontend
+│   │   ├── products.php # API de gestión de productos
+│   │   ├── stock-movements.php # Historial de movimientos de inventario
+│   │   ├── update-item-status.php # Actualización del estado de ítems
+│   │   ├── delivery-stats.php # Estadísticas de delivery
+│   │   ├── delivery.php # API de gestión de deliveries
+│   │   ├── online-orders-stats.php # Estadísticas de pedidos online
+│   │   ├── online-orders.php # API de pedidos online
+│   │   ├── update-delivery.php # Actualización de estado de entregas
+│   │   ├── orders.php # API de órdenes tradicionales
+│   │   ├── kitchen.php # API del panel de cocina
+│   │   ├── update-order-status.php # Actualización del estado de órdenes
+│   │   ├── create-order.php # Creación de órdenes desde el sistema
+│   │   ├── tables.php # API de gestión de mesas
+│   │   ├── regenerate-css.php # API para regenerar archivos CSS
+│   │   ├── whatsapp-stats.php # API de estadísticas de WhatsApp
+│   │   ├── 🆕 github-update.php # API para actualización desde GitHub
+│   │   └── online-orders-recent.php # Listado de pedidos online recientes
+│   │
+│   ├── receipts/ # Archivos de recibos generados
+│   │   └── customer_ORD-.txt # Ejemplo de recibo de cliente
+│   │
+│   ├── tickets/ # Tickets impresos para cocina/delivery
+│   │   └── kitchen_ORD-.txt # Ticket de orden en cocina
+│   │
+│   ├── pages/ # Páginas estáticas del panel
+│   │   └── 403.php # Página de error 403 (acceso denegado)
+│   │
+│   ├── uploads/ # Archivos subidos en el panel
+│   │   └── products/ # Imágenes de productos
+│   │
+│   ├── products.php # Gestión de productos
+│   ├── settings.php # Configuración general del sistema y actualización
+│   ├── permissions.php # Gestión de permisos y roles
+│   ├── check_calls.php # Verificación de llamadas de mesero
+│   ├── delivery.php # Panel de gestión de deliveries
+│   ├── attend_call.php # Atender llamadas de mesero
+│   ├── online-orders.php # Gestión de pedidos online
+│   ├── online-order-details.php # Detalle de un pedido online
+│   ├── dashboard.php # Dashboard principal con estadísticas
+│   ├── reports.php # Reportes avanzados del sistema
+│   ├── orders.php # Gestión de órdenes tradicionales
+│   ├── kitchen.php # Panel de cocina
+│   ├── users.php # Gestión de usuarios y roles
+│   ├── tables.php # Gestión de mesas
+│   ├── profile.php # Gestión del perfil de usuario con avatar y configuración personal
+│   ├── order-create.php # Crear o editar órdenes
+│   ├── logout.php # Cerrar sesión
+│   ├── order-details.php # Detalle de una orden
+│   ├── print-order.php # Impresión de órdenes
+│   ├── theme-settings.php # Panel principal de configuración de temas
+│   ├── whatsapp-answers.php # Panel de configuración de respuestas automáticas
+│   ├── whatsapp-settings.php # Configuración de WhatsApp Business API
+│   ├── whatsapp-messages.php # Panel de gestión de conversaciones WhatsApp  
+│   ├── whatsapp-webhook.php # Webhook para recibir mensajes de WhatsApp
+│   └── login.php # Página de login
 │
 ├── assets/ # Recursos estáticos
-│ ├── includes/ # Archivos de inclusión
-│ ├── css/ # Hojas de estilo
-│ │ ├── generate-theme.php # Generador de CSS dinámico
-│ │ └── dynamic-theme.css # Archivo CSS generado automáticamente
-│ │
-│ ├── images/ # Imágenes del sistema
-│ └── js/ # Scripts JavaScript
+│   ├── includes/ # Archivos de inclusión
+│   ├── css/ # Hojas de estilo
+│   │   ├── generate-theme.php # Generador de CSS dinámico
+│   │   └── dynamic-theme.css # Archivo CSS generado automáticamente
+│   │
+│   ├── images/ # Imágenes del sistema
+│   └── js/ # Scripts JavaScript
+│
+├── 🆕 backups/ # Backups automáticos del sistema
+│   └── backup_YYYY-MM-DD_HH-MM-SS/ # Carpetas de backup con timestamp
 │
 └── database/ # Scripts de base de datos
-└── bd.sql # Estructura y datos iniciales
-```
+    └── bd.sql # Estructura y datos iniciales
+🚀 Instalación
+Requisitos del Sistema
 
-## 🚀 Instalación
+PHP: 7.4 o superior
+MySQL: 8.0 o superior
+Apache/Nginx: Servidor web
+Extensiones PHP:
 
-### Requisitos del Sistema
+PDO
+PDO_MySQL
+GD (para imágenes)
+JSON
+Session
+mbstring
+openssl
+curl
+🆕 zip (para sistema de actualización)
 
-- **PHP**: 7.4 o superior
-- **MySQL**: 8.0 o superior
-- **Apache/Nginx**: Servidor web
-- **Extensiones PHP**:
-  - PDO
-  - PDO_MySQL
-  - GD (para imágenes)
-  - JSON
-  - Session
-  - mbstring
-  - openssl
-  - curl
 
-### Instalación Automática (Recomendada)
 
+Instalación Automática (Recomendada)
 El sistema incluye un instalador web modular dividido en pasos para una instalación más organizada y mantenible.
 
-1. **Descargar y extraer** el proyecto en su servidor web
-2. **Crear base de datos** MySQL vacía
-3. **Navegar** a `http://su-dominio.com/install/`
-4. **Seguir el asistente** de instalación paso a paso:
+Descargar y extraer el proyecto en su servidor web
+Crear base de datos MySQL vacía
+Navegar a http://su-dominio.com/install/
+Seguir el asistente de instalación paso a paso:
 
-#### Pasos del Instalador
+Pasos del Instalador
+Paso 1: Verificación de Requisitos y Configuración de BD
 
-**Paso 1: Verificación de Requisitos y Configuración de BD**
-- Verificación automática de requisitos del sistema
-- Configuración de conexión a base de datos
-- Generación del archivo `config/config.php`
+Verificación automática de requisitos del sistema
+Configuración de conexión a base de datos
+Generación del archivo config/config.php
 
-**Paso 2: Instalación de Estructura de BD**
-- Creación automática de todas las tablas necesarias:
-  - Gestión de usuarios, roles y permisos
-  - Sistema de productos con control de stock
-  - Gestión de órdenes y pagos
-  - Sistema de mesas y llamadas de mesero
-  - Configuración de temas dinámicos
-  - Integración completa de WhatsApp Business API
-  - **Tabla `stock_movements`** para historial de inventario
-- Inserción de datos básicos del sistema
-- Configuración de roles y permisos
-- Instalación de respuestas automáticas de WhatsApp
-- Configuración de temas básicos
+Paso 2: Instalación de Estructura de BD
 
-**Paso 3: Configuración del Restaurante**
-- Datos básicos del negocio
-- Configuración de delivery y horarios
-- Creación del usuario administrador
-- Configuración de APIs (Google Maps, WhatsApp)
+Creación automática de todas las tablas necesarias:
 
-**Paso 4: Datos de Ejemplo (Opcional)**
-- Usuarios de ejemplo con diferentes roles
-- **Productos de muestra con control de stock**:
-  - Productos con y sin seguimiento de inventario
-  - Configuración de alertas de stock bajo
-  - Datos realistas de costos y precios
-- Mesas adicionales
-- **Este paso funciona independientemente** y puede ejecutarse en cualquier momento
+Gestión de usuarios, roles y permisos
+Sistema de productos con control de stock
+Gestión de órdenes y pagos
+Sistema de mesas y llamadas de mesero
+Configuración de temas dinámicos
+Integración completa de WhatsApp Business API
+Tabla stock_movements para historial de inventario
+🆕 Tabla system_updates para logs de actualizaciones
 
-**Paso 5: Finalización**
-- Resumen de la instalación
-- Credenciales de acceso
-- Enlaces directos al sistema
-- Instrucciones de seguridad
 
-### Estructura de Archivos de Instalación
+Inserción de datos básicos del sistema
+Configuración de roles y permisos
+Instalación de respuestas automáticas de WhatsApp
+Configuración de temas básicos
+🆕 Configuración inicial de GitHub para actualizaciones
 
-```
+Paso 3: Configuración del Restaurante
+
+Datos básicos del negocio
+Configuración de delivery y horarios
+Creación del usuario administrador
+Configuración de APIs (Google Maps, WhatsApp)
+🆕 Configuración opcional de repositorio GitHub
+
+Paso 4: Datos de Ejemplo (Opcional)
+
+Usuarios de ejemplo con diferentes roles
+Productos de muestra con control de stock:
+
+Productos con y sin seguimiento de inventario
+Configuración de alertas de stock bajo
+Datos realistas de costos y precios
+
+
+Mesas adicionales
+Este paso funciona independientemente y puede ejecutarse en cualquier momento
+
+Paso 5: Finalización
+
+Resumen de la instalación
+Credenciales de acceso
+Enlaces directos al sistema
+Instrucciones de seguridad
+🆕 Acceso directo a configuración de actualización
+
+Estructura de Archivos de Instalación
 install/
 ├── index.php              # Archivo principal de instalación
 ├── install_common.php     # Funciones compartidas y estructura de BD
@@ -222,95 +248,103 @@ install/
 ├── step3.php             # Configuración del restaurante
 ├── step4.php             # Datos de ejemplo (opcional)
 └── step5.php             # Finalización
-```
+Características del Instalador
 
-### Características del Instalador
+Modular: Cada paso es independiente y mantenible
+Verificación automática: Requisitos del sistema validados
+Progreso visual: Indicadores de progreso en cada paso
+Navegación flexible: Posibilidad de saltar o repetir pasos
+Datos de ejemplo opcionales: El paso 4 puede ejecutarse después de la instalación principal
+Seguridad: Verificaciones y validaciones en cada paso
+Instalación completa: Incluye todas las tablas necesarias para:
 
-- **Modular**: Cada paso es independiente y mantenible
-- **Verificación automática**: Requisitos del sistema validados
-- **Progreso visual**: Indicadores de progreso en cada paso
-- **Navegación flexible**: Posibilidad de saltar o repetir pasos
-- **Datos de ejemplo opcionales**: El paso 4 puede ejecutarse después de la instalación principal
-- **Seguridad**: Verificaciones y validaciones en cada paso
-- **Instalación completa**: Incluye todas las tablas necesarias para:
-  - Sistema de productos con control de stock
-  - Gestión de inventario con historial de movimientos
-  - WhatsApp Business API con respuestas automáticas
-  - Sistema de temas dinámicos
-  - Estructura completa de órdenes y pagos
+Sistema de productos con control de stock
+Gestión de inventario con historial de movimientos
+WhatsApp Business API con respuestas automáticas
+Sistema de temas dinámicos
+Estructura completa de órdenes y pagos
+🆕 Sistema de actualización automática desde GitHub
 
-### Base de Datos Instalada
 
+
+Base de Datos Instalada
 El instalador crea automáticamente las siguientes tablas:
+Sistema Core:
 
-**Sistema Core:**
-- `users`, `roles` - Gestión de usuarios y permisos
-- `settings` - Configuración del sistema
-- `categories`, `products` - Gestión de productos
-- `stock_movements` - **Historial de movimientos de inventario**
+users, roles - Gestión de usuarios y permisos
+settings - Configuración del sistema
+categories, products - Gestión de productos
+stock_movements - Historial de movimientos de inventario
+🆕 system_updates - Logs de actualizaciones del sistema
 
-**Gestión de Órdenes:**
-- `orders`, `order_items` - Órdenes tradicionales
-- `online_orders` - Pedidos online
-- `payments`, `online_orders_payments` - Sistema de pagos
-- `tables`, `waiter_calls` - Gestión de mesas
+Gestión de Órdenes:
 
-**Sistema de Temas:**
-- `theme_settings` - Configuración de temas
-- `custom_themes` - Temas personalizados
-- `theme_history` - Historial de cambios
+orders, order_items - Órdenes tradicionales
+online_orders - Pedidos online
+payments, online_orders_payments - Sistema de pagos
+tables, waiter_calls - Gestión de mesas
 
-**WhatsApp Business API:**
-- `whatsapp_messages` - Conversaciones
-- `whatsapp_logs` - Logs de envío
-- `whatsapp_auto_responses` - Respuestas automáticas
-- `whatsapp_media_uploads` - Archivos multimedia
+Sistema de Temas:
 
-### Post-Instalación
+theme_settings - Configuración de temas
+custom_themes - Temas personalizados
+theme_history - Historial de cambios
 
-**Importante para la seguridad:**
-- ⚠️ **Eliminar toda la carpeta `install/`** después de completar la instalación
-- Cambiar todas las contraseñas predefinidas
-- Configurar HTTPS en producción
-- Verificar permisos de archivos y carpetas
+WhatsApp Business API:
 
-### Solución de Problemas de Instalación
+whatsapp_messages - Conversaciones
+whatsapp_logs - Logs de envío
+whatsapp_auto_responses - Respuestas automáticas
+whatsapp_media_uploads - Archivos multimedia
 
-**El sistema ya está instalado:**
-- Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
-- Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
+Post-Instalación
+Importante para la seguridad:
 
-**Error de conexión a base de datos:**
-- Verificar credenciales de MySQL
-- Asegurar que la base de datos existe y está accesible
-- Comprobar que las extensiones PHP están instaladas
+⚠️ Eliminar toda la carpeta install/ después de completar la instalación
+Cambiar todas las contraseñas predefinidas
+Configurar HTTPS en producción
+Verificar permisos de archivos y carpetas
+🆕 Configurar repositorio GitHub para actualizaciones automáticas
 
-**Permisos de escritura:**
-- Verificar permisos 755 en carpetas de uploads
-- Asegurar que el servidor web puede escribir en `config/`
+Solución de Problemas de Instalación
+El sistema ya está instalado:
 
-**Requisitos no cumplidos:**
-- Actualizar PHP a versión 7.4 o superior
-- Instalar extensiones PHP faltantes
-- Verificar configuración del servidor web
+Si aparece este mensaje y desea reinstalar, elimine el archivo config/installed.lock
+Para agregar solo datos de ejemplo, acceda directamente a install/step4.php
 
-### Instalación Manual (Avanzada)
+Error de conexión a base de datos:
 
+Verificar credenciales de MySQL
+Asegurar que la base de datos existe y está accesible
+Comprobar que las extensiones PHP están instaladas
+
+Permisos de escritura:
+
+Verificar permisos 755 en carpetas de uploads
+Asegurar que el servidor web puede escribir en config/
+🆕 Verificar permisos 755 en carpeta backups/
+
+Requisitos no cumplidos:
+
+Actualizar PHP a versión 7.4 o superior
+Instalar extensiones PHP faltantes
+🆕 Instalar extensión php-zip para actualizaciones
+Verificar configuración del servidor web
+
+Instalación Manual (Avanzada)
 Si prefiere instalar manualmente:
 
-1. **Configurar base de datos**:
-   ```sql
-   CREATE DATABASE comidasm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
+Configurar base de datos:
 
-2. **Importar estructura**:
-   ```bash
-   mysql -u usuario -p comidasm < database/bd.sql
-   ```
+sql   CREATE DATABASE comidasm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-3. **Configurar archivo de configuración**:
-   ```php
-   // config/config.php
+Importar estructura:
+
+bash   mysql -u usuario -p comidasm < database/bd.sql
+
+Configurar archivo de configuración:
+
+php   // config/config.php
    define('DB_HOST', 'localhost');
    define('DB_NAME', 'comidasm');
    define('DB_USER', 'tu_usuario');
@@ -319,355 +353,386 @@ Si prefiere instalar manualmente:
    define('BASE_URL', 'https://tu-dominio.com/');
    define('UPLOAD_PATH', 'uploads/');
    define('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
-   ```
 
-4. **Crear carpetas con permisos**:
-   ```bash
-   mkdir -p config uploads uploads/products uploads/categories uploads/avatars whatsapp_media
-   chmod 755 uploads/ admin/uploads/ whatsapp_media/
-   ```
+Crear carpetas con permisos:
 
-5. **Crear archivo de instalación completada**:
-   ```bash
-   echo "$(date)" > config/installed.lock
-   ```
+bash   mkdir -p config uploads uploads/products uploads/categories uploads/avatars whatsapp_media backups
+   chmod 755 uploads/ admin/uploads/ whatsapp_media/ backups/
 
-### Post-Instalación
+Crear archivo de instalación completada:
 
-**Importante para la seguridad:**
-- ⚠️ **Eliminar toda la carpeta `install/`** después de completar la instalación
-- Cambiar todas las contraseñas predefinidas
-- Configurar HTTPS en producción
-- Verificar permisos de archivos y carpetas
+bash   echo "$(date)" > config/installed.lock
 
-### Solución de Problemas de Instalación
+🆕 Configurar sistema de actualización:
 
-**El sistema ya está instalado:**
-- Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
-- Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
+sql   -- Ejecutar SQL para tabla system_updates y configuración GitHub
+   CREATE TABLE IF NOT EXISTS `system_updates` (...);
+   INSERT INTO `settings` (...) VALUES (...);
+🔧 Configuración
+Configuración Básica
+Acceder a Admin > Configuración para ajustar:
 
-**Error de conexión a base de datos:**
-- Verificar credenciales de MySQL
-- Asegurar que la base de datos existe y está accesible
-- Comprobar que las extensiones PHP están instaladas
+Datos del restaurante: Nombre, teléfono, dirección
+Horarios: Apertura, cierre, cierre de cocina
+Delivery: Costo, distancia máxima, monto mínimo
+Pagos: Métodos aceptados, configuración de impuestos
+Notificaciones: Sonidos, alertas automáticas
+🆕 Actualización del Sistema: GitHub, backups, historial
 
-**Permisos de escritura:**
-- Verificar permisos 755 en carpetas de uploads
-- Asegurar que el servidor web puede escribir en `config/`
+🔄 Configuración de Actualización Automática (NUEVO)
+Para configurar el sistema de actualización desde GitHub:
 
-**Requisitos no cumplidos:**
-- Actualizar PHP a versión 7.4 o superior
-- Instalar extensiones PHP faltantes
-- Verificar configuración del servidor web
+Acceder al panel: Admin > Configuración > Actualizar Sistema
+Configurar GitHub:
 
-## 🔧 Configuración
+Repositorio: Sabalero23/mi_restaurant_delivery
+Rama: main (o la rama que uses)
+Token (opcional): Solo para repositorios privados
+Backup automático: Activar (recomendado)
 
-### Configuración Básica
 
-Acceder a **Admin > Configuración** para ajustar:
+Guardar configuración
+Verificar actualizaciones: Clic en "Verificar Ahora"
 
-- **Datos del restaurante**: Nombre, teléfono, dirección
-- **Horarios**: Apertura, cierre, cierre de cocina
-- **Delivery**: Costo, distancia máxima, monto mínimo
-- **Pagos**: Métodos aceptados, configuración de impuestos
-- **Notificaciones**: Sonidos, alertas automáticas
+Características del Sistema de Actualización:
 
-### Google Maps (Opcional)
+✅ Verificación manual o programada de actualizaciones
+✅ Backup automático antes de cada actualización
+✅ Vista previa de cambios antes de aplicar
+✅ Actualización con un clic desde el panel
+✅ Protección de archivos sensibles:
 
+config/config.php (configuración de BD)
+uploads/ (imágenes subidas)
+whatsapp_media/ (archivos de WhatsApp)
+backups/ (carpeta de backups)
+.htaccess (configuración de Apache)
+
+
+✅ Sistema de rollback para revertir cambios
+✅ Historial completo de actualizaciones con logs
+✅ Sin necesidad de Git instalado en el servidor
+✅ Seguro y confiable: Usa API oficial de GitHub
+
+Cómo Actualizar el Sistema:
+
+Accede a Admin > Configuración > Actualizar Sistema
+Haz clic en "Verificar Actualizaciones"
+Si hay actualizaciones disponibles:
+
+Revisa los cambios (archivos nuevos, modificados, eliminados)
+Haz clic en "Actualizar Sistema Ahora"
+El sistema automáticamente:
+
+Crea un backup completo
+Descarga archivos desde GitHub
+Aplica las actualizaciones
+Preserva tus configuraciones
+Registra la operación
+
+
+
+
+
+Token de GitHub (Opcional):
+Solo necesario para repositorios privados:
+
+Ve a GitHub Settings > Tokens
+Genera un token con scope repo
+Copia y pega en el panel de configuración
+
+Google Maps (Opcional)
 Para habilitar autocompletado de direcciones:
 
-1. **Obtener API Key** de Google Maps
-2. **Configurar en**: Admin > Configuración > Google Maps API Key
-3. **Habilitar APIs**:
-   - Places API
-   - Geocoding API
-   - Maps JavaScript API
+Obtener API Key de Google Maps
+Configurar en: Admin > Configuración > Google Maps API Key
+Habilitar APIs:
 
-### Configuración de Roles
+Places API
+Geocoding API
+Maps JavaScript API
 
+
+
+Configuración de Roles
 El sistema incluye roles predefinidos, pero puede:
 
-- **Crear roles personalizados**
-- **Asignar permisos específicos**:
-  - `all`: Acceso completo
-  - `orders`: Gestión de órdenes tradicionales
-  - `online_orders`: Gestión de pedidos online
-  - `products`: Gestión de productos
-  - `users`: Gestión de usuarios
-  - `tables`: Gestión de mesas
-  - `reports`: Reportes y estadísticas
-  - `kitchen`: Panel de cocina
-  - `delivery`: Gestión de delivery
-  - `settings`: Configuración del sistema
+Crear roles personalizados
+Asignar permisos específicos:
 
-  
-### 📦 Control de Stock e Inventario
+all: Acceso completo
+orders: Gestión de órdenes tradicionales
+online_orders: Gestión de pedidos online
+products: Gestión de productos
+users: Gestión de usuarios
+tables: Gestión de mesas
+reports: Reportes y estadísticas
+kitchen: Panel de cocina
+delivery: Gestión de delivery
+settings: Configuración del sistema
+🆕 system_update: Actualización del sistema (solo administradores)
 
+
+
+📦 Control de Stock e Inventario
 Sistema avanzado de gestión de inventario con seguimiento en tiempo real y alertas automáticas.
+Características del Sistema de Stock
 
-#### Características del Sistema de Stock
+Control opcional por producto - Activar/desactivar gestión de inventario individualmente
+Seguimiento en tiempo real - Actualización automática de cantidades
+Alertas de stock bajo - Notificaciones configurables por producto
+Historial de movimientos - Registro completo de entradas y salidas
+Ajustes manuales - Correcciones de inventario con motivos
+Indicadores visuales - Barras de progreso y badges de estado
+Estadísticas de inventario - Dashboard con métricas en vivo
 
-- **Control opcional por producto** - Activar/desactivar gestión de inventario individualmente
-- **Seguimiento en tiempo real** - Actualización automática de cantidades
-- **Alertas de stock bajo** - Notificaciones configurables por producto
-- **Historial de movimientos** - Registro completo de entradas y salidas
-- **Ajustes manuales** - Correcciones de inventario con motivos
-- **Indicadores visuales** - Barras de progreso y badges de estado
-- **Estadísticas de inventario** - Dashboard con métricas en vivo
+Funcionalidades Principales
+Gestión de Productos con Stock:
 
-#### Funcionalidades Principales
+✅ Activación selectiva - Control de inventario opcional por producto
+✅ Stock actual - Cantidad disponible en tiempo real
+✅ Límites de alerta - Configuración personalizada de stock mínimo
+✅ Estados visuales - Sin stock, stock bajo, stock normal
+✅ Cálculos automáticos - Márgenes de ganancia en tiempo real
+✅ Validaciones robustas - Prevención de stock negativo
 
-**Gestión de Productos con Stock:**
-- ✅ **Activación selectiva** - Control de inventario opcional por producto
-- ✅ **Stock actual** - Cantidad disponible en tiempo real
-- ✅ **Límites de alerta** - Configuración personalizada de stock mínimo
-- ✅ **Estados visuales** - Sin stock, stock bajo, stock normal
-- ✅ **Cálculos automáticos** - Márgenes de ganancia en tiempo real
-- ✅ **Validaciones robustas** - Prevención de stock negativo
+Panel de Ajustes de Stock:
 
-**Panel de Ajustes de Stock:**
-- **Modal dedicado** para ajustes rápidos de inventario
-- **Tipos de movimiento**: Entrada (agregar) y Salida (reducir)
-- **Motivos predefinidos**:
-  - Ajuste manual
-  - Inventario físico
-  - Producto dañado/vencido
-  - Venta directa
-  - Compra/Reposición
-  - Corrección de error
-  - Motivos personalizados
-- **Vista previa** del nuevo stock antes de confirmar
-- **Alertas automáticas** si el ajuste genera stock crítico
+Modal dedicado para ajustes rápidos de inventario
+Tipos de movimiento: Entrada (agregar) y Salida (reducir)
+Motivos predefinidos:
 
-**Dashboard de Inventario:**
-- **Productos con control** - Cantidad total bajo seguimiento
-- **Stock bueno** - Productos con inventario normal
-- **Stock bajo** - Productos cerca del límite mínimo
-- **Sin stock** - Productos agotados
-- **Alertas prominentes** para productos críticos
-
-**Historial de Movimientos:**
-- **Registro completo** de todos los cambios de stock
-- **Información detallada**: Usuario, fecha, cantidad, motivo
-- **Trazabilidad total** del inventario
-- **Reportes de movimientos** por producto y periodo
-
-#### Características Técnicas del Stock
-
-- **Base de datos optimizada** con tabla `stock_movements`
-- **Transacciones seguras** para prevenir inconsistencias
-- **Validaciones múltiples** en frontend y backend
-- **Interfaz responsive** optimizada para móviles
-- **Integración completa** con sistema de productos existente
-- **API REST** para ajustes programáticos
-- **Logs automáticos** de todas las operaciones
-
-#### Interfaz de Usuario Mejorada
-
-**Tarjetas de Productos:**
-- **Indicadores de stock** en esquina superior
-- **Barras de progreso** mostrando nivel de inventario
-- **Badges dinámicos** (Sin stock, Stock bajo, Disponible)
-- **Botones de acción rápida** para ajustar stock
-- **Colores semánticos** según estado del inventario
-
-**Modal de Productos Expandido:**
-- **Sección dedicada** de gestión de inventario
-- **Switch de activación** para control de stock
-- **Campos de stock actual** y límite de alerta
-- **Indicadores de estado** en tiempo real
-- **Validaciones visuales** instantáneas
-
-**Alertas Inteligentes:**
-- **Notificaciones automáticas** de productos con stock bajo
-- **Lista expandible** con acciones directas
-- **Auto-actualización** cada vez que se modifica inventario
-- **Integración con dashboard** principal
-
-#### Flujo de Trabajo del Stock
-
-1. **Configuración inicial**:
-   - Activar control de stock por producto
-   - Establecer cantidad inicial
-   - Configurar límite de alerta
-
-2. **Operación diaria**:
-   - Visualización automática de alertas
-   - Ajustes rápidos desde tarjetas de productos
-   - Seguimiento en dashboard de inventario
-
-3. **Gestión avanzada**:
-   - Ajustes con motivos específicos
-   - Revisión de historial de movimientos
-   - Reportes de inventario
-
-#### Beneficios del Sistema
-
-- **Control preciso** del inventario sin complejidad excesiva
-- **Alertas proactivas** evitan quiebres de stock
-- **Trazabilidad completa** para auditorías
-- **Interfaz intuitiva** sin curva de aprendizaje
-- **Integración transparente** con flujo de trabajo existente
-- **Flexibilidad total** - usar solo en productos necesarios
+Ajuste manual
+Inventario físico
+Producto dañado/vencido
+Venta directa
+Compra/Reposición
+Corrección de error
+Motivos personalizados
 
 
-## 📊 Módulos del Sistema
+Vista previa del nuevo stock antes de confirmar
+Alertas automáticas si el ajuste genera stock crítico
 
-### 🏠 Dashboard
-- **Estadísticas en tiempo real**
-- **Órdenes recientes** de todos los tipos
-- **Estado de mesas** visual
-- **Notificaciones automáticas**
-- **Accesos rápidos** según el rol
+Dashboard de Inventario:
 
-### 📋 Gestión de Órdenes
-- **Órdenes tradicionales**: Mesa, delivery, retiro
-- **Pedidos online**: Integración completa
-- **Estados de orden**: Pendiente → Confirmado → Preparando → Listo → Entregado
-- **Pagos**: Múltiples métodos (efectivo, tarjeta, transferencia, QR)
-- **Filtros avanzados** por fecha, estado, tipo
+Productos con control - Cantidad total bajo seguimiento
+Stock bueno - Productos con inventario normal
+Stock bajo - Productos cerca del límite mínimo
+Sin stock - Productos agotados
+Alertas prominentes para productos críticos
 
-### 🌐 Pedidos Online
-- **Sistema completo** de pedidos por internet
-- **Carrito de compras** con validación
-- **Autocompletado de direcciones** con Google Maps
-- **Verificación de zona** de delivery
-- **Formateo automático** de teléfonos argentinos
-- **Confirmación por WhatsApp**
-- **Estados en tiempo real**
-- **Panel de gestión** dedicado con:
-  - Aceptación/rechazo de pedidos
-  - Tiempos estimados de preparación
-  - Seguimiento completo del proceso
-  - Integración con WhatsApp automático
-  - Sistema de pagos integrado
+Historial de Movimientos:
 
-### 🍽️ Gestión de Mesas
-- **Vista visual** de todas las mesas
-- **Estados**: Libre, ocupada, reservada, mantenimiento
-- **Capacidad** y ubicación
-- **Asignación automática** de órdenes
-- **Representación gráfica** con sillas según capacidad
-- **Acciones rápidas** desde cada mesa
+Registro completo de todos los cambios de stock
+Información detallada: Usuario, fecha, cantidad, motivo
+Trazabilidad total del inventario
+Reportes de movimientos por producto y periodo
 
-### 👨‍🍳 Panel de Cocina
-- **Órdenes por preparar** en tiempo real
-- **Tiempos de preparación**
-- **Estados por item**
-- **Priorización automática**
-- **Actualización en vivo**
+📊 Módulos del Sistema
+🏠 Dashboard
 
-### 🏍️ Gestión de Delivery
-- **Órdenes listas** para entrega
-- **Información del cliente** completa
-- **Direcciones con mapas**
-- **Tiempos de entrega**
-- **Estado de entrega**
+Estadísticas en tiempo real
+Órdenes recientes de todos los tipos
+Estado de mesas visual
+Notificaciones automáticas
+Accesos rápidos según el rol
+🆕 Estado de actualización del sistema
 
-### 🖨️ Sistema de Impresión
-- **Tickets de venta** personalizables
-- **Impresión automática** opcional
-- **Formatos múltiples** (58mm, 80mm)
-- **Vista previa** antes de imprimir
-- **Información completa** del pedido y pagos
+📋 Gestión de Órdenes
 
-### 📊 Reportes Avanzados
-- **Ventas diarias** con gráficos
-- **Productos más vendidos**
-- **Rendimiento del personal**
-- **Análisis de mesas**
-- **Métodos de pago**
-- **Comparación de períodos**
-- **Exportación a Excel/CSV**
+Órdenes tradicionales: Mesa, delivery, retiro
+Pedidos online: Integración completa
+Estados de orden: Pendiente → Confirmado → Preparando → Listo → Entregado
+Pagos: Múltiples métodos (efectivo, tarjeta, transferencia, QR)
+Filtros avanzados por fecha, estado, tipo
 
-### 📱 Menú QR
-- **Código QR** para cada mesa
-- **Menú digital** responsive
-- **Filtros por categoría**
-- **Llamada al mesero** integrada
-- **Sin instalación** de apps
+🌐 Pedidos Online
 
-### 👥 Gestión de Usuarios
-- **Roles y permisos** granulares
-- **Interfaz responsive** optimizada para móvil
-- **Vista de tarjetas** en dispositivos móviles
-- **Filtros por rol** y estado
-- **Gestión de contraseñas**
-- **Activación/desactivación** de usuarios
-- **Interfaz táctil** optimizada
+Sistema completo de pedidos por internet
+Carrito de compras con validación
+Autocompletado de direcciones con Google Maps
+Verificación de zona de delivery
+Formateo automático de teléfonos argentinos
+Confirmación por WhatsApp
+Estados en tiempo real
+Panel de gestión dedicado con:
 
-### 👤 Perfil de Usuario
+Aceptación/rechazo de pedidos
+Tiempos estimados de preparación
+Seguimiento completo del proceso
+Integración con WhatsApp automático
+Sistema de pagos integrado
 
+
+
+🍽️ Gestión de Mesas
+
+Vista visual de todas las mesas
+Estados: Libre, ocupada, reservada, mantenimiento
+Capacidad y ubicación
+Asignación automática de órdenes
+Representación gráfica con sillas según capacidad
+Acciones rápidas desde cada mesa
+
+👨‍🍳 Panel de Cocina
+
+Órdenes por preparar en tiempo real
+Tiempos de preparación
+Estados por item
+Priorización automática
+Actualización en vivo
+
+🚗 Gestión de Delivery
+
+Órdenes listas para entrega
+Información del cliente completa
+Direcciones con mapas
+Tiempos de entrega
+Estado de entrega
+
+🖨️ Sistema de Impresión
+
+Tickets de venta personalizables
+Impresión automática opcional
+Formatos múltiples (58mm, 80mm)
+Vista previa antes de imprimir
+Información completa del pedido y pagos
+
+📊 Reportes Avanzados
+
+Ventas diarias con gráficos
+Productos más vendidos
+Rendimiento del personal
+Análisis de mesas
+Métodos de pago
+Comparación de períodos
+Exportación a Excel/CSV
+
+📱 Menú QR
+
+Código QR para cada mesa
+Menú digital responsive
+Filtros por categoría
+Llamada al mesero integrada
+Sin instalación de apps
+
+👥 Gestión de Usuarios
+
+Roles y permisos granulares
+Interfaz responsive optimizada para móvil
+Vista de tarjetas en dispositivos móviles
+Filtros por rol y estado
+Gestión de contraseñas
+Activación/desactivación de usuarios
+Interfaz táctil optimizada
+
+👤 Perfil de Usuario
 Sistema completo de gestión de perfiles personales para todos los usuarios del sistema.
+Características del Perfil
 
-#### Características del Perfil
+Información personal completa:
 
-- **Información personal completa**:
-  - Edición de nombre completo
-  - Actualización de email con validación
-  - Gestión de número de teléfono
-  - Visualización del rol asignado
+Edición de nombre completo
+Actualización de email con validación
+Gestión de número de teléfono
+Visualización del rol asignado
 
-- **Sistema de avatars avanzado**:
-  - Subida de imágenes de perfil (JPG, PNG, GIF)
-  - Límite de 2MB por archivo
-  - Generación automática de iniciales si no hay avatar
-  - Vista previa antes de subir
-  - Eliminación automática de avatars anteriores
 
-- **Cambio de contraseña seguro**:
-  - Verificación de contraseña actual
-  - Indicador visual de fortaleza de contraseña
-  - Validación de coincidencia en tiempo real
-  - Requisito mínimo de 6 caracteres
-  - Opción de mostrar/ocultar contraseñas
+Sistema de avatars avanzado:
 
-- **Estadísticas personales**:
-  - Fecha de registro en el sistema
-  - Días activo en la plataforma
-  - Último acceso registrado
-  - Estado actual de la cuenta
+Subida de imágenes de perfil (JPG, PNG, GIF)
+Límite de 2MB por archivo
+Generación automática de iniciales si no hay avatar
+Vista previa antes de subir
+Eliminación automática de avatars anteriores
 
-#### Funcionalidades Técnicas
 
-- **Validación en tiempo real** con JavaScript
-- **Compatibilidad automática** con base de datos existente
-- **Creación automática** de columnas `avatar` y `last_login` si no existen
-- **Interfaz responsive** optimizada para dispositivos móviles
-- **Integración completa** con sistema de temas dinámico
-- **Gestión segura** de archivos subidos
-- **Validaciones robustas** del lado servidor y cliente
+Cambio de contraseña seguro:
 
-#### Seguridad Implementada
+Verificación de contraseña actual
+Indicador visual de fortaleza de contraseña
+Validación de coincidencia en tiempo real
+Requisito mínimo de 6 caracteres
+Opción de mostrar/ocultar contraseñas
 
-- **Verificación de contraseña actual** antes de cambios
-- **Validación de formato** de emails
-- **Verificación de unicidad** de emails
-- **Límites de tamaño** y tipo de archivos
-- **Sanitización** de datos de entrada
-- **Protección contra** sobrescritura de archivos
 
-#### Interfaz de Usuario
+Estadísticas personales:
 
-- **Diseño moderno** con gradientes y efectos visuales
-- **Animaciones suaves** para mejor experiencia
-- **Feedback visual inmediato** en formularios
-- **Indicadores de estado** para todas las acciones
-- **Responsividad completa** para móviles y tablets
-- **Accesibilidad mejorada** con labels y ARIA
+Fecha de registro en el sistema
+Días activo en la plataforma
+Último acceso registrado
+Estado actual de la cuenta
 
-Este módulo proporciona a cada usuario control total sobre su información personal y configuración de cuenta, manteniendo la seguridad y consistencia del sistema.
 
-### ⚙️ Configuración Avanzada
-- **Configuración general** del restaurante
-- **Configuración de negocio** (impuestos, delivery)
-- **Configuración de pedidos online**
-- **Horarios de atención**
-- **Integración con Google Maps**
-- **Configuraciones del sistema**
-- **Pruebas de configuración** integradas
 
-## 📞 Sistema de Llamadas de Mesero
+⚙️ Configuración Avanzada
+
+Configuración general del restaurante
+Configuración de negocio (impuestos, delivery)
+Configuración de pedidos online
+Horarios de atención
+Integración con Google Maps
+Configuraciones del sistema
+Pruebas de configuración integradas
+🆕 Sistema de Actualización Automática:
+
+Verificación de actualizaciones desde GitHub
+Aplicación de actualizaciones con un clic
+Gestión de backups del sistema
+Historial de actualizaciones con rollback
+Configuración de repositorio y rama
+Protección de archivos sensibles
+
+
+
+🔄 Actualización del Sistema (NUEVO)
+Panel dedicado para mantener el sistema actualizado desde GitHub.
+Características:
+
+Verificación de actualizaciones:
+
+Manual con botón "Verificar Ahora"
+Comparación de versiones (actual vs. disponible)
+Información del último commit disponible
+
+
+Vista previa de cambios:
+
+Lista de archivos nuevos
+Lista de archivos modificados
+Lista de archivos eliminados
+Commits recientes con mensajes
+
+
+Aplicación de actualizaciones:
+
+Backup automático antes de actualizar
+Descarga desde GitHub sin Git
+Aplicación inteligente de cambios
+Preservación de archivos de configuración
+Barra de progreso en tiempo real
+
+
+Gestión de backups:
+
+Creación manual de backups
+Lista de backups disponibles
+Sistema de rollback (revertir)
+Información de tamaño y fecha
+
+
+Historial de actualizaciones:
+
+Registro completo de actualizaciones
+Estado de cada actualización
+Usuario que realizó la actualización
+Estadísticas de archivos afectados
+Opción de revertir desde historial
+
+
+
+📞 Sistema de Llamadas de Mesero
 
 ### Funcionalidades
 - **Llamada desde código QR** de mesa
