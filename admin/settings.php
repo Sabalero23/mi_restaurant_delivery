@@ -33,6 +33,21 @@ $role = $_SESSION['role_name'] ?? 'usuario';
 $stats = array();
 $online_stats = array();
 
+// Obtener o crear commit hash del sistema
+$commit_query = "SELECT setting_value FROM settings WHERE setting_key = 'system_commit'";
+$commit_stmt = $db->prepare($commit_query);
+$commit_stmt->execute();
+$commit_result = $commit_stmt->fetch();
+
+if (!$commit_result) {
+    // Si no existe, crear con valor inicial
+    $initial_commit = 'initial';
+    $insert_commit = "INSERT INTO settings (setting_key, setting_value, description) 
+                      VALUES ('system_commit', ?, 'Hash del último commit instalado')";
+    $stmt = $db->prepare($insert_commit);
+    $stmt->execute([$initial_commit]);
+}
+
 // Handle form submissions
 if ($_POST && isset($_POST['action'])) {
     switch ($_POST['action']) {
@@ -47,6 +62,9 @@ if ($_POST && isset($_POST['action'])) {
             break;
         case 'update_online_orders':
             $result = updateOnlineOrdersSettings();
+            break;
+        case 'update_github_config':
+            $result = updateGithubConfig();
             break;
     }
     
@@ -209,32 +227,17 @@ function updateOnlineOrdersSettings() {
         'closing_time' => sanitize($_POST['closing_time']),
         'kitchen_closing_time' => sanitize($_POST['kitchen_closing_time']),
         'order_timeout' => intval($_POST['order_timeout']),
-        'auto_print_orders' => isset($_POST['auto_print_orders']) ? '1' : '0',
         'notification_sound' => isset($_POST['notification_sound']) ? '1' : '0',
-        'kitchen_display_refresh' => intval($_POST['kitchen_display_refresh'])
+        'auto_print_orders' => isset($_POST['auto_print_orders']) ? '1' : '0',
+        'show_delivery_zones' => isset($_POST['show_delivery_zones']) ? '1' : '0'
     ];
     
     try {
         foreach ($settings as $key => $value) {
-            $query = "INSERT INTO settings (setting_key, setting_value, description) VALUES (?, ?, ?) 
+            $query = "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) 
                      ON DUPLICATE KEY UPDATE setting_value = ?";
-            
-            // Definir descripciones para las nuevas configuraciones
-            $descriptions = [
-                'enable_online_orders' => 'Habilitar/deshabilitar pedidos online',
-                'google_maps_api_key' => 'Clave de API de Google Maps para autocompletado',
-                'opening_time' => 'Hora de apertura del restaurante',
-                'closing_time' => 'Hora de cierre del restaurante',
-                'kitchen_closing_time' => 'Hora de cierre de cocina para pedidos',
-                'order_timeout' => 'Tiempo límite para confirmar orden (minutos)',
-                'auto_print_orders' => 'Imprimir órdenes automáticamente',
-                'notification_sound' => 'Sonido de notificaciones',
-                'kitchen_display_refresh' => 'Actualización pantalla cocina (segundos)'
-            ];
-            
-            $description = $descriptions[$key] ?? '';
             $stmt = $db->prepare($query);
-            $stmt->execute([$key, $value, $description, $value]);
+            $stmt->execute([$key, $value, $value]);
         }
         
         return ['success' => true, 'message' => 'Configuración de pedidos online actualizada'];
@@ -243,22 +246,39 @@ function updateOnlineOrdersSettings() {
     }
 }
 
-// Load current settings
-$current_settings = getSettings();
+function updateGithubConfig() {
+    global $db;
+    
+    $settings = [
+        'github_repo' => sanitize($_POST['github_repo']),
+        'github_branch' => sanitize($_POST['github_branch']),
+        'github_token' => sanitize($_POST['github_token'] ?? ''),
+        'auto_backup_before_update' => isset($_POST['auto_backup_before_update']) ? '1' : '0'
+    ];
+    
+    try {
+        foreach ($settings as $key => $value) {
+            $query = "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) 
+                     ON DUPLICATE KEY UPDATE setting_value = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([$key, $value, $value]);
+        }
+        
+        return ['success' => true, 'message' => 'Configuración de GitHub actualizada'];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}
 
-// Get system stats
-$stats_query = "SELECT 
-    (SELECT COUNT(*) FROM users WHERE is_active = 1) as active_users,
-    (SELECT COUNT(*) FROM orders WHERE DATE(created_at) = CURDATE()) as orders_today,
-    (SELECT COUNT(*) FROM online_orders WHERE DATE(created_at) = CURDATE()) as online_orders_today,
-    (SELECT COUNT(*) FROM products WHERE is_active = 1) as active_products,
-    (SELECT COUNT(*) FROM tables) as total_tables";
+// Obtener todas las configuraciones
+$query = "SELECT setting_key, setting_value FROM settings";
+$stmt = $db->prepare($query);
+$stmt->execute();
+$current_settings = [];
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $current_settings[$row['setting_key']] = $row['setting_value'];
+}
 
-$stats_stmt = $db->prepare($stats_query);
-$stats_stmt->execute();
-$system_stats = $stats_stmt->fetch();
-
-$restaurant_name = $current_settings['restaurant_name'] ?? 'Mi Restaurante';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -795,8 +815,7 @@ p {
 }
 .system-header .container-fluid {
     height: 60px;
-    display: flex
-;
+    display: flex;
     align-items: center;
     padding: 0 1rem;
     background-color: white;
@@ -816,545 +835,753 @@ p {
 <body>
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
-            
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Page Header -->
-        <div class="page-header">
+
+<!-- Navigation Tabs -->
+<div class="main-content">
+    <div class="container-fluid">
+        <div class="page-header mb-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-0">
-                        <i class="fas fa-cog me-2"></i>
-                        Configuración del Sistema
-                    </h2>
-                    <p class="text-muted mb-0">Administra la configuración general del restaurante</p>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-cog me-2"></i>Configuración del Sistema
+                    </h1>
+                    <p class="text-muted mb-0 mt-2">Administra las configuraciones de tu restaurante</p>
                 </div>
-                <div class="text-muted d-none d-lg-block">
-                    <i class="fas fa-clock me-1"></i>
-                    <?php echo date('d/m/Y H:i'); ?>
+                <div>
+                    <button class="btn btn-outline-secondary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i>Recargar
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Messages -->
         <?php if ($message): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check me-2"></i>
-                <?php echo $message; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i><?php echo htmlspecialchars($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                <?php echo $error; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i><?php echo htmlspecialchars($error); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         <?php endif; ?>
 
-        <!-- System Stats -->
-        <div class="row mb-4">
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number text-primary"><?php echo $system_stats['active_users']; ?></div>
-                    <div class="text-muted small">Usuarios Activos</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number text-success"><?php echo $system_stats['orders_today']; ?></div>
-                    <div class="text-muted small">Órdenes Hoy</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number text-warning"><?php echo $system_stats['online_orders_today']; ?></div>
-                    <div class="text-muted small">Online Hoy</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number text-info"><?php echo $system_stats['active_products']; ?></div>
-                    <div class="text-muted small">Productos</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number text-secondary"><?php echo $system_stats['total_tables']; ?></div>
-                    <div class="text-muted small">Mesas</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <div class="stat-card">
-                    <div class="stat-number <?php echo ($current_settings['enable_online_orders'] ?? '0') === '1' ? 'text-success' : 'text-danger'; ?>">
-                        <i class="fas fa-<?php echo ($current_settings['enable_online_orders'] ?? '0') === '1' ? 'check' : 'times'; ?>"></i>
+        <ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">
+                    <i class="fas fa-store me-2"></i>General
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="business-tab" data-bs-toggle="tab" data-bs-target="#business" type="button">
+                    <i class="fas fa-calculator me-2"></i>Negocio
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button">
+                    <i class="fas fa-server me-2"></i>Sistema
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="online-tab" data-bs-toggle="tab" data-bs-target="#online" type="button">
+                    <i class="fas fa-globe me-2"></i>Pedidos Online
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="update-tab" data-bs-toggle="tab" data-bs-target="#update" type="button">
+                    <i class="fas fa-sync-alt me-2"></i>Actualizar Sistema
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="settingsTabContent">
+            <!-- General Settings Tab -->
+            <div class="tab-pane fade show active" id="general" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-store me-2"></i>Información General del Restaurante</h5>
                     </div>
-                    <div class="text-muted small">Pedidos Online</div>
-                </div>
-            </div>
-        </div>
-                    
-        <!-- Settings Tabs -->
-        <div class="settings-section">
-            <ul class="nav nav-tabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button">
-                        <i class="fas fa-store me-2"></i>General
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="business-tab" data-bs-toggle="tab" data-bs-target="#business" type="button">
-                        <i class="fas fa-dollar-sign me-2"></i>Negocio
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="online-orders-tab" data-bs-toggle="tab" data-bs-target="#online-orders" type="button">
-                        <i class="fas fa-globe me-2"></i>Pedidos Online
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button">
-                        <i class="fas fa-server me-2"></i>Sistema
-                    </button>
-                </li>
-            </ul>
-            
-            <div class="tab-content">
-                <!-- General Settings -->
-<div class="tab-pane fade show active" id="general" role="tabpanel">
-    <form method="POST">
-        <input type="hidden" name="action" value="update_general">
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Nombre del Restaurante</label>
-                    <input type="text" class="form-control" name="restaurant_name" 
-                           value="<?php echo htmlspecialchars($current_settings['restaurant_name'] ?? ''); ?>" required>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Email del Restaurante</label>
-                    <input type="email" class="form-control" name="restaurant_email" 
-                           value="<?php echo htmlspecialchars($current_settings['restaurant_email'] ?? ''); ?>">
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <input type="text" class="form-control" name="restaurant_phone" 
-                           value="<?php echo htmlspecialchars($current_settings['restaurant_phone'] ?? ''); ?>">
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">WhatsApp (sin +54)</label>
-                    <input type="text" class="form-control" name="whatsapp_number" 
-                           value="<?php echo htmlspecialchars($current_settings['whatsapp_number'] ?? ''); ?>"
-                           placeholder="3482549555">
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Dirección</label>
-                    <textarea class="form-control" name="restaurant_address" rows="2"><?php echo htmlspecialchars($current_settings['restaurant_address'] ?? ''); ?></textarea>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">
-                        URL de Google Maps
-                        <small class="text-muted">(para extraer coordenadas automáticamente)</small>
-                    </label>
-                    <input type="url" class="form-control" name="restaurant_maps_url" 
-                           value="<?php echo htmlspecialchars($current_settings['restaurant_maps_url'] ?? ''); ?>"
-                           placeholder="https://maps.google.com/...">
-                    <div class="form-text">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Pegue aquí la URL completa de Google Maps de su restaurante. 
-                        <button type="button" class="btn btn-link p-0 text-decoration-none" onclick="showMapsInstructions()">
-                            ¿Cómo obtener la URL?
-                        </button>
-                    </div>
-                    <div id="maps-coordinates-preview" class="form-text text-success" style="display: none;">
-                        <i class="fas fa-map-marker-alt me-1"></i>
-                        <span id="coordinates-text"></span>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_general">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nombre del Restaurante</label>
+                                        <input type="text" class="form-control" name="restaurant_name" 
+                                               value="<?php echo htmlspecialchars($current_settings['restaurant_name'] ?? ''); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Teléfono</label>
+                                        <input type="tel" class="form-control" name="restaurant_phone" 
+                                               value="<?php echo htmlspecialchars($current_settings['restaurant_phone'] ?? ''); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Dirección</label>
+                                <input type="text" class="form-control" name="restaurant_address" 
+                                       value="<?php echo htmlspecialchars($current_settings['restaurant_address'] ?? ''); ?>" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">WhatsApp</label>
+                                        <input type="tel" class="form-control" name="whatsapp_number" 
+                                               value="<?php echo htmlspecialchars($current_settings['whatsapp_number'] ?? ''); ?>" 
+                                               placeholder="+549XXXXXXXXXX">
+                                        <div class="form-text">Formato internacional: +549 seguido del número con código de área</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" name="restaurant_email" 
+                                               value="<?php echo htmlspecialchars($current_settings['restaurant_email'] ?? ''); ?>">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    URL de Google Maps
+                                    <button type="button" class="btn btn-sm btn-link p-0" onclick="showMapsInstructions()">
+                                        <i class="fas fa-question-circle"></i> ¿Cómo obtenerla?
+                                    </button>
+                                </label>
+                                <input type="url" class="form-control" name="restaurant_maps_url" 
+                                       value="<?php echo htmlspecialchars($current_settings['restaurant_maps_url'] ?? ''); ?>" 
+                                       placeholder="https://maps.google.com/...">
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    El sistema extraerá automáticamente las coordenadas de ubicación desde esta URL
+                                </div>
+                                <div id="maps-coordinates-preview" class="alert alert-success mt-2" style="display: none;">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    <span id="coordinates-text"></span>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
+
+            <!-- Business Settings Tab -->
+            <div class="tab-pane fade" id="business" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Configuración de Negocio</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_business">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Tasa de Impuesto (%)</label>
+                                        <input type="number" step="0.01" class="form-control" name="tax_rate" 
+                                               value="<?php echo htmlspecialchars($current_settings['tax_rate'] ?? '0'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Tarifa de Delivery</label>
+                                        <input type="number" step="0.01" class="form-control" name="delivery_fee" 
+                                               value="<?php echo htmlspecialchars($current_settings['delivery_fee'] ?? '0'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Símbolo de Moneda</label>
+                                        <input type="text" class="form-control" name="currency_symbol" 
+                                               value="<?php echo htmlspecialchars($current_settings['currency_symbol'] ?? '$'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Distancia Máxima (km)</label>
+                                        <input type="number" step="0.1" class="form-control" name="max_delivery_distance" 
+                                               value="<?php echo htmlspecialchars($current_settings['max_delivery_distance'] ?? '5'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Monto Mínimo de Pedido</label>
+                                        <input type="number" step="0.01" class="form-control" name="min_delivery_amount" 
+                                               value="<?php echo htmlspecialchars($current_settings['min_delivery_amount'] ?? '0'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Settings Tab -->
+            <div class="tab-pane fade" id="system" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-server me-2"></i>Configuración del Sistema</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_system">
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Zona Horaria</label>
+                                        <select class="form-select" name="system_timezone" required>
+                                            <option value="America/Argentina/Buenos_Aires" 
+                                                    <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Argentina/Buenos_Aires' ? 'selected' : ''; ?>>
+                                                Buenos Aires (GMT-3)
+                                            </option>
+                                            <option value="America/Cordoba" 
+                                                    <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Cordoba' ? 'selected' : ''; ?>>
+                                                Córdoba (GMT-3)
+                                            </option>
+                                            <option value="America/Argentina/Mendoza" 
+                                                    <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Argentina/Mendoza' ? 'selected' : ''; ?>>
+                                                Mendoza (GMT-3)
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Formato de Fecha</label>
+                                        <select class="form-select" name="date_format" required>
+                                            <option value="d/m/Y" <?php echo ($current_settings['date_format'] ?? '') === 'd/m/Y' ? 'selected' : ''; ?>>
+                                                DD/MM/AAAA
+                                            </option>
+                                            <option value="m/d/Y" <?php echo ($current_settings['date_format'] ?? '') === 'm/d/Y' ? 'selected' : ''; ?>>
+                                                MM/DD/AAAA
+                                            </option>
+                                            <option value="Y-m-d" <?php echo ($current_settings['date_format'] ?? '') === 'Y-m-d' ? 'selected' : ''; ?>>
+                                                AAAA-MM-DD
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Tiempo de Auto-Cierre de Sesión (minutos)</label>
+                                        <input type="number" class="form-control" name="auto_logout_time" 
+                                               value="<?php echo htmlspecialchars($current_settings['auto_logout_time'] ?? '30'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Máximo de Pedidos por Día</label>
+                                        <input type="number" class="form-control" name="max_orders_per_day" 
+                                               value="<?php echo htmlspecialchars($current_settings['max_orders_per_day'] ?? '100'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Frecuencia de Backup</label>
+                                <select class="form-select" name="backup_frequency" required>
+                                    <option value="daily" <?php echo ($current_settings['backup_frequency'] ?? '') === 'daily' ? 'selected' : ''; ?>>
+                                        Diario
+                                    </option>
+                                    <option value="weekly" <?php echo ($current_settings['backup_frequency'] ?? '') === 'weekly' ? 'selected' : ''; ?>>
+                                        Semanal
+                                    </option>
+                                    <option value="monthly" <?php echo ($current_settings['backup_frequency'] ?? '') === 'monthly' ? 'selected' : ''; ?>>
+                                        Mensual
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Online Orders Settings Tab -->
+            <div class="tab-pane fade" id="online" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-globe me-2"></i>Configuración de Pedidos Online</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_online_orders">
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> Para habilitar pedidos online, debes configurar tu API Key de Google Maps.
+                            </div>
+
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input" type="checkbox" id="enable_online_orders" 
+                                       name="enable_online_orders" 
+                                       <?php echo ($current_settings['enable_online_orders'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="enable_online_orders">
+                                    <strong>Habilitar Pedidos Online</strong>
+                                </label>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Google Maps API Key</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="google_maps_api_key" 
+                                           name="google_maps_api_key" 
+                                           value="<?php echo htmlspecialchars($current_settings['google_maps_api_key'] ?? ''); ?>" 
+                                           placeholder="AIza...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()">
+                                        <i class="fas fa-eye" id="api-key-icon"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" type="button" onclick="testGoogleMapsAPI()">
+                                        <i class="fas fa-vial me-1"></i>Probar
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    Necesitas una API Key de Google Maps con Places API habilitado. 
+                                    <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">
+                                        Obtener API Key
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Hora de Apertura</label>
+                                        <input type="time" class="form-control" name="opening_time" 
+                                               value="<?php echo htmlspecialchars($current_settings['opening_time'] ?? '11:00'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Hora de Cierre</label>
+                                        <input type="time" class="form-control" name="closing_time" 
+                                               value="<?php echo htmlspecialchars($current_settings['closing_time'] ?? '23:00'); ?>" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Cierre de Cocina</label>
+                                        <input type="time" class="form-control" name="kitchen_closing_time" 
+                                               value="<?php echo htmlspecialchars($current_settings['kitchen_closing_time'] ?? '22:30'); ?>" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Tiempo Límite de Pedido (minutos)</label>
+                                <input type="number" class="form-control" name="order_timeout" 
+                                       value="<?php echo htmlspecialchars($current_settings['order_timeout'] ?? '15'); ?>" required>
+                                <div class="form-text">Tiempo máximo para confirmar un pedido antes de que expire</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="notification_sound" 
+                                       name="notification_sound" 
+                                       <?php echo ($current_settings['notification_sound'] ?? '1') === '1' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="notification_sound">
+                                    Sonido de notificación para nuevos pedidos
+                                </label>
+                                <button type="button" class="btn btn-sm btn-link" onclick="testNotificationSound()">
+                                    <i class="fas fa-volume-up"></i> Probar sonido
+                                </button>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="auto_print_orders" 
+                                       name="auto_print_orders" 
+                                       <?php echo ($current_settings['auto_print_orders'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="auto_print_orders">
+                                    Imprimir automáticamente pedidos nuevos
+                                </label>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="show_delivery_zones" 
+                                       name="show_delivery_zones" 
+                                       <?php echo ($current_settings['show_delivery_zones'] ?? '1') === '1' ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="show_delivery_zones">
+                                    Mostrar zonas de delivery en mapa
+                                </label>
+                            </div>
+
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update System Tab -->
+            <div class="tab-pane fade" id="update" role="tabpanel">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Sistema de Actualización Automática</strong><br>
+                    Esta herramienta descarga y aplica automáticamente las últimas actualizaciones desde GitHub.
+                    Se creará un backup antes de actualizar para poder revertir cambios si es necesario.
+                </div>
+
+                <!-- Estado de actualización -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-code-branch me-2"></i>
+                                    Versión Actual
+                                </h5>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="mb-1 text-muted small">Versión del Sistema</p>
+                                        <h3 class="mb-0" id="current-version">
+                                            <?php echo $current_settings['current_system_version'] ?? '2.1.0'; ?>
+                                        </h3>
+                                    </div>
+                                    <div class="text-end">
+                                        <p class="mb-1 text-muted small">Commit</p>
+                                        <code id="current-commit">Verificando...</code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-cloud-download-alt me-2"></i>
+                                    Estado de Actualizaciones
+                                </h5>
+                                <div id="update-status">
+                                    <p class="text-muted">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                        Verificando actualizaciones...
+                                    </p>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="checkForUpdates()">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    Verificar Ahora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel de cambios -->
+                <div id="changes-panel" class="card mb-4" style="display: none;">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list-ul me-2"></i>
+                            Cambios Disponibles
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h2 class="text-success mb-0" id="files-added">0</h2>
+                                    <small class="text-muted">Archivos Nuevos</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h2 class="text-warning mb-0" id="files-modified">0</h2>
+                                    <small class="text-muted">Archivos Modificados</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h2 class="text-danger mb-0" id="files-removed">0</h2>
+                                    <small class="text-muted">Archivos Eliminados</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6>Últimos Commits:</h6>
+                            <div id="commits-list" class="list-group">
+                                <!-- Se llenará dinámicamente -->
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button class="btn btn-success btn-lg" onclick="performUpdate()">
+                                <i class="fas fa-download me-2"></i>
+                                Actualizar Sistema Ahora
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="showChangesDetails()">
+                                <i class="fas fa-eye me-1"></i>
+                                Ver Detalles
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel de progreso -->
+                <div id="progress-panel" class="card mb-4" style="display: none;">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            Actualizando Sistema
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3" style="height: 30px;">
+                            <div id="update-progress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                        <div id="progress-status" class="text-center">
+                            <p class="mb-0">Iniciando actualización...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activación de Licencia -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            <i class="fas fa-key me-2"></i>
+            Activación de Licencia
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>¿Cómo obtener tu licencia?</strong><br>
+            1. Copia tu System ID de abajo<br>
+            2. Envíalo al desarrollador por WhatsApp o Email<br>
+            3. El desarrollador te enviará tu clave de licencia<br>
+            4. Pega la clave aquí y verifica
         </div>
-        
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save me-2"></i>
-            Guardar Configuración General
-        </button>
-    </form>
+
+        <!-- System ID -->
+        <div class="mb-4">
+            <label class="form-label"><strong>System ID de tu instalación:</strong></label>
+            <div class="input-group">
+                <input type="text" class="form-control form-control-lg" id="system-id-display" 
+                       value="Generando..." readonly style="font-family: monospace; font-weight: bold;">
+                <button class="btn btn-outline-secondary" type="button" onclick="copySystemId()">
+                    <i class="fas fa-copy"></i> Copiar
+                </button>
+            </div>
+            <div class="form-text">
+                <i class="fas fa-fingerprint me-1"></i>
+                Este es el identificador único de tu sistema. Envíalo al desarrollador para obtener tu licencia.
+            </div>
+        </div>
+
+        <!-- License Input -->
+        <form id="license-form" onsubmit="verifyLicense(event)">
+            <div class="mb-3">
+                <label class="form-label"><strong>Clave de Licencia:</strong></label>
+                <input type="text" class="form-control form-control-lg" id="license-key-input" 
+                       placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+                       pattern="[A-F0-9]{5}-[A-F0-9]{5}-[A-F0-9]{5}-[A-F0-9]{5}"
+                       style="font-family: monospace; text-transform: uppercase;"
+                       value="<?php echo htmlspecialchars($current_settings['system_license'] ?? ''); ?>">
+                <div class="form-text">
+                    Pega aquí la clave de licencia que te proporcionó el desarrollador
+                </div>
+            </div>
+
+            <div id="license-status" class="mb-3"></div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-check-circle me-1"></i>
+                Verificar Licencia
+            </button>
+        </form>
+    </div>
 </div>
 
-                
-                <!-- Business Settings -->
-                <div class="tab-pane fade" id="business" role="tabpanel">
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_business">
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">IVA (%)</label>
-                                    <input type="number" class="form-control" name="tax_rate" step="0.01" 
-                                           value="<?php echo $current_settings['tax_rate'] ?? '21'; ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Costo de Delivery</label>
-                                    <input type="number" class="form-control" name="delivery_fee" step="0.01" 
-                                           value="<?php echo $current_settings['delivery_fee'] ?? '300'; ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Símbolo de Moneda</label>
-                                    <input type="text" class="form-control" name="currency_symbol" 
-                                           value="<?php echo htmlspecialchars($current_settings['currency_symbol'] ?? '$'); ?>">
-                        ); ?>">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Distancia máxima de delivery (km)</label>
-                                    <input type="number" class="form-control" name="max_delivery_distance" step="0.1" 
-                                           value="<?php echo $current_settings['max_delivery_distance'] ?? '25'; ?>">
-                                    <div class="form-text">Radio máximo para entregas a domicilio</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Monto mínimo para delivery</label>
-                                    <input type="number" class="form-control" name="min_delivery_amount" step="0.01" 
-                                           value="<?php echo $current_settings['min_delivery_amount'] ?? '1500'; ?>">
-                                    <div class="form-text">Monto mínimo de pedido para delivery</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-2"></i>
-                            Guardar Configuración de Negocio
-                        </button>
-                    </form>
+<!-- Configuración de Repositorio -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fab fa-github me-2"></i>
+            Configuración de Repositorio
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="github-config-form">
+            <input type="hidden" name="action" value="update_github_config">
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Repositorio</label>
+                        <input type="text" class="form-control" name="github_repo" 
+                               value="<?php echo htmlspecialchars($current_settings['github_repo'] ?? 'Sabalero23/mi_restaurant_delivery'); ?>" 
+                               readonly>
+                    </div>
                 </div>
-                
-                <!-- Online Orders Settings -->
-                <div class="tab-pane fade" id="online-orders" role="tabpanel">
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_online_orders">
-                        
-                        <!-- Configuración General de Pedidos Online -->
-                        <h5 class="mb-3">
-                            <i class="fas fa-toggle-on me-2"></i>
-                            Configuración General
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="enable_online_orders" 
-                                               name="enable_online_orders" <?php echo ($current_settings['enable_online_orders'] ?? '1') === '1' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="enable_online_orders">
-                                            <strong>Habilitar Pedidos Online</strong>
-                                        </label>
-                                    </div>
-                                    <div class="form-text">Permite a los clientes realizar pedidos desde la web</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="auto_print_orders" 
-                                               name="auto_print_orders" <?php echo ($current_settings['auto_print_orders'] ?? '1') === '1' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="auto_print_orders">
-                                            <strong>Imprimir Órdenes Automáticamente</strong>
-                                        </label>
-                                    </div>
-                                    <div class="form-text">Imprime automáticamente cuando llega un pedido</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Horarios -->
-                        <h5 class="mb-3 mt-4">
-                            <i class="fas fa-clock me-2"></i>
-                            Horarios de Atención
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Hora de Apertura</label>
-                                    <input type="time" class="form-control" name="opening_time" 
-                                           value="<?php echo $current_settings['opening_time'] ?? '11:00'; ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Hora de Cierre</label>
-                                    <input type="time" class="form-control" name="closing_time" 
-                                           value="<?php echo $current_settings['closing_time'] ?? '23:30'; ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Cierre de Cocina</label>
-                                    <input type="time" class="form-control" name="kitchen_closing_time" 
-                                           value="<?php echo $current_settings['kitchen_closing_time'] ?? '23:00'; ?>">
-                                    <div class="form-text">Hora límite para recibir pedidos online</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Google Maps API -->
-                        <h5 class="mb-3 mt-4">
-                            <i class="fab fa-google me-2"></i>
-                            Integración con Google Maps
-                        </h5>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Clave de API de Google Maps</label>
-                            <div class="api-key-field">
-                                <input type="password" class="form-control" id="google_maps_api_key" name="google_maps_api_key" 
-                                       value="<?php echo htmlspecialchars($current_settings['google_maps_api_key'] ?? ''); ?>"
-                                       placeholder="Ingrese su API Key de Google Maps">
-                                <button type="button" class="api-key-toggle" onclick="toggleApiKeyVisibility()">
-                                    <i class="fas fa-eye" id="api-key-icon"></i>
-                                </button>
-                            </div>
-                            <div class="form-text">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Necesaria para el autocompletado de direcciones. 
-                                <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">
-                                    ¿Cómo obtener una API Key?
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <!-- Configuraciones Avanzadas -->
-                        <h5 class="mb-3 mt-4">
-                            <i class="fas fa-cogs me-2"></i>
-                            Configuraciones Avanzadas
-                        </h5>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Tiempo límite de confirmación (minutos)</label>
-                                    <input type="number" class="form-control" name="order_timeout" 
-                                           value="<?php echo $current_settings['order_timeout'] ?? '30'; ?>" min="5" max="120">
-                                    <div class="form-text">Tiempo máximo para confirmar un pedido</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Actualización pantalla cocina (segundos)</label>
-                                    <input type="number" class="form-control" name="kitchen_display_refresh" 
-                                           value="<?php echo $current_settings['kitchen_display_refresh'] ?? '5'; ?>" min="1" max="60">
-                                    <div class="form-text">Frecuencia de actualización automática</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="notification_sound" 
-                                               name="notification_sound" <?php echo ($current_settings['notification_sound'] ?? '1') === '1' ? 'checked' : ''; ?>>
-                                        <label class="form-check-label" for="notification_sound">
-                                            <strong>Sonido de Notificaciones</strong>
-                                        </label>
-                                    </div>
-                                    <div class="form-text">Reproduce sonido al recibir pedidos</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Test de Configuración -->
-                        <div class="alert alert-info mt-4">
-                            <h6><i class="fas fa-test-tube me-2"></i>Prueba tu configuración</h6>
-                            <div class="d-flex gap-2 flex-wrap">
-                                <button type="button" class="btn btn-outline-info btn-sm" onclick="testGoogleMapsAPI()">
-                                    <i class="fab fa-google me-1"></i>
-                                    Probar Google Maps
-                                </button>
-                                <button type="button" class="btn btn-outline-success btn-sm" onclick="testNotificationSound()">
-                                    <i class="fas fa-volume-up me-1"></i>
-                                    Probar Sonido
-                                </button>
-                                <a href="../index.php" target="_blank" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-external-link-alt me-1"></i>
-                                    Ver Página de Pedidos
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-save me-2"></i>
-                            Guardar Configuración de Pedidos Online
-                        </button>
-                    </form>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Rama</label>
+                        <input type="text" class="form-control" name="github_branch" 
+                               value="<?php echo htmlspecialchars($current_settings['github_branch'] ?? 'main'); ?>" 
+                               readonly>
+                    </div>
                 </div>
-                
-                <!-- System Settings -->
-                <div class="tab-pane fade" id="system" role="tabpanel">
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_system">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Zona Horaria</label>
-                                    <select class="form-select" name="system_timezone">
-                                        <option value="America/Argentina/Buenos_Aires" 
-                                                <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Argentina/Buenos_Aires' ? 'selected' : ''; ?>>
-                                            Buenos Aires
-                                        </option>
-                                        <option value="America/Argentina/Cordoba" 
-                                                <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Argentina/Cordoba' ? 'selected' : ''; ?>>
-                                            Córdoba
-                                        </option>
-                                        <option value="America/Argentina/Mendoza" 
-                                                <?php echo ($current_settings['system_timezone'] ?? '') === 'America/Argentina/Mendoza' ? 'selected' : ''; ?>>
-                                            Mendoza
-                                        </option>
-                                    </select>
-                                </div>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="auto_backup" name="auto_backup_before_update" 
+                       <?php echo ($current_settings['auto_backup_before_update'] ?? '1') === '1' ? 'checked' : ''; ?>>
+                <label class="form-check-label" for="auto_backup">
+                    <strong>Crear backup automático antes de actualizar</strong>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i>
+                Guardar Configuración
+            </button>
+        </form>
+    </div>
+</div>
+
+                <!-- Backups y Historial -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-database me-2"></i>
+                                    Backups
+                                </h5>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Formato de Fecha</label>
-                                    <select class="form-select" name="date_format">
-                                        <option value="d/m/Y" 
-                                                <?php echo ($current_settings['date_format'] ?? 'd/m/Y') === 'd/m/Y' ? 'selected' : ''; ?>>
-                                            DD/MM/YYYY
-                                        </option>
-                                        <option value="Y-m-d" 
-                                                <?php echo ($current_settings['date_format'] ?? '') === 'Y-m-d' ? 'selected' : ''; ?>>
-                                            YYYY-MM-DD
-                                        </option>
-                                        <option value="m/d/Y" 
-                                                <?php echo ($current_settings['date_format'] ?? '') === 'm/d/Y' ? 'selected' : ''; ?>>
-                                            MM/DD/YYYY
-                                        </option>
-                                    </select>
+                            <div class="card-body">
+                                <button class="btn btn-primary mb-3" onclick="createManualBackup()">
+                                    <i class="fas fa-save me-1"></i>
+                                    Crear Backup Manual
+                                </button>
+                                <div id="backups-list">
+                                    <p class="text-muted">Cargando backups...</p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Auto-Logout (minutos)</label>
-                                    <input type="number" class="form-control" name="auto_logout_time" 
-                                           value="<?php echo $current_settings['auto_logout_time'] ?? '240'; ?>" min="30" max="480">
-                                </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-history me-2"></i>
+                                    Historial de Actualizaciones
+                                </h5>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Máx. Órdenes por Día</label>
-                                    <input type="number" class="form-control" name="max_orders_per_day" 
-                                           value="<?php echo $current_settings['max_orders_per_day'] ?? '1000'; ?>">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Usuario</th>
+                                                <th>Estado</th>
+                                                <th>Archivos</th>
+                                                <th>Commit</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="updates-history">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">Cargando...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Frecuencia de Backup</label>
-                            <select class="form-select" name="backup_frequency">
-                                <option value="daily" 
-                                        <?php echo ($current_settings['backup_frequency'] ?? 'daily') === 'daily' ? 'selected' : ''; ?>>
-                                    Diario
-                                </option>
-                                <option value="weekly" 
-                                        <?php echo ($current_settings['backup_frequency'] ?? '') === 'weekly' ? 'selected' : ''; ?>>
-                                    Semanal
-                                </option>
-                                <option value="monthly" 
-                                        <?php echo ($current_settings['backup_frequency'] ?? '') === 'monthly' ? 'selected' : ''; ?>>
-                                    Mensual
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-info">
-                            <i class="fas fa-save me-2"></i>
-                            Guardar Configuración del Sistema
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Modal con instrucciones -->
+</div>
+
+<!-- Modal: Instrucciones de Google Maps -->
 <div class="modal fade" id="mapsInstructionsModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fab fa-google me-2"></i>
+                    <i class="fas fa-map-marked-alt me-2"></i>
                     Cómo obtener la URL de Google Maps
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="step-by-step">
-                    <div class="step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <strong>Abrir Google Maps</strong>
-                            <p>Vaya a <a href="https://maps.google.com" target="_blank">maps.google.com</a></p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <strong>Buscar su restaurante</strong>
-                            <p>Escriba el nombre y dirección de su restaurante en la barra de búsqueda</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <strong>Copiar la URL</strong>
-                            <p>Una vez que aparezca su restaurante en el mapa, copie la URL completa desde la barra del navegador</p>
-                        </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <strong>Pegar aquí</strong>
-                            <p>Pegue la URL en el campo anterior y guarde la configuración</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info mt-3">
+                <div class="alert alert-info">
                     <i class="fas fa-lightbulb me-2"></i>
-                    <strong>Ejemplo de URL válida:</strong><br>
-                    <code>https://maps.google.com/maps?q=-29.1167,-59.6500</code><br>
-                    <code>https://www.google.com/maps/place/Mi+Restaurante/@-29.1167,-59.6500,15z</code>
+                    Sigue estos pasos para obtener la URL correcta de tu ubicación en Google Maps:
+                </div>
+
+                <ol class="mb-4">
+                    <li class="mb-3">
+                        <strong>Abre Google Maps</strong> en tu navegador: 
+                        <a href="https://maps.google.com" target="_blank">maps.google.com</a>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Busca tu restaurante</strong> o la dirección exacta
+                    </li>
+                    <li class="mb-3">
+                        <strong>Haz clic en "Compartir"</strong> (botón con el ícono de compartir)
+                    </li>
+                    <li class="mb-3">
+                        <strong>Selecciona "Copiar enlace"</strong>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Pega el enlace</strong> en el campo "URL de Google Maps" de arriba
+                    </li>
+                </ol>
+
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>¡Listo!</strong> El sistema extraerá automáticamente tus coordenadas de latitud y longitud desde esa URL.
+                </div>
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Ejemplo de URL válida:</strong></p>
+                        <code class="small">https://maps.google.com/?q=-31.4176,-64.1890</code><br>
+                        <code class="small">https://www.google.com/maps/@-31.4176,-64.1890,15z</code>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1363,55 +1590,81 @@ p {
         </div>
     </div>
 </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeMobileMenu();
-            updateCurrentTime();
-        });
 
-        function initializeMobileMenu() {
-            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+<style>
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        border-color: #dee2e6;
+        color: #495057;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: var(--primary-color);
+        border-color: var(--primary-color);
+        background-color: transparent;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0 20px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #e9ecef;
+        font-weight: 600;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+    }
+    
+    .alert {
+        border-left: 4px solid;
+    }
+    
+    .alert-info {
+        border-left-color: #0dcaf0;
+    }
+    
+    .alert-success {
+        border-left-color: #198754;
+    }
+    
+    .alert-danger {
+        border-left-color: #dc3545;
+    }
+</style>
+
+    <script>
+        // Sidebar toggle
+        function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-            const sidebarClose = document.getElementById('sidebarClose');
-
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    sidebar.classList.toggle('show');
-                    sidebarBackdrop.classList.toggle('show');
-                    document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : '';
-                });
-            }
-
-            if (sidebarClose) {
-                sidebarClose.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    closeSidebar();
-                });
-            }
-
-            if (sidebarBackdrop) {
-                sidebarBackdrop.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    closeSidebar();
-                });
-            }
-
-            document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth < 992) {
-                        setTimeout(closeSidebar, 100);
-                    }
-                });
-            });
-
-            window.addEventListener('resize', function() {
-                if (window.innerWidth >= 992) {
-                    closeSidebar();
+            
+            if (sidebar && sidebarBackdrop) {
+                sidebar.classList.toggle('show');
+                sidebarBackdrop.classList.toggle('show');
+                
+                if (sidebar.classList.contains('show')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
                 }
-            });
+            }
         }
 
         function closeSidebar() {
@@ -1546,6 +1799,296 @@ p {
                 this.classList.remove('is-valid', 'is-invalid');
             }
         });
+
+        // GitHub Update System Functions
+        let updateInProgress = false;
+
+        // Verificar actualizaciones disponibles
+        function checkForUpdates() {
+            const btn = event.target;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Verificando...';
+            btn.disabled = true;
+
+            fetch('api/github-update.php?action=check')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.updates_available) {
+                            showUpdatesAvailable(data);
+                        } else {
+                            document.getElementById('update-status').innerHTML = `
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>Sistema actualizado</strong><br>
+                                    Estás usando la última versión disponible
+                                </div>
+                            `;
+                            document.getElementById('changes-panel').style.display = 'none';
+                        }
+                        document.getElementById('current-commit').textContent = data.current_commit ? data.current_commit.substring(0, 7) : 'N/A';
+                    } else {
+                        document.getElementById('update-status').innerHTML = `
+                            <div class="alert alert-danger mb-0">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Error: ${data.message}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('update-status').innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Error de conexión: ${error.message}
+                        </div>
+                    `;
+                })
+                .finally(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+        }
+
+        // Mostrar actualizaciones disponibles
+        function showUpdatesAvailable(data) {
+            document.getElementById('update-status').innerHTML = `
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-download me-2"></i>
+                    <strong>¡Hay actualizaciones disponibles!</strong><br>
+                    ${data.commits_ahead} nuevos commits desde ${data.latest_commit.substring(0, 7)}
+                </div>
+            `;
+
+            document.getElementById('files-added').textContent = data.stats.added || 0;
+            document.getElementById('files-modified').textContent = data.stats.modified || 0;
+            document.getElementById('files-removed').textContent = data.stats.removed || 0;
+
+            let commitsHTML = '';
+            if (data.commits && data.commits.length > 0) {
+                data.commits.forEach(commit => {
+                    commitsHTML += `
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">${commit.message}</h6>
+                                <small><code>${commit.sha.substring(0, 7)}</code></small>
+                            </div>
+                            <p class="mb-1 small text-muted">${commit.author}</p>
+                            <small class="text-muted">${new Date(commit.date).toLocaleString('es-AR')}</small>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('commits-list').innerHTML = commitsHTML;
+            document.getElementById('changes-panel').style.display = 'block';
+        }
+
+        // Realizar actualización
+        function performUpdate() {
+            if (updateInProgress) {
+                alert('Ya hay una actualización en progreso');
+                return;
+            }
+
+            if (!confirm('¿Está seguro de que desea actualizar el sistema?\n\nSe creará un backup automático antes de continuar.')) {
+                return;
+            }
+
+            updateInProgress = true;
+            document.getElementById('changes-panel').style.display = 'none';
+            document.getElementById('progress-panel').style.display = 'block';
+
+            updateProgress(10, 'Creando backup del sistema...');
+
+            fetch('api/github-update.php?action=update', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateProgress(100, '¡Actualización completada exitosamente!');
+                        
+                        setTimeout(() => {
+                            alert(`Sistema actualizado exitosamente!\n\nArchivos actualizados: ${data.stats.updated}\nArchivos nuevos: ${data.stats.added}\nArchivos eliminados: ${data.stats.deleted}\n\nLa página se recargará para aplicar los cambios.`);
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    updateInProgress = false;
+                    updateProgress(0, '');
+                    document.getElementById('progress-panel').style.display = 'none';
+                    alert('Error durante la actualización: ' + error.message);
+                });
+        }
+
+        // Actualizar barra de progreso
+        function updateProgress(percent, message) {
+            const progressBar = document.getElementById('update-progress');
+            const statusDiv = document.getElementById('progress-status');
+            
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            statusDiv.innerHTML = `<p class="mb-0">${message}</p>`;
+        }
+
+        // Guardar configuración de GitHub
+        function saveGithubConfig(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(document.getElementById('github-config-form'));
+            
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.text())
+                .then(() => {
+                    alert('Configuración guardada exitosamente');
+                    location.reload();
+                })
+                .catch(error => {
+                    alert('Error al guardar: ' + error.message);
+                });
+        }
+
+        // Toggle visibilidad del token
+        function toggleGithubToken() {
+            const input = document.getElementById('github-token');
+            const icon = document.getElementById('github-token-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // Crear backup manual
+        function createManualBackup() {
+            if (!confirm('¿Crear un backup manual del sistema actual?')) {
+                return;
+            }
+            
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
+            btn.disabled = true;
+            
+            fetch('api/github-update.php?action=backup')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Backup creado exitosamente!\n\nUbicación: ${data.backup_path}\nArchivos: ${data.files_backed_up}\nTamaño: ${data.size}`);
+                        loadBackupsList();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al crear backup: ' + error.message);
+                })
+                .finally(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+        }
+
+        // Cargar lista de backups
+        function loadBackupsList() {
+            document.getElementById('backups-list').innerHTML = `
+                <p class="text-muted">Los backups se guardan en la carpeta <code>backups/</code></p>
+                <p class="small">Puedes acceder a ellos mediante FTP o el administrador de archivos de tu servidor.</p>
+            `;
+        }
+
+        // Cargar historial de actualizaciones
+        function loadUpdateHistory() {
+            fetch('api/github-update.php?action=get_logs')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.logs.length > 0) {
+                        let html = '';
+                        data.logs.forEach(log => {
+                            const statusBadge = getStatusBadge(log.status);
+                            const date = new Date(log.started_at).toLocaleString('es-AR');
+                            
+                            html += `
+                                <tr>
+                                    <td>${date}</td>
+                                    <td>${log.username || 'Sistema'}</td>
+                                    <td>${statusBadge}</td>
+                                    <td>
+                                        <span class="badge bg-success">${log.files_added} nuevos</span>
+                                        <span class="badge bg-warning">${log.files_updated} modificados</span>
+                                        ${log.files_deleted > 0 ? `<span class="badge bg-danger">${log.files_deleted} eliminados</span>` : ''}
+                                    </td>
+                                    <td><code>${log.commit_hash ? log.commit_hash.substring(0, 7) : 'N/A'}</code></td>
+                                    <td>
+                                        ${log.backup_path ? `<button class="btn btn-sm btn-outline-primary" onclick="rollbackToBackup('${log.backup_path}')"><i class="fas fa-undo me-1"></i>Revertir</button>` : ''}
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        document.getElementById('updates-history').innerHTML = html;
+                    } else {
+                        document.getElementById('updates-history').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay actualizaciones registradas</td></tr>';
+                    }
+                });
+        }
+
+        // Obtener badge de estado
+        function getStatusBadge(status) {
+            const badges = {
+                'completed': '<span class="badge bg-success">Completada</span>',
+                'failed': '<span class="badge bg-danger">Fallida</span>',
+                'in_progress': '<span class="badge bg-info">En progreso</span>',
+                'rolled_back': '<span class="badge bg-warning">Revertida</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">Desconocido</span>';
+        }
+
+        // Revertir a un backup
+        function rollbackToBackup(backupPath) {
+            if (!confirm('¿Está seguro de que desea revertir el sistema a este backup?\n\nEsto sobrescribirá todos los archivos actuales.')) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('backup_path', backupPath);
+            
+            fetch('api/github-update.php?action=rollback', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Sistema revertido exitosamente!\n\nArchivos restaurados: ${data.files_restored}\n\nLa página se recargará.`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al revertir: ' + error.message);
+                });
+        }
+
+        // Inicializar al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            checkForUpdates();
+            loadBackupsList();
+            loadUpdateHistory();
+        });
+
+        function showChangesDetails() {
+            alert('Esta función mostrará los detalles de los cambios disponibles. Por implementar.');
+        }
     </script>
     <script>
 function showMapsInstructions() {
@@ -1620,8 +2163,112 @@ function extractCoordinatesFromUrl(url) {
     
     return null;
 }
+
+// Obtener y mostrar System ID
+function loadSystemId() {
+    fetch('api/github-update.php?action=generate_system_id')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('system-id-display').value = data.system_id;
+            } else {
+                document.getElementById('system-id-display').value = 'Error al generar ID';
+            }
+        })
+        .catch(error => {
+            document.getElementById('system-id-display').value = 'Error de conexión';
+        });
+}
+
+// Copiar System ID
+function copySystemId() {
+    const systemId = document.getElementById('system-id-display').value;
+    navigator.clipboard.writeText(systemId).then(function() {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+        }, 2000);
+    });
+}
+
+// Verificar licencia
+function verifyLicense(event) {
+    event.preventDefault();
+    
+    const licenseKey = document.getElementById('license-key-input').value.toUpperCase().trim();
+    const statusDiv = document.getElementById('license-status');
+    
+    if (!licenseKey) {
+        statusDiv.innerHTML = '<div class="alert alert-warning">Por favor ingresa una clave de licencia</div>';
+        return;
+    }
+    
+    statusDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Verificando licencia...</div>';
+    
+    const formData = new FormData();
+    formData.append('license_key', licenseKey);
+    
+    fetch('api/github-update.php?action=verify_license', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>¡Licencia válida!</strong><br>
+                        ${data.message}
+                    </div>
+                `;
+                // Recargar para aplicar cambios
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>Licencia inválida</strong><br>
+                        ${data.message}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            statusDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al verificar: ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Auto-formato del input de licencia
+document.getElementById('license-key-input').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/[^A-F0-9-]/gi, '').toUpperCase();
+    value = value.replace(/-/g, '');
+    
+    let formatted = '';
+    for (let i = 0; i < value.length && i < 20; i++) {
+        if (i > 0 && i % 5 === 0) {
+            formatted += '-';
+        }
+        formatted += value[i];
+    }
+    
+    e.target.value = formatted;
+});
+
+// Cargar System ID al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    loadSystemId();
+});
 </script>
 
 <?php include 'footer.php'; ?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
