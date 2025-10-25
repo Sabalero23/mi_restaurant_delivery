@@ -1,149 +1,149 @@
-# Sistema de GestiÃ³n GastronÃ³mica
+# Sistema de Gesti¨®n Gastron¨®mica
 
-Un sistema completo de gestiÃ³n para restaurantes que incluye punto de venta, pedidos online, gestiÃ³n de mesas, cocina, delivery y reportes avanzados.
+Un sistema completo de gesti¨®n para restaurantes que incluye punto de venta, pedidos online, gesti¨®n de mesas, cocina, delivery y reportes avanzados.
 
-## ğŸŒŸ CaracterÃ­sticas Principales
+## ?? Caracter¨ªsticas Principales
 
-### ğŸ’» Panel de AdministraciÃ³n
-- **Dashboard en tiempo real** con estadÃ­sticas y notificaciones
-- **GestiÃ³n de Ã³rdenes** tradicionales y online
+### ?? Panel de Administraci¨®n
+- **Dashboard en tiempo real** con estad¨ªsticas y notificaciones
+- **Gesti¨®n de ¨®rdenes** tradicionales y online
 - **Control de mesas** con estados visuales
-- **Panel de cocina** con tiempos de preparaciÃ³n
-- **GestiÃ³n de delivery** con seguimiento
-- **Reportes avanzados** con grÃ¡ficos y exportaciÃ³n
+- **Panel de cocina** con tiempos de preparaci¨®n
+- **Gesti¨®n de delivery** con seguimiento
+- **Reportes avanzados** con gr¨¢ficos y exportaci¨®n
 - **Sistema de usuarios** con roles y permisos
-- **GestiÃ³n de productos** y categorÃ­as
+- **Gesti¨®n de productos** y categor¨ªas
 - **Control de inventario** con seguimiento en tiempo real
-- **ConfiguraciÃ³n del sistema** centralizada
-- **Instalador automÃ¡tico** modular en 5 pasos
+- **Configuraci¨®n del sistema** centralizada
+- **Instalador autom¨¢tico** modular en 5 pasos
 - **Control de inventario** con seguimiento en tiempo real
 
-### ğŸ“± Experiencia del Cliente
-- **MenÃº online** responsive con carrito de compras
-- **MenÃº QR** para mesas sin contacto
-- **Pedidos online** con validaciÃ³n de direcciones
-- **IntegraciÃ³n con Google Maps** para delivery
-- **Llamada al mesero** desde cÃ³digo QR
-- **ValidaciÃ³n de horarios** de atenciÃ³n
+### ?? Experiencia del Cliente
+- **Men¨² online** responsive con carrito de compras
+- **Men¨² QR** para mesas sin contacto
+- **Pedidos online** con validaci¨®n de direcciones
+- **Integraci¨®n con Google Maps** para delivery
+- **Llamada al mesero** desde c¨®digo QR
+- **Validaci¨®n de horarios** de atenci¨®n
 
-### ğŸ”” Notificaciones en Tiempo Real
+### ?? Notificaciones en Tiempo Real
 - **Alertas sonoras** para nuevos pedidos
 - **Notificaciones visuales** con animaciones
 - **Sistema de llamadas** de mesa
-- **Actualizaciones automÃ¡ticas** del estado
+- **Actualizaciones autom¨¢ticas** del estado
 
-## ğŸ› ï¸ TecnologÃ­as Utilizadas
+## ??? Tecnolog¨ªas Utilizadas
 
 - **Backend**: PHP 8.0+
 - **Base de datos**: MySQL 8.0+
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
 - **Framework CSS**: Bootstrap 5.3
 - **Iconos**: Font Awesome 6.0
-- **GrÃ¡ficos**: Chart.js 3.9
+- **Gr¨¢ficos**: Chart.js 3.9
 - **Mapas**: Google Maps API
 - **Tablas**: DataTables
-- **GestiÃ³n de Stock**: Sistema de inventario integrado
+- **Gesti¨®n de Stock**: Sistema de inventario integrado
 
-## ğŸ“‚ Estructura del Proyecto
+## ?? Estructura del Proyecto
 
 ```
 mi_restaurant_delivery/
-â”œâ”€â”€ index.php # PÃ¡gina principal del menÃº online
-â”œâ”€â”€ 404.html # PÃ¡gina de error 404
-â”œâ”€â”€ 502.html # PÃ¡gina de error 502
-â”œâ”€â”€ menu-qr.php # MenÃº accesible por cÃ³digo QR
-â”œâ”€â”€ call_waiter.php # API para generar llamadas de mesero
-â”œâ”€â”€ install.php # Instalador del sistema
-â”œâ”€â”€ README.md # DocumentaciÃ³n del proyecto
-â”œâ”€â”€ .htaccess # Reglas de Apache (URLs amigables, seguridad, etc.)
-â”œâ”€â”€ estructura de archivos.txt # Archivo de referencia con la estructura del sistema
-â”‚
-â”œâ”€â”€ models/ # Modelos de datos del sistema
-â”‚ â”œâ”€â”€ Product.php # Modelo de productos
-â”‚ â”œâ”€â”€ Table.php # Modelo de mesas
-â”‚ â”œâ”€â”€ Category.php # Modelo de categorÃ­as
-â”‚ â”œâ”€â”€ Payment.php # Modelo de pagos
-â”‚ â””â”€â”€ Order.php # Modelo de Ã³rdenes
-â”‚
-â”œâ”€â”€ config/ # ConfiguraciÃ³n global del sistema
-â”‚ â”œâ”€â”€ config.php # ConfiguraciÃ³n general (constantes, variables globales)
-â”‚ â”œâ”€â”€ database.php # ConexiÃ³n a la base de datos
-â”‚ â”œâ”€â”€ auth.php # Sistema de autenticaciÃ³n y sesiones
-â”‚ â”œâ”€â”€ functions.php # Funciones auxiliares y utilidades
-â”‚ â”œâ”€â”€ whatsapp_api.php         # Clase de integraciÃ³n con WhatsApp Business API
-â”‚ â””â”€â”€ theme.php # Clase ThemeManager con toda la lÃ³gica
-â”‚
-â”œâ”€â”€ admin/ # Panel de administraciÃ³n
-â”‚ â”œâ”€â”€ api/ # APIs internas para el frontend
-â”‚ â”‚ â”œâ”€â”€ products.php # API de gestiÃ³n de productos
-â”‚ â”‚ â”œâ”€â”€ stock-movements.php # Historial de movimientos de inventario
-â”‚ â”‚ â”œâ”€â”€ update-item-status.php # ActualizaciÃ³n del estado de Ã­tems
-â”‚ â”‚ â”œâ”€â”€ delivery-stats.php # EstadÃ­sticas de delivery
-â”‚ â”‚ â”œâ”€â”€ delivery.php # API de gestiÃ³n de deliveries
-â”‚ â”‚ â”œâ”€â”€ online-orders-stats.php # EstadÃ­sticas de pedidos online
-â”‚ â”‚ â”œâ”€â”€ online-orders.php # API de pedidos online
-â”‚ â”‚ â”œâ”€â”€ update-delivery.php # ActualizaciÃ³n de estado de entregas
-â”‚ â”‚ â”œâ”€â”€ orders.php # API de Ã³rdenes tradicionales
-â”‚ â”‚ â”œâ”€â”€ kitchen.php # API del panel de cocina
-â”‚ â”‚ â”œâ”€â”€ update-order-status.php # ActualizaciÃ³n del estado de Ã³rdenes
-â”‚ â”‚ â”œâ”€â”€ create-order.php # CreaciÃ³n de Ã³rdenes desde el sistema
-â”‚ â”‚ â”œâ”€â”€ tables.php # API de gestiÃ³n de mesas
-â”‚ â”‚ â”œâ”€â”€ regenerate-css.php # API para regenerar archivos CSS
-â”‚ â”‚ â”œâ”€â”€ whatsapp-stats.php   # API de estadÃ­sticas de WhatsApp
-â”‚ â”‚ â””â”€â”€ online-orders-recent.php # Listado de pedidos online recientes
-â”‚ â”‚
-â”‚ â”œâ”€â”€ receipts/ # Archivos de recibos generados
-â”‚ â”‚ â””â”€â”€ customer_ORD-.txt # Ejemplo de recibo de cliente
-â”‚ â”‚
-â”‚ â”œâ”€â”€ tickets/ # Tickets impresos para cocina/delivery
-â”‚ â”‚ â””â”€â”€ kitchen_ORD-.txt # Ticket de orden en cocina
-â”‚ â”‚
-â”‚ â”œâ”€â”€ pages/ # PÃ¡ginas estÃ¡ticas del panel
-â”‚ â”‚ â””â”€â”€ 403.php # PÃ¡gina de error 403 (acceso denegado)
-â”‚ â”‚
-â”‚ â”œâ”€â”€ uploads/ # Archivos subidos en el panel
-â”‚ â”‚ â””â”€â”€ products/ # ImÃ¡genes de productos
-â”‚ â”‚
-â”‚ â”œâ”€â”€ products.php # GestiÃ³n de productos
-â”‚ â”œâ”€â”€ settings.php # ConfiguraciÃ³n general del sistema
-â”‚ â”œâ”€â”€ permissions.php # GestiÃ³n de permisos y roles
-â”‚ â”œâ”€â”€ check_calls.php # VerificaciÃ³n de llamadas de mesero
-â”‚ â”œâ”€â”€ delivery.php # Panel de gestiÃ³n de deliveries
-â”‚ â”œâ”€â”€ attend_call.php # Atender llamadas de mesero
-â”‚ â”œâ”€â”€ online-orders.php # GestiÃ³n de pedidos online
-â”‚ â”œâ”€â”€ online-order-details.php # Detalle de un pedido online
-â”‚ â”œâ”€â”€ dashboard.php # Dashboard principal con estadÃ­sticas
-â”‚ â”œâ”€â”€ reports.php # Reportes avanzados del sistema
-â”‚ â”œâ”€â”€ orders.php # GestiÃ³n de Ã³rdenes tradicionales
-â”‚ â”œâ”€â”€ kitchen.php # Panel de cocina
-â”‚ â”œâ”€â”€ users.php # GestiÃ³n de usuarios y roles
-â”‚ â”œâ”€â”€ tables.php # GestiÃ³n de mesas
-â”‚ â”œâ”€â”€ profile.php # GestiÃ³n del perfil de usuario con avatar y configuraciÃ³n personal
-â”‚ â”œâ”€â”€ order-create.php # Crear o editar Ã³rdenes
-â”‚ â”œâ”€â”€ logout.php # Cerrar sesiÃ³n
-â”‚ â”œâ”€â”€ order-details.php # Detalle de una orden
-â”‚ â”œâ”€â”€ print-order.php # ImpresiÃ³n de Ã³rdenes
-â”‚ â”œâ”€â”€ theme-settings.php # Panel principal de configuraciÃ³n de temas
-â”‚ â”œâ”€â”€ whatsapp-answers.php      # Panel de configuraciÃ³n de respuestas automÃ¡ticas
-â”‚ â”œâ”€â”€ whatsapp-settings.php    # ConfiguraciÃ³n de WhatsApp Business API
-â”‚ â”œâ”€â”€ whatsapp-messages.php    # Panel de gestiÃ³n de conversaciones WhatsApp  
-â”‚ â”œâ”€â”€ whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
-â”‚ â””â”€â”€ login.php # PÃ¡gina de login
-â”‚
-â”œâ”€â”€ assets/ # Recursos estÃ¡ticos
-â”‚ â”œâ”€â”€ includes/ # Archivos de inclusiÃ³n
-â”‚ â”œâ”€â”€ css/ # Hojas de estilo
-â”‚ â”‚ â”œâ”€â”€ generate-theme.php # Generador de CSS dinÃ¡mico
-â”‚ â”‚ â””â”€â”€ dynamic-theme.css # Archivo CSS generado automÃ¡ticamente
-â”‚ â”‚
-â”‚ â”œâ”€â”€ images/ # ImÃ¡genes del sistema
-â”‚ â””â”€â”€ js/ # Scripts JavaScript
-â”‚
-â””â”€â”€ database/ # Scripts de base de datos
-â””â”€â”€ bd.sql # Estructura y datos iniciales
+©À©¤©¤ index.php # P¨¢gina principal del men¨² online
+©À©¤©¤ 404.html # P¨¢gina de error 404
+©À©¤©¤ 502.html # P¨¢gina de error 502
+©À©¤©¤ menu-qr.php # Men¨² accesible por c¨®digo QR
+©À©¤©¤ call_waiter.php # API para generar llamadas de mesero
+©À©¤©¤ install.php # Instalador del sistema
+©À©¤©¤ README.md # Documentaci¨®n del proyecto
+©À©¤©¤ .htaccess # Reglas de Apache (URLs amigables, seguridad, etc.)
+©À©¤©¤ estructura de archivos.txt # Archivo de referencia con la estructura del sistema
+©¦
+©À©¤©¤ models/ # Modelos de datos del sistema
+©¦ ©À©¤©¤ Product.php # Modelo de productos
+©¦ ©À©¤©¤ Table.php # Modelo de mesas
+©¦ ©À©¤©¤ Category.php # Modelo de categor¨ªas
+©¦ ©À©¤©¤ Payment.php # Modelo de pagos
+©¦ ©¸©¤©¤ Order.php # Modelo de ¨®rdenes
+©¦
+©À©¤©¤ config/ # Configuraci¨®n global del sistema
+©¦ ©À©¤©¤ config.php # Configuraci¨®n general (constantes, variables globales)
+©¦ ©À©¤©¤ database.php # Conexi¨®n a la base de datos
+©¦ ©À©¤©¤ auth.php # Sistema de autenticaci¨®n y sesiones
+©¦ ©À©¤©¤ functions.php # Funciones auxiliares y utilidades
+©¦ ©À©¤©¤ whatsapp_api.php         # Clase de integraci¨®n con WhatsApp Business API
+©¦ ©¸©¤©¤ theme.php # Clase ThemeManager con toda la l¨®gica
+©¦
+©À©¤©¤ admin/ # Panel de administraci¨®n
+©¦ ©À©¤©¤ api/ # APIs internas para el frontend
+©¦ ©¦ ©À©¤©¤ products.php # API de gesti¨®n de productos
+©¦ ©¦ ©À©¤©¤ stock-movements.php # Historial de movimientos de inventario
+©¦ ©¦ ©À©¤©¤ update-item-status.php # Actualizaci¨®n del estado de ¨ªtems
+©¦ ©¦ ©À©¤©¤ delivery-stats.php # Estad¨ªsticas de delivery
+©¦ ©¦ ©À©¤©¤ delivery.php # API de gesti¨®n de deliveries
+©¦ ©¦ ©À©¤©¤ online-orders-stats.php # Estad¨ªsticas de pedidos online
+©¦ ©¦ ©À©¤©¤ online-orders.php # API de pedidos online
+©¦ ©¦ ©À©¤©¤ update-delivery.php # Actualizaci¨®n de estado de entregas
+©¦ ©¦ ©À©¤©¤ orders.php # API de ¨®rdenes tradicionales
+©¦ ©¦ ©À©¤©¤ kitchen.php # API del panel de cocina
+©¦ ©¦ ©À©¤©¤ update-order-status.php # Actualizaci¨®n del estado de ¨®rdenes
+©¦ ©¦ ©À©¤©¤ create-order.php # Creaci¨®n de ¨®rdenes desde el sistema
+©¦ ©¦ ©À©¤©¤ tables.php # API de gesti¨®n de mesas
+©¦ ©¦ ©À©¤©¤ regenerate-css.php # API para regenerar archivos CSS
+©¦ ©¦ ©À©¤©¤ whatsapp-stats.php   # API de estad¨ªsticas de WhatsApp
+©¦ ©¦ ©¸©¤©¤ online-orders-recent.php # Listado de pedidos online recientes
+©¦ ©¦
+©¦ ©À©¤©¤ receipts/ # Archivos de recibos generados
+©¦ ©¦ ©¸©¤©¤ customer_ORD-.txt # Ejemplo de recibo de cliente
+©¦ ©¦
+©¦ ©À©¤©¤ tickets/ # Tickets impresos para cocina/delivery
+©¦ ©¦ ©¸©¤©¤ kitchen_ORD-.txt # Ticket de orden en cocina
+©¦ ©¦
+©¦ ©À©¤©¤ pages/ # P¨¢ginas est¨¢ticas del panel
+©¦ ©¦ ©¸©¤©¤ 403.php # P¨¢gina de error 403 (acceso denegado)
+©¦ ©¦
+©¦ ©À©¤©¤ uploads/ # Archivos subidos en el panel
+©¦ ©¦ ©¸©¤©¤ products/ # Im¨¢genes de productos
+©¦ ©¦
+©¦ ©À©¤©¤ products.php # Gesti¨®n de productos
+©¦ ©À©¤©¤ settings.php # Configuraci¨®n general del sistema
+©¦ ©À©¤©¤ permissions.php # Gesti¨®n de permisos y roles
+©¦ ©À©¤©¤ check_calls.php # Verificaci¨®n de llamadas de mesero
+©¦ ©À©¤©¤ delivery.php # Panel de gesti¨®n de deliveries
+©¦ ©À©¤©¤ attend_call.php # Atender llamadas de mesero
+©¦ ©À©¤©¤ online-orders.php # Gesti¨®n de pedidos online
+©¦ ©À©¤©¤ online-order-details.php # Detalle de un pedido online
+©¦ ©À©¤©¤ dashboard.php # Dashboard principal con estad¨ªsticas
+©¦ ©À©¤©¤ reports.php # Reportes avanzados del sistema
+©¦ ©À©¤©¤ orders.php # Gesti¨®n de ¨®rdenes tradicionales
+©¦ ©À©¤©¤ kitchen.php # Panel de cocina
+©¦ ©À©¤©¤ users.php # Gesti¨®n de usuarios y roles
+©¦ ©À©¤©¤ tables.php # Gesti¨®n de mesas
+©¦ ©À©¤©¤ profile.php # Gesti¨®n del perfil de usuario con avatar y configuraci¨®n personal
+©¦ ©À©¤©¤ order-create.php # Crear o editar ¨®rdenes
+©¦ ©À©¤©¤ logout.php # Cerrar sesi¨®n
+©¦ ©À©¤©¤ order-details.php # Detalle de una orden
+©¦ ©À©¤©¤ print-order.php # Impresi¨®n de ¨®rdenes
+©¦ ©À©¤©¤ theme-settings.php # Panel principal de configuraci¨®n de temas
+©¦ ©À©¤©¤ whatsapp-answers.php      # Panel de configuraci¨®n de respuestas autom¨¢ticas
+©¦ ©À©¤©¤ whatsapp-settings.php    # Configuraci¨®n de WhatsApp Business API
+©¦ ©À©¤©¤ whatsapp-messages.php    # Panel de gesti¨®n de conversaciones WhatsApp  
+©¦ ©À©¤©¤ whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
+©¦ ©¸©¤©¤ login.php # P¨¢gina de login
+©¦
+©À©¤©¤ assets/ # Recursos est¨¢ticos
+©¦ ©À©¤©¤ includes/ # Archivos de inclusi¨®n
+©¦ ©À©¤©¤ css/ # Hojas de estilo
+©¦ ©¦ ©À©¤©¤ generate-theme.php # Generador de CSS din¨¢mico
+©¦ ©¦ ©¸©¤©¤ dynamic-theme.css # Archivo CSS generado autom¨¢ticamente
+©¦ ©¦
+©¦ ©À©¤©¤ images/ # Im¨¢genes del sistema
+©¦ ©¸©¤©¤ js/ # Scripts JavaScript
+©¦
+©¸©¤©¤ database/ # Scripts de base de datos
+©¸©¤©¤ bd.sql # Estructura y datos iniciales
 ```
 
-## ğŸš€ InstalaciÃ³n
+## ?? Instalaci¨®n
 
 ### Requisitos del Sistema
 
@@ -153,148 +153,148 @@ mi_restaurant_delivery/
 - **Extensiones PHP**:
   - PDO
   - PDO_MySQL
-  - GD (para imÃ¡genes)
+  - GD (para im¨¢genes)
   - JSON
   - Session
   - mbstring
   - openssl
   - curl
 
-### InstalaciÃ³n AutomÃ¡tica (Recomendada)
+### Instalaci¨®n Autom¨¢tica (Recomendada)
 
-El sistema incluye un instalador web modular dividido en pasos para una instalaciÃ³n mÃ¡s organizada y mantenible.
+El sistema incluye un instalador web modular dividido en pasos para una instalaci¨®n m¨¢s organizada y mantenible.
 
 1. **Descargar y extraer** el proyecto en su servidor web
-2. **Crear base de datos** MySQL vacÃ­a
+2. **Crear base de datos** MySQL vac¨ªa
 3. **Navegar** a `http://su-dominio.com/install/`
-4. **Seguir el asistente** de instalaciÃ³n paso a paso:
+4. **Seguir el asistente** de instalaci¨®n paso a paso:
 
 #### Pasos del Instalador
 
-**Paso 1: VerificaciÃ³n de Requisitos y ConfiguraciÃ³n de BD**
-- VerificaciÃ³n automÃ¡tica de requisitos del sistema
-- ConfiguraciÃ³n de conexiÃ³n a base de datos
-- GeneraciÃ³n del archivo `config/config.php`
+**Paso 1: Verificaci¨®n de Requisitos y Configuraci¨®n de BD**
+- Verificaci¨®n autom¨¢tica de requisitos del sistema
+- Configuraci¨®n de conexi¨®n a base de datos
+- Generaci¨®n del archivo `config/config.php`
 
-**Paso 2: InstalaciÃ³n de Estructura de BD**
-- CreaciÃ³n automÃ¡tica de todas las tablas necesarias:
-  - GestiÃ³n de usuarios, roles y permisos
+**Paso 2: Instalaci¨®n de Estructura de BD**
+- Creaci¨®n autom¨¢tica de todas las tablas necesarias:
+  - Gesti¨®n de usuarios, roles y permisos
   - Sistema de productos con control de stock
-  - GestiÃ³n de Ã³rdenes y pagos
+  - Gesti¨®n de ¨®rdenes y pagos
   - Sistema de mesas y llamadas de mesero
-  - ConfiguraciÃ³n de temas dinÃ¡micos
-  - IntegraciÃ³n completa de WhatsApp Business API
+  - Configuraci¨®n de temas din¨¢micos
+  - Integraci¨®n completa de WhatsApp Business API
   - **Tabla `stock_movements`** para historial de inventario
-- InserciÃ³n de datos bÃ¡sicos del sistema
-- ConfiguraciÃ³n de roles y permisos
-- InstalaciÃ³n de respuestas automÃ¡ticas de WhatsApp
-- ConfiguraciÃ³n de temas bÃ¡sicos
+- Inserci¨®n de datos b¨¢sicos del sistema
+- Configuraci¨®n de roles y permisos
+- Instalaci¨®n de respuestas autom¨¢ticas de WhatsApp
+- Configuraci¨®n de temas b¨¢sicos
 
-**Paso 3: ConfiguraciÃ³n del Restaurante**
-- Datos bÃ¡sicos del negocio
-- ConfiguraciÃ³n de delivery y horarios
-- CreaciÃ³n del usuario administrador
-- ConfiguraciÃ³n de APIs (Google Maps, WhatsApp)
+**Paso 3: Configuraci¨®n del Restaurante**
+- Datos b¨¢sicos del negocio
+- Configuraci¨®n de delivery y horarios
+- Creaci¨®n del usuario administrador
+- Configuraci¨®n de APIs (Google Maps, WhatsApp)
 
 **Paso 4: Datos de Ejemplo (Opcional)**
 - Usuarios de ejemplo con diferentes roles
 - **Productos de muestra con control de stock**:
   - Productos con y sin seguimiento de inventario
-  - ConfiguraciÃ³n de alertas de stock bajo
+  - Configuraci¨®n de alertas de stock bajo
   - Datos realistas de costos y precios
 - Mesas adicionales
 - **Este paso funciona independientemente** y puede ejecutarse en cualquier momento
 
-**Paso 5: FinalizaciÃ³n**
-- Resumen de la instalaciÃ³n
+**Paso 5: Finalizaci¨®n**
+- Resumen de la instalaci¨®n
 - Credenciales de acceso
 - Enlaces directos al sistema
 - Instrucciones de seguridad
 
-### Estructura de Archivos de InstalaciÃ³n
+### Estructura de Archivos de Instalaci¨®n
 
 ```
 install/
-â”œâ”€â”€ index.php              # Archivo principal de instalaciÃ³n
-â”œâ”€â”€ install_common.php     # Funciones compartidas y estructura de BD
-â”œâ”€â”€ step1.php             # Requisitos del sistema y configuraciÃ³n de BD
-â”œâ”€â”€ step2.php             # InstalaciÃ³n de estructura de BD
-â”œâ”€â”€ step3.php             # ConfiguraciÃ³n del restaurante
-â”œâ”€â”€ step4.php             # Datos de ejemplo (opcional)
-â””â”€â”€ step5.php             # FinalizaciÃ³n
+©À©¤©¤ index.php              # Archivo principal de instalaci¨®n
+©À©¤©¤ install_common.php     # Funciones compartidas y estructura de BD
+©À©¤©¤ step1.php             # Requisitos del sistema y configuraci¨®n de BD
+©À©¤©¤ step2.php             # Instalaci¨®n de estructura de BD
+©À©¤©¤ step3.php             # Configuraci¨®n del restaurante
+©À©¤©¤ step4.php             # Datos de ejemplo (opcional)
+©¸©¤©¤ step5.php             # Finalizaci¨®n
 ```
 
-### CaracterÃ­sticas del Instalador
+### Caracter¨ªsticas del Instalador
 
 - **Modular**: Cada paso es independiente y mantenible
-- **VerificaciÃ³n automÃ¡tica**: Requisitos del sistema validados
+- **Verificaci¨®n autom¨¢tica**: Requisitos del sistema validados
 - **Progreso visual**: Indicadores de progreso en cada paso
-- **NavegaciÃ³n flexible**: Posibilidad de saltar o repetir pasos
-- **Datos de ejemplo opcionales**: El paso 4 puede ejecutarse despuÃ©s de la instalaciÃ³n principal
+- **Navegaci¨®n flexible**: Posibilidad de saltar o repetir pasos
+- **Datos de ejemplo opcionales**: El paso 4 puede ejecutarse despu¨¦s de la instalaci¨®n principal
 - **Seguridad**: Verificaciones y validaciones en cada paso
-- **InstalaciÃ³n completa**: Incluye todas las tablas necesarias para:
+- **Instalaci¨®n completa**: Incluye todas las tablas necesarias para:
   - Sistema de productos con control de stock
-  - GestiÃ³n de inventario con historial de movimientos
-  - WhatsApp Business API con respuestas automÃ¡ticas
-  - Sistema de temas dinÃ¡micos
-  - Estructura completa de Ã³rdenes y pagos
+  - Gesti¨®n de inventario con historial de movimientos
+  - WhatsApp Business API con respuestas autom¨¢ticas
+  - Sistema de temas din¨¢micos
+  - Estructura completa de ¨®rdenes y pagos
 
 ### Base de Datos Instalada
 
-El instalador crea automÃ¡ticamente las siguientes tablas:
+El instalador crea autom¨¢ticamente las siguientes tablas:
 
 **Sistema Core:**
-- `users`, `roles` - GestiÃ³n de usuarios y permisos
-- `settings` - ConfiguraciÃ³n del sistema
-- `categories`, `products` - GestiÃ³n de productos
+- `users`, `roles` - Gesti¨®n de usuarios y permisos
+- `settings` - Configuraci¨®n del sistema
+- `categories`, `products` - Gesti¨®n de productos
 - `stock_movements` - **Historial de movimientos de inventario**
 
-**GestiÃ³n de Ã“rdenes:**
-- `orders`, `order_items` - Ã“rdenes tradicionales
+**Gesti¨®n de ¨®rdenes:**
+- `orders`, `order_items` - ¨®rdenes tradicionales
 - `online_orders` - Pedidos online
 - `payments`, `online_orders_payments` - Sistema de pagos
-- `tables`, `waiter_calls` - GestiÃ³n de mesas
+- `tables`, `waiter_calls` - Gesti¨®n de mesas
 
 **Sistema de Temas:**
-- `theme_settings` - ConfiguraciÃ³n de temas
+- `theme_settings` - Configuraci¨®n de temas
 - `custom_themes` - Temas personalizados
 - `theme_history` - Historial de cambios
 
 **WhatsApp Business API:**
 - `whatsapp_messages` - Conversaciones
-- `whatsapp_logs` - Logs de envÃ­o
-- `whatsapp_auto_responses` - Respuestas automÃ¡ticas
+- `whatsapp_logs` - Logs de env¨ªo
+- `whatsapp_auto_responses` - Respuestas autom¨¢ticas
 - `whatsapp_media_uploads` - Archivos multimedia
 
-### Post-InstalaciÃ³n
+### Post-Instalaci¨®n
 
 **Importante para la seguridad:**
-- âš ï¸ **Eliminar toda la carpeta `install/`** despuÃ©s de completar la instalaciÃ³n
-- Cambiar todas las contraseÃ±as predefinidas
-- Configurar HTTPS en producciÃ³n
+- ?? **Eliminar toda la carpeta `install/`** despu¨¦s de completar la instalaci¨®n
+- Cambiar todas las contrase?as predefinidas
+- Configurar HTTPS en producci¨®n
 - Verificar permisos de archivos y carpetas
 
-### SoluciÃ³n de Problemas de InstalaciÃ³n
+### Soluci¨®n de Problemas de Instalaci¨®n
 
-**El sistema ya estÃ¡ instalado:**
+**El sistema ya est¨¢ instalado:**
 - Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
 - Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
 
-**Error de conexiÃ³n a base de datos:**
+**Error de conexi¨®n a base de datos:**
 - Verificar credenciales de MySQL
-- Asegurar que la base de datos existe y estÃ¡ accesible
-- Comprobar que las extensiones PHP estÃ¡n instaladas
+- Asegurar que la base de datos existe y est¨¢ accesible
+- Comprobar que las extensiones PHP est¨¢n instaladas
 
 **Permisos de escritura:**
 - Verificar permisos 755 en carpetas de uploads
 - Asegurar que el servidor web puede escribir en `config/`
 
 **Requisitos no cumplidos:**
-- Actualizar PHP a versiÃ³n 7.4 o superior
+- Actualizar PHP a versi¨®n 7.4 o superior
 - Instalar extensiones PHP faltantes
-- Verificar configuraciÃ³n del servidor web
+- Verificar configuraci¨®n del servidor web
 
-### InstalaciÃ³n Manual (Avanzada)
+### Instalaci¨®n Manual (Avanzada)
 
 Si prefiere instalar manualmente:
 
@@ -308,13 +308,13 @@ Si prefiere instalar manualmente:
    mysql -u usuario -p comidasm < database/bd.sql
    ```
 
-3. **Configurar archivo de configuraciÃ³n**:
+3. **Configurar archivo de configuraci¨®n**:
    ```php
    // config/config.php
    define('DB_HOST', 'localhost');
    define('DB_NAME', 'comidasm');
    define('DB_USER', 'tu_usuario');
-   define('DB_PASS', 'tu_contraseÃ±a');
+   define('DB_PASS', 'tu_contrase?a');
    
    define('BASE_URL', 'https://tu-dominio.com/');
    define('UPLOAD_PATH', 'uploads/');
@@ -327,548 +327,548 @@ Si prefiere instalar manualmente:
    chmod 755 uploads/ admin/uploads/ whatsapp_media/
    ```
 
-5. **Crear archivo de instalaciÃ³n completada**:
+5. **Crear archivo de instalaci¨®n completada**:
    ```bash
    echo "$(date)" > config/installed.lock
    ```
 
-### Post-InstalaciÃ³n
+### Post-Instalaci¨®n
 
 **Importante para la seguridad:**
-- âš ï¸ **Eliminar toda la carpeta `install/`** despuÃ©s de completar la instalaciÃ³n
-- Cambiar todas las contraseÃ±as predefinidas
-- Configurar HTTPS en producciÃ³n
+- ?? **Eliminar toda la carpeta `install/`** despu¨¦s de completar la instalaci¨®n
+- Cambiar todas las contrase?as predefinidas
+- Configurar HTTPS en producci¨®n
 - Verificar permisos de archivos y carpetas
 
-### SoluciÃ³n de Problemas de InstalaciÃ³n
+### Soluci¨®n de Problemas de Instalaci¨®n
 
-**El sistema ya estÃ¡ instalado:**
+**El sistema ya est¨¢ instalado:**
 - Si aparece este mensaje y desea reinstalar, elimine el archivo `config/installed.lock`
 - Para agregar solo datos de ejemplo, acceda directamente a `install/step4.php`
 
-**Error de conexiÃ³n a base de datos:**
+**Error de conexi¨®n a base de datos:**
 - Verificar credenciales de MySQL
-- Asegurar que la base de datos existe y estÃ¡ accesible
-- Comprobar que las extensiones PHP estÃ¡n instaladas
+- Asegurar que la base de datos existe y est¨¢ accesible
+- Comprobar que las extensiones PHP est¨¢n instaladas
 
 **Permisos de escritura:**
 - Verificar permisos 755 en carpetas de uploads
 - Asegurar que el servidor web puede escribir en `config/`
 
 **Requisitos no cumplidos:**
-- Actualizar PHP a versiÃ³n 7.4 o superior
+- Actualizar PHP a versi¨®n 7.4 o superior
 - Instalar extensiones PHP faltantes
-- Verificar configuraciÃ³n del servidor web
+- Verificar configuraci¨®n del servidor web
 
-## ğŸ”§ ConfiguraciÃ³n
+## ?? Configuraci¨®n
 
-### ConfiguraciÃ³n BÃ¡sica
+### Configuraci¨®n B¨¢sica
 
-Acceder a **Admin > ConfiguraciÃ³n** para ajustar:
+Acceder a **Admin > Configuraci¨®n** para ajustar:
 
-- **Datos del restaurante**: Nombre, telÃ©fono, direcciÃ³n
+- **Datos del restaurante**: Nombre, tel¨¦fono, direcci¨®n
 - **Horarios**: Apertura, cierre, cierre de cocina
-- **Delivery**: Costo, distancia mÃ¡xima, monto mÃ­nimo
-- **Pagos**: MÃ©todos aceptados, configuraciÃ³n de impuestos
-- **Notificaciones**: Sonidos, alertas automÃ¡ticas
+- **Delivery**: Costo, distancia m¨¢xima, monto m¨ªnimo
+- **Pagos**: M¨¦todos aceptados, configuraci¨®n de impuestos
+- **Notificaciones**: Sonidos, alertas autom¨¢ticas
 
 ### Google Maps (Opcional)
 
 Para habilitar autocompletado de direcciones:
 
 1. **Obtener API Key** de Google Maps
-2. **Configurar en**: Admin > ConfiguraciÃ³n > Google Maps API Key
+2. **Configurar en**: Admin > Configuraci¨®n > Google Maps API Key
 3. **Habilitar APIs**:
    - Places API
    - Geocoding API
    - Maps JavaScript API
 
-### ConfiguraciÃ³n de Roles
+### Configuraci¨®n de Roles
 
 El sistema incluye roles predefinidos, pero puede:
 
 - **Crear roles personalizados**
-- **Asignar permisos especÃ­ficos**:
+- **Asignar permisos espec¨ªficos**:
   - `all`: Acceso completo
-  - `orders`: GestiÃ³n de Ã³rdenes tradicionales
-  - `online_orders`: GestiÃ³n de pedidos online
-  - `products`: GestiÃ³n de productos
-  - `users`: GestiÃ³n de usuarios
-  - `tables`: GestiÃ³n de mesas
-  - `reports`: Reportes y estadÃ­sticas
+  - `orders`: Gesti¨®n de ¨®rdenes tradicionales
+  - `online_orders`: Gesti¨®n de pedidos online
+  - `products`: Gesti¨®n de productos
+  - `users`: Gesti¨®n de usuarios
+  - `tables`: Gesti¨®n de mesas
+  - `reports`: Reportes y estad¨ªsticas
   - `kitchen`: Panel de cocina
-  - `delivery`: GestiÃ³n de delivery
-  - `settings`: ConfiguraciÃ³n del sistema
+  - `delivery`: Gesti¨®n de delivery
+  - `settings`: Configuraci¨®n del sistema
 
   
-### ğŸ“¦ Control de Stock e Inventario
+### ?? Control de Stock e Inventario
 
-Sistema avanzado de gestiÃ³n de inventario con seguimiento en tiempo real y alertas automÃ¡ticas.
+Sistema avanzado de gesti¨®n de inventario con seguimiento en tiempo real y alertas autom¨¢ticas.
 
-#### CaracterÃ­sticas del Sistema de Stock
+#### Caracter¨ªsticas del Sistema de Stock
 
-- **Control opcional por producto** - Activar/desactivar gestiÃ³n de inventario individualmente
-- **Seguimiento en tiempo real** - ActualizaciÃ³n automÃ¡tica de cantidades
+- **Control opcional por producto** - Activar/desactivar gesti¨®n de inventario individualmente
+- **Seguimiento en tiempo real** - Actualizaci¨®n autom¨¢tica de cantidades
 - **Alertas de stock bajo** - Notificaciones configurables por producto
 - **Historial de movimientos** - Registro completo de entradas y salidas
 - **Ajustes manuales** - Correcciones de inventario con motivos
 - **Indicadores visuales** - Barras de progreso y badges de estado
-- **EstadÃ­sticas de inventario** - Dashboard con mÃ©tricas en vivo
+- **Estad¨ªsticas de inventario** - Dashboard con m¨¦tricas en vivo
 
 #### Funcionalidades Principales
 
-**GestiÃ³n de Productos con Stock:**
-- âœ… **ActivaciÃ³n selectiva** - Control de inventario opcional por producto
-- âœ… **Stock actual** - Cantidad disponible en tiempo real
-- âœ… **LÃ­mites de alerta** - ConfiguraciÃ³n personalizada de stock mÃ­nimo
-- âœ… **Estados visuales** - Sin stock, stock bajo, stock normal
-- âœ… **CÃ¡lculos automÃ¡ticos** - MÃ¡rgenes de ganancia en tiempo real
-- âœ… **Validaciones robustas** - PrevenciÃ³n de stock negativo
+**Gesti¨®n de Productos con Stock:**
+- ? **Activaci¨®n selectiva** - Control de inventario opcional por producto
+- ? **Stock actual** - Cantidad disponible en tiempo real
+- ? **L¨ªmites de alerta** - Configuraci¨®n personalizada de stock m¨ªnimo
+- ? **Estados visuales** - Sin stock, stock bajo, stock normal
+- ? **C¨¢lculos autom¨¢ticos** - M¨¢rgenes de ganancia en tiempo real
+- ? **Validaciones robustas** - Prevenci¨®n de stock negativo
 
 **Panel de Ajustes de Stock:**
-- **Modal dedicado** para ajustes rÃ¡pidos de inventario
+- **Modal dedicado** para ajustes r¨¢pidos de inventario
 - **Tipos de movimiento**: Entrada (agregar) y Salida (reducir)
 - **Motivos predefinidos**:
   - Ajuste manual
-  - Inventario fÃ­sico
-  - Producto daÃ±ado/vencido
+  - Inventario f¨ªsico
+  - Producto da?ado/vencido
   - Venta directa
-  - Compra/ReposiciÃ³n
-  - CorrecciÃ³n de error
+  - Compra/Reposici¨®n
+  - Correcci¨®n de error
   - Motivos personalizados
 - **Vista previa** del nuevo stock antes de confirmar
-- **Alertas automÃ¡ticas** si el ajuste genera stock crÃ­tico
+- **Alertas autom¨¢ticas** si el ajuste genera stock cr¨ªtico
 
 **Dashboard de Inventario:**
 - **Productos con control** - Cantidad total bajo seguimiento
 - **Stock bueno** - Productos con inventario normal
-- **Stock bajo** - Productos cerca del lÃ­mite mÃ­nimo
+- **Stock bajo** - Productos cerca del l¨ªmite m¨ªnimo
 - **Sin stock** - Productos agotados
-- **Alertas prominentes** para productos crÃ­ticos
+- **Alertas prominentes** para productos cr¨ªticos
 
 **Historial de Movimientos:**
 - **Registro completo** de todos los cambios de stock
-- **InformaciÃ³n detallada**: Usuario, fecha, cantidad, motivo
+- **Informaci¨®n detallada**: Usuario, fecha, cantidad, motivo
 - **Trazabilidad total** del inventario
 - **Reportes de movimientos** por producto y periodo
 
-#### CaracterÃ­sticas TÃ©cnicas del Stock
+#### Caracter¨ªsticas T¨¦cnicas del Stock
 
 - **Base de datos optimizada** con tabla `stock_movements`
 - **Transacciones seguras** para prevenir inconsistencias
-- **Validaciones mÃºltiples** en frontend y backend
-- **Interfaz responsive** optimizada para mÃ³viles
-- **IntegraciÃ³n completa** con sistema de productos existente
-- **API REST** para ajustes programÃ¡ticos
-- **Logs automÃ¡ticos** de todas las operaciones
+- **Validaciones m¨²ltiples** en frontend y backend
+- **Interfaz responsive** optimizada para m¨®viles
+- **Integraci¨®n completa** con sistema de productos existente
+- **API REST** para ajustes program¨¢ticos
+- **Logs autom¨¢ticos** de todas las operaciones
 
 #### Interfaz de Usuario Mejorada
 
 **Tarjetas de Productos:**
 - **Indicadores de stock** en esquina superior
 - **Barras de progreso** mostrando nivel de inventario
-- **Badges dinÃ¡micos** (Sin stock, Stock bajo, Disponible)
-- **Botones de acciÃ³n rÃ¡pida** para ajustar stock
-- **Colores semÃ¡nticos** segÃºn estado del inventario
+- **Badges din¨¢micos** (Sin stock, Stock bajo, Disponible)
+- **Botones de acci¨®n r¨¢pida** para ajustar stock
+- **Colores sem¨¢nticos** seg¨²n estado del inventario
 
 **Modal de Productos Expandido:**
-- **SecciÃ³n dedicada** de gestiÃ³n de inventario
-- **Switch de activaciÃ³n** para control de stock
-- **Campos de stock actual** y lÃ­mite de alerta
+- **Secci¨®n dedicada** de gesti¨®n de inventario
+- **Switch de activaci¨®n** para control de stock
+- **Campos de stock actual** y l¨ªmite de alerta
 - **Indicadores de estado** en tiempo real
-- **Validaciones visuales** instantÃ¡neas
+- **Validaciones visuales** instant¨¢neas
 
 **Alertas Inteligentes:**
-- **Notificaciones automÃ¡ticas** de productos con stock bajo
+- **Notificaciones autom¨¢ticas** de productos con stock bajo
 - **Lista expandible** con acciones directas
-- **Auto-actualizaciÃ³n** cada vez que se modifica inventario
-- **IntegraciÃ³n con dashboard** principal
+- **Auto-actualizaci¨®n** cada vez que se modifica inventario
+- **Integraci¨®n con dashboard** principal
 
 #### Flujo de Trabajo del Stock
 
-1. **ConfiguraciÃ³n inicial**:
+1. **Configuraci¨®n inicial**:
    - Activar control de stock por producto
    - Establecer cantidad inicial
-   - Configurar lÃ­mite de alerta
+   - Configurar l¨ªmite de alerta
 
-2. **OperaciÃ³n diaria**:
-   - VisualizaciÃ³n automÃ¡tica de alertas
-   - Ajustes rÃ¡pidos desde tarjetas de productos
+2. **Operaci¨®n diaria**:
+   - Visualizaci¨®n autom¨¢tica de alertas
+   - Ajustes r¨¢pidos desde tarjetas de productos
    - Seguimiento en dashboard de inventario
 
-3. **GestiÃ³n avanzada**:
-   - Ajustes con motivos especÃ­ficos
-   - RevisiÃ³n de historial de movimientos
+3. **Gesti¨®n avanzada**:
+   - Ajustes con motivos espec¨ªficos
+   - Revisi¨®n de historial de movimientos
    - Reportes de inventario
 
 #### Beneficios del Sistema
 
 - **Control preciso** del inventario sin complejidad excesiva
 - **Alertas proactivas** evitan quiebres de stock
-- **Trazabilidad completa** para auditorÃ­as
+- **Trazabilidad completa** para auditor¨ªas
 - **Interfaz intuitiva** sin curva de aprendizaje
-- **IntegraciÃ³n transparente** con flujo de trabajo existente
+- **Integraci¨®n transparente** con flujo de trabajo existente
 - **Flexibilidad total** - usar solo en productos necesarios
 
 
-## ğŸ“Š MÃ³dulos del Sistema
+## ?? M¨®dulos del Sistema
 
-### ğŸ  Dashboard
-- **EstadÃ­sticas en tiempo real**
-- **Ã“rdenes recientes** de todos los tipos
+### ?? Dashboard
+- **Estad¨ªsticas en tiempo real**
+- **¨®rdenes recientes** de todos los tipos
 - **Estado de mesas** visual
-- **Notificaciones automÃ¡ticas**
-- **Accesos rÃ¡pidos** segÃºn el rol
+- **Notificaciones autom¨¢ticas**
+- **Accesos r¨¢pidos** seg¨²n el rol
 
-### ğŸ“‹ GestiÃ³n de Ã“rdenes
-- **Ã“rdenes tradicionales**: Mesa, delivery, retiro
-- **Pedidos online**: IntegraciÃ³n completa
-- **Estados de orden**: Pendiente â†’ Confirmado â†’ Preparando â†’ Listo â†’ Entregado
-- **Pagos**: MÃºltiples mÃ©todos (efectivo, tarjeta, transferencia, QR)
+### ?? Gesti¨®n de ¨®rdenes
+- **¨®rdenes tradicionales**: Mesa, delivery, retiro
+- **Pedidos online**: Integraci¨®n completa
+- **Estados de orden**: Pendiente ¡ú Confirmado ¡ú Preparando ¡ú Listo ¡ú Entregado
+- **Pagos**: M¨²ltiples m¨¦todos (efectivo, tarjeta, transferencia, QR)
 - **Filtros avanzados** por fecha, estado, tipo
 
-### ğŸŒ Pedidos Online
+### ?? Pedidos Online
 - **Sistema completo** de pedidos por internet
-- **Carrito de compras** con validaciÃ³n
+- **Carrito de compras** con validaci¨®n
 - **Autocompletado de direcciones** con Google Maps
-- **VerificaciÃ³n de zona** de delivery
-- **Formateo automÃ¡tico** de telÃ©fonos argentinos
-- **ConfirmaciÃ³n por WhatsApp**
+- **Verificaci¨®n de zona** de delivery
+- **Formateo autom¨¢tico** de tel¨¦fonos argentinos
+- **Confirmaci¨®n por WhatsApp**
 - **Estados en tiempo real**
-- **Panel de gestiÃ³n** dedicado con:
-  - AceptaciÃ³n/rechazo de pedidos
-  - Tiempos estimados de preparaciÃ³n
+- **Panel de gesti¨®n** dedicado con:
+  - Aceptaci¨®n/rechazo de pedidos
+  - Tiempos estimados de preparaci¨®n
   - Seguimiento completo del proceso
-  - IntegraciÃ³n con WhatsApp automÃ¡tico
+  - Integraci¨®n con WhatsApp autom¨¢tico
   - Sistema de pagos integrado
 
-### ğŸ½ï¸ GestiÃ³n de Mesas
+### ??? Gesti¨®n de Mesas
 - **Vista visual** de todas las mesas
 - **Estados**: Libre, ocupada, reservada, mantenimiento
-- **Capacidad** y ubicaciÃ³n
-- **AsignaciÃ³n automÃ¡tica** de Ã³rdenes
-- **RepresentaciÃ³n grÃ¡fica** con sillas segÃºn capacidad
-- **Acciones rÃ¡pidas** desde cada mesa
+- **Capacidad** y ubicaci¨®n
+- **Asignaci¨®n autom¨¢tica** de ¨®rdenes
+- **Representaci¨®n gr¨¢fica** con sillas seg¨²n capacidad
+- **Acciones r¨¢pidas** desde cada mesa
 
-### ğŸ‘¨â€ğŸ³ Panel de Cocina
-- **Ã“rdenes por preparar** en tiempo real
-- **Tiempos de preparaciÃ³n**
+### ????? Panel de Cocina
+- **¨®rdenes por preparar** en tiempo real
+- **Tiempos de preparaci¨®n**
 - **Estados por item**
-- **PriorizaciÃ³n automÃ¡tica**
-- **ActualizaciÃ³n en vivo**
+- **Priorizaci¨®n autom¨¢tica**
+- **Actualizaci¨®n en vivo**
 
-### ğŸï¸ GestiÃ³n de Delivery
-- **Ã“rdenes listas** para entrega
-- **InformaciÃ³n del cliente** completa
+### ??? Gesti¨®n de Delivery
+- **¨®rdenes listas** para entrega
+- **Informaci¨®n del cliente** completa
 - **Direcciones con mapas**
 - **Tiempos de entrega**
 - **Estado de entrega**
 
-### ğŸ–¨ï¸ Sistema de ImpresiÃ³n
+### ??? Sistema de Impresi¨®n
 - **Tickets de venta** personalizables
-- **ImpresiÃ³n automÃ¡tica** opcional
-- **Formatos mÃºltiples** (58mm, 80mm)
+- **Impresi¨®n autom¨¢tica** opcional
+- **Formatos m¨²ltiples** (58mm, 80mm)
 - **Vista previa** antes de imprimir
-- **InformaciÃ³n completa** del pedido y pagos
+- **Informaci¨®n completa** del pedido y pagos
 
-### ğŸ“Š Reportes Avanzados
-- **Ventas diarias** con grÃ¡ficos
-- **Productos mÃ¡s vendidos**
+### ?? Reportes Avanzados
+- **Ventas diarias** con gr¨¢ficos
+- **Productos m¨¢s vendidos**
 - **Rendimiento del personal**
-- **AnÃ¡lisis de mesas**
-- **MÃ©todos de pago**
-- **ComparaciÃ³n de perÃ­odos**
-- **ExportaciÃ³n a Excel/CSV**
+- **An¨¢lisis de mesas**
+- **M¨¦todos de pago**
+- **Comparaci¨®n de per¨ªodos**
+- **Exportaci¨®n a Excel/CSV**
 
-### ğŸ“± MenÃº QR
-- **CÃ³digo QR** para cada mesa
-- **MenÃº digital** responsive
-- **Filtros por categorÃ­a**
+### ?? Men¨² QR
+- **C¨®digo QR** para cada mesa
+- **Men¨² digital** responsive
+- **Filtros por categor¨ªa**
 - **Llamada al mesero** integrada
-- **Sin instalaciÃ³n** de apps
+- **Sin instalaci¨®n** de apps
 
-### ğŸ‘¥ GestiÃ³n de Usuarios
+### ?? Gesti¨®n de Usuarios
 - **Roles y permisos** granulares
-- **Interfaz responsive** optimizada para mÃ³vil
-- **Vista de tarjetas** en dispositivos mÃ³viles
+- **Interfaz responsive** optimizada para m¨®vil
+- **Vista de tarjetas** en dispositivos m¨®viles
 - **Filtros por rol** y estado
-- **GestiÃ³n de contraseÃ±as**
-- **ActivaciÃ³n/desactivaciÃ³n** de usuarios
-- **Interfaz tÃ¡ctil** optimizada
+- **Gesti¨®n de contrase?as**
+- **Activaci¨®n/desactivaci¨®n** de usuarios
+- **Interfaz t¨¢ctil** optimizada
 
-### ğŸ‘¤ Perfil de Usuario
+### ?? Perfil de Usuario
 
-Sistema completo de gestiÃ³n de perfiles personales para todos los usuarios del sistema.
+Sistema completo de gesti¨®n de perfiles personales para todos los usuarios del sistema.
 
-#### CaracterÃ­sticas del Perfil
+#### Caracter¨ªsticas del Perfil
 
-- **InformaciÃ³n personal completa**:
-  - EdiciÃ³n de nombre completo
-  - ActualizaciÃ³n de email con validaciÃ³n
-  - GestiÃ³n de nÃºmero de telÃ©fono
-  - VisualizaciÃ³n del rol asignado
+- **Informaci¨®n personal completa**:
+  - Edici¨®n de nombre completo
+  - Actualizaci¨®n de email con validaci¨®n
+  - Gesti¨®n de n¨²mero de tel¨¦fono
+  - Visualizaci¨®n del rol asignado
 
 - **Sistema de avatars avanzado**:
-  - Subida de imÃ¡genes de perfil (JPG, PNG, GIF)
-  - LÃ­mite de 2MB por archivo
-  - GeneraciÃ³n automÃ¡tica de iniciales si no hay avatar
+  - Subida de im¨¢genes de perfil (JPG, PNG, GIF)
+  - L¨ªmite de 2MB por archivo
+  - Generaci¨®n autom¨¢tica de iniciales si no hay avatar
   - Vista previa antes de subir
-  - EliminaciÃ³n automÃ¡tica de avatars anteriores
+  - Eliminaci¨®n autom¨¢tica de avatars anteriores
 
-- **Cambio de contraseÃ±a seguro**:
-  - VerificaciÃ³n de contraseÃ±a actual
-  - Indicador visual de fortaleza de contraseÃ±a
-  - ValidaciÃ³n de coincidencia en tiempo real
-  - Requisito mÃ­nimo de 6 caracteres
-  - OpciÃ³n de mostrar/ocultar contraseÃ±as
+- **Cambio de contrase?a seguro**:
+  - Verificaci¨®n de contrase?a actual
+  - Indicador visual de fortaleza de contrase?a
+  - Validaci¨®n de coincidencia en tiempo real
+  - Requisito m¨ªnimo de 6 caracteres
+  - Opci¨®n de mostrar/ocultar contrase?as
 
-- **EstadÃ­sticas personales**:
+- **Estad¨ªsticas personales**:
   - Fecha de registro en el sistema
-  - DÃ­as activo en la plataforma
-  - Ãšltimo acceso registrado
+  - D¨ªas activo en la plataforma
+  - ¨²ltimo acceso registrado
   - Estado actual de la cuenta
 
-#### Funcionalidades TÃ©cnicas
+#### Funcionalidades T¨¦cnicas
 
-- **ValidaciÃ³n en tiempo real** con JavaScript
-- **Compatibilidad automÃ¡tica** con base de datos existente
-- **CreaciÃ³n automÃ¡tica** de columnas `avatar` y `last_login` si no existen
-- **Interfaz responsive** optimizada para dispositivos mÃ³viles
-- **IntegraciÃ³n completa** con sistema de temas dinÃ¡mico
-- **GestiÃ³n segura** de archivos subidos
+- **Validaci¨®n en tiempo real** con JavaScript
+- **Compatibilidad autom¨¢tica** con base de datos existente
+- **Creaci¨®n autom¨¢tica** de columnas `avatar` y `last_login` si no existen
+- **Interfaz responsive** optimizada para dispositivos m¨®viles
+- **Integraci¨®n completa** con sistema de temas din¨¢mico
+- **Gesti¨®n segura** de archivos subidos
 - **Validaciones robustas** del lado servidor y cliente
 
 #### Seguridad Implementada
 
-- **VerificaciÃ³n de contraseÃ±a actual** antes de cambios
-- **ValidaciÃ³n de formato** de emails
-- **VerificaciÃ³n de unicidad** de emails
-- **LÃ­mites de tamaÃ±o** y tipo de archivos
-- **SanitizaciÃ³n** de datos de entrada
-- **ProtecciÃ³n contra** sobrescritura de archivos
+- **Verificaci¨®n de contrase?a actual** antes de cambios
+- **Validaci¨®n de formato** de emails
+- **Verificaci¨®n de unicidad** de emails
+- **L¨ªmites de tama?o** y tipo de archivos
+- **Sanitizaci¨®n** de datos de entrada
+- **Protecci¨®n contra** sobrescritura de archivos
 
 #### Interfaz de Usuario
 
-- **DiseÃ±o moderno** con gradientes y efectos visuales
+- **Dise?o moderno** con gradientes y efectos visuales
 - **Animaciones suaves** para mejor experiencia
 - **Feedback visual inmediato** en formularios
 - **Indicadores de estado** para todas las acciones
-- **Responsividad completa** para mÃ³viles y tablets
+- **Responsividad completa** para m¨®viles y tablets
 - **Accesibilidad mejorada** con labels y ARIA
 
-Este mÃ³dulo proporciona a cada usuario control total sobre su informaciÃ³n personal y configuraciÃ³n de cuenta, manteniendo la seguridad y consistencia del sistema.
+Este m¨®dulo proporciona a cada usuario control total sobre su informaci¨®n personal y configuraci¨®n de cuenta, manteniendo la seguridad y consistencia del sistema.
 
-### âš™ï¸ ConfiguraciÃ³n Avanzada
-- **ConfiguraciÃ³n general** del restaurante
-- **ConfiguraciÃ³n de negocio** (impuestos, delivery)
-- **ConfiguraciÃ³n de pedidos online**
-- **Horarios de atenciÃ³n**
-- **IntegraciÃ³n con Google Maps**
+### ?? Configuraci¨®n Avanzada
+- **Configuraci¨®n general** del restaurante
+- **Configuraci¨®n de negocio** (impuestos, delivery)
+- **Configuraci¨®n de pedidos online**
+- **Horarios de atenci¨®n**
+- **Integraci¨®n con Google Maps**
 - **Configuraciones del sistema**
-- **Pruebas de configuraciÃ³n** integradas
+- **Pruebas de configuraci¨®n** integradas
 
-## ğŸ“ Sistema de Llamadas de Mesero
+## ?? Sistema de Llamadas de Mesero
 
 ### Funcionalidades
-- **Llamada desde cÃ³digo QR** de mesa
+- **Llamada desde c¨®digo QR** de mesa
 - **Notificaciones en tiempo real** al personal
 - **Estado de llamadas** (pendiente/atendida)
-- **HistÃ³rico de llamadas**
-- **IntegraciÃ³n con panel de mesas**
+- **Hist¨®rico de llamadas**
+- **Integraci¨®n con panel de mesas**
 
 ### Archivos del Sistema
 - `call_waiter.php`: API para generar llamadas
 - `attend_call.php`: Marcar llamadas como atendidas
 - `check_calls.php`: Verificar llamadas pendientes
 
-## ğŸ”’ Seguridad
+## ?? Seguridad
 
 ### Medidas Implementadas
-- **AutenticaciÃ³n** con hash seguro de contraseÃ±as
-- **AutorizaciÃ³n** basada en roles y permisos
-- **ProtecciÃ³n CSRF** en formularios
-- **ValidaciÃ³n de datos** en servidor y cliente
+- **Autenticaci¨®n** con hash seguro de contrase?as
+- **Autorizaci¨®n** basada en roles y permisos
+- **Protecci¨®n CSRF** en formularios
+- **Validaci¨®n de datos** en servidor y cliente
 - **Escape de HTML** para prevenir XSS
-- **Sesiones seguras** con configuraciÃ³n httponly
-- **ValidaciÃ³n de archivos** subidos
+- **Sesiones seguras** con configuraci¨®n httponly
+- **Validaci¨®n de archivos** subidos
 
 ### Recomendaciones
-- **Cambiar contraseÃ±as** predefinidas
-- **Usar HTTPS** en producciÃ³n
+- **Cambiar contrase?as** predefinidas
+- **Usar HTTPS** en producci¨®n
 - **Backup regular** de la base de datos
 - **Actualizar** PHP y MySQL regularmente
 - **Monitorear logs** de acceso
 
-## ğŸ¨ PersonalizaciÃ³n
+## ?? Personalizaci¨®n
 
 ### Temas y Estilos
 - **Variables CSS** para colores principales
 - **Responsive design** para todos los dispositivos
 - **Iconos personalizables** con Font Awesome
 - **Animaciones suaves** para mejor UX
-- **Interfaz optimizada** para dispositivos tÃ¡ctiles
+- **Interfaz optimizada** para dispositivos t¨¢ctiles
 
-### ğŸ¨ Sistema de GestiÃ³n de Estilos DinÃ¡micos
+### ?? Sistema de Gesti¨®n de Estilos Din¨¢micos
 
-El sistema incluye un potente mÃ³dulo de personalizaciÃ³n de temas que permite modificar la apariencia visual de toda la aplicaciÃ³n en tiempo real.
+El sistema incluye un potente m¨®dulo de personalizaci¨®n de temas que permite modificar la apariencia visual de toda la aplicaci¨®n en tiempo real.
 
-#### CaracterÃ­sticas del Sistema de Temas
+#### Caracter¨ªsticas del Sistema de Temas
 
 - **Editor visual de colores** con color pickers interactivos
 - **Vista previa en tiempo real** de los cambios
 - **Temas predefinidos** profesionales (Predeterminado, Oscuro, Verde, Morado, Azul, Naranja)
-- **Generador automÃ¡tico de paletas de colores**:
+- **Generador autom¨¢tico de paletas de colores**:
   - Colores aleatorios
   - Colores complementarios  
-  - Colores anÃ¡logos
-- **ConfiguraciÃ³n de tipografÃ­a** con preview en vivo
-- **PersonalizaciÃ³n de layout** (bordes, espaciado, sidebar)
-- **Sistema de importaciÃ³n/exportaciÃ³n** de temas
-- **Backup automÃ¡tico** de configuraciones
-- **ValidaciÃ³n de integridad** del tema
-- **CSS dinÃ¡mico** generado automÃ¡ticamente
+  - Colores an¨¢logos
+- **Configuraci¨®n de tipograf¨ªa** con preview en vivo
+- **Personalizaci¨®n de layout** (bordes, espaciado, sidebar)
+- **Sistema de importaci¨®n/exportaci¨®n** de temas
+- **Backup autom¨¢tico** de configuraciones
+- **Validaci¨®n de integridad** del tema
+- **CSS din¨¢mico** generado autom¨¢ticamente
 
 
 #### Uso del Sistema de Temas
 
-1. **Acceder al configurador**: Admin > ConfiguraciÃ³n > Tema
+1. **Acceder al configurador**: Admin > Configuraci¨®n > Tema
 2. **Personalizar colores**: 
    - Colores principales (primario, secundario, acento)
-   - Colores de estado (Ã©xito, advertencia, peligro, informaciÃ³n)
-   - Vista previa instantÃ¡nea de cambios
-3. **Configurar tipografÃ­a**:
-   - SelecciÃ³n de fuentes (Segoe UI, Inter, Roboto, Open Sans, Montserrat, Poppins)
-   - TamaÃ±os de fuente (base, pequeÃ±o, grande)
+   - Colores de estado (¨¦xito, advertencia, peligro, informaci¨®n)
+   - Vista previa instant¨¢nea de cambios
+3. **Configurar tipograf¨ªa**:
+   - Selecci¨®n de fuentes (Segoe UI, Inter, Roboto, Open Sans, Montserrat, Poppins)
+   - Tama?os de fuente (base, peque?o, grande)
    - Preview en tiempo real
-4. **Ajustar diseÃ±o**:
+4. **Ajustar dise?o**:
    - Radio de bordes (angular, normal, redondeado)
    - Ancho del sidebar
    - Intensidad de sombras
 5. **Aplicar temas predefinidos** con un solo clic
-6. **Generar paletas automÃ¡ticas**:
-   - Colores aleatorios para inspiraciÃ³n
+6. **Generar paletas autom¨¢ticas**:
+   - Colores aleatorios para inspiraci¨®n
    - Colores complementarios para alto contraste
-   - Colores anÃ¡logos para armonÃ­a visual
+   - Colores an¨¢logos para armon¨ªa visual
 
 #### Herramientas Avanzadas
 
-- **Exportar tema**: Descarga configuraciÃ³n actual en formato JSON
+- **Exportar tema**: Descarga configuraci¨®n actual en formato JSON
 - **Importar tema**: Carga temas previamente exportados
-- **Restablecer**: Vuelve a la configuraciÃ³n predeterminada
-- **Regenerar CSS**: Actualiza archivos CSS dinÃ¡micos
-- **Crear backup**: Respaldo de seguridad de la configuraciÃ³n
+- **Restablecer**: Vuelve a la configuraci¨®n predeterminada
+- **Regenerar CSS**: Actualiza archivos CSS din¨¢micos
+- **Crear backup**: Respaldo de seguridad de la configuraci¨®n
 - **Validar tema**: Verifica integridad de colores y configuraciones
 
-#### CaracterÃ­sticas TÃ©cnicas
+#### Caracter¨ªsticas T¨¦cnicas
 
 - **CSS Variables**: Uso de variables CSS para cambios en tiempo real
-- **Responsive design**: Todos los temas se adaptan a dispositivos mÃ³viles
-- **ValidaciÃ³n robusta**: VerificaciÃ³n de colores hexadecimales y medidas CSS
-- **Cache inteligente**: OptimizaciÃ³n de rendimiento
-- **Fallback automÃ¡tico**: CSS de emergencia si hay errores
-- **Compatibilidad total**: Funciona con todos los mÃ³dulos del sistema
+- **Responsive design**: Todos los temas se adaptan a dispositivos m¨®viles
+- **Validaci¨®n robusta**: Verificaci¨®n de colores hexadecimales y medidas CSS
+- **Cache inteligente**: Optimizaci¨®n de rendimiento
+- **Fallback autom¨¢tico**: CSS de emergencia si hay errores
+- **Compatibilidad total**: Funciona con todos los m¨®dulos del sistema
 
 #### Beneficios
 
 - **Branding personalizado**: Adapta el sistema a la identidad visual del restaurante
-- **Mejor experiencia de usuario**: Interface mÃ¡s atractiva y profesional
-- **Facilidad de uso**: Sin conocimientos tÃ©cnicos requeridos
+- **Mejor experiencia de usuario**: Interface m¨¢s atractiva y profesional
+- **Facilidad de uso**: Sin conocimientos t¨¦cnicos requeridos
 - **Flexibilidad total**: Desde cambios sutiles hasta transformaciones completas
-- **Consistencia visual**: Todos los mÃ³dulos mantienen el tema seleccionado
+- **Consistencia visual**: Todos los m¨®dulos mantienen el tema seleccionado
 - 
 
 ### Funcionalidades Adicionales
 El sistema es extensible para agregar:
 - **Reservas online**
-- **Programa de fidelizaciÃ³n**
-- **IntegraciÃ³n con redes sociales**
+- **Programa de fidelizaci¨®n**
+- **Integraci¨®n con redes sociales**
 - **Sistemas de pago online**
-- **FacturaciÃ³n electrÃ³nica**
-- **MÃºltiples sucursales**
+- **Facturaci¨®n electr¨®nica**
+- **M¨²ltiples sucursales**
  
 
-### ğŸ“± Sistema de WhatsApp Business API
+### ?? Sistema de WhatsApp Business API
 
-El sistema incluye integraciÃ³n completa con WhatsApp Business API para comunicaciÃ³n automÃ¡tica con clientes y gestiÃ³n de conversaciones avanzadas.
+El sistema incluye integraci¨®n completa con WhatsApp Business API para comunicaci¨®n autom¨¢tica con clientes y gesti¨®n de conversaciones avanzadas.
 
-#### CaracterÃ­sticas del Sistema WhatsApp
+#### Caracter¨ªsticas del Sistema WhatsApp
 
 - **API de WhatsApp Business** completamente integrada
-- **EnvÃ­o automÃ¡tico** de notificaciones de pedidos (confirmaciÃ³n, preparaciÃ³n, listo, entregado)
-- **Webhook automÃ¡tico** para recibir mensajes entrantes con configuraciÃ³n segura
-- **Respuestas automÃ¡ticas configurables** desde panel web con variables dinÃ¡micas
-- **Panel de gestiÃ³n de conversaciones** con interface tipo chat
+- **Env¨ªo autom¨¢tico** de notificaciones de pedidos (confirmaci¨®n, preparaci¨®n, listo, entregado)
+- **Webhook autom¨¢tico** para recibir mensajes entrantes con configuraci¨®n segura
+- **Respuestas autom¨¢ticas configurables** desde panel web con variables din¨¢micas
+- **Panel de gesti¨®n de conversaciones** con interface tipo chat
 - **Sistema de prioridades** y tipos de coincidencia para respuestas
-- **Rate limiting** y detecciÃ³n de duplicados
-- **Logs completos** de envÃ­os y recepciones
-- **ConfiguraciÃ³n dinÃ¡mica** del restaurante
-- **Limpieza automÃ¡tica** de nÃºmeros telefÃ³nicos argentinos
+- **Rate limiting** y detecci¨®n de duplicados
+- **Logs completos** de env¨ªos y recepciones
+- **Configuraci¨®n din¨¢mica** del restaurante
+- **Limpieza autom¨¢tica** de n¨²meros telef¨®nicos argentinos
 - **Sistema de fallback** a WhatsApp Web si falla la API
 - **Guardado de conversaciones completas** para seguimiento
 
-#### Funcionalidades de MensajerÃ­a
+#### Funcionalidades de Mensajer¨ªa
 
-**EnvÃ­o AutomÃ¡tico:**
-- âœ… **Confirmaciones automÃ¡ticas** de pedidos online al aceptar
-- âœ… **Actualizaciones de estado** en tiempo real (preparando, listo)
-- âœ… **Notificaciones de entrega** automÃ¡ticas
-- âœ… **Mensajes de rechazo** con motivo especificado
-- âœ… **Guardado automÃ¡tico** en conversaciones para seguimiento
-- âœ… **Fallback inteligente** a WhatsApp Web si la API falla
+**Env¨ªo Autom¨¢tico:**
+- ? **Confirmaciones autom¨¢ticas** de pedidos online al aceptar
+- ? **Actualizaciones de estado** en tiempo real (preparando, listo)
+- ? **Notificaciones de entrega** autom¨¢ticas
+- ? **Mensajes de rechazo** con motivo especificado
+- ? **Guardado autom¨¢tico** en conversaciones para seguimiento
+- ? **Fallback inteligente** a WhatsApp Web si la API falla
 
-**Sistema de Respuestas AutomÃ¡ticas Avanzado:**
-- **Editor web de respuestas** con variables dinÃ¡micas
+**Sistema de Respuestas Autom¨¢ticas Avanzado:**
+- **Editor web de respuestas** con variables din¨¢micas
 - **Tipos de coincidencia**: Contiene, exacto, empieza con, termina con
-- **Sistema de prioridades** (mayor nÃºmero = mayor prioridad)
-- **Variables automÃ¡ticas**: `{restaurant_name}`, `{restaurant_web}`, `{restaurant_phone}`, etc.
-- **EstadÃ­sticas de uso** para cada respuesta
-- **ActivaciÃ³n/desactivaciÃ³n** individual
-- **Contador de usos** y fechas de creaciÃ³n/actualizaciÃ³n
+- **Sistema de prioridades** (mayor n¨²mero = mayor prioridad)
+- **Variables autom¨¢ticas**: `{restaurant_name}`, `{restaurant_web}`, `{restaurant_phone}`, etc.
+- **Estad¨ªsticas de uso** para cada respuesta
+- **Activaci¨®n/desactivaci¨®n** individual
+- **Contador de usos** y fechas de creaci¨®n/actualizaci¨®n
 
 **Ejemplos de respuestas configurables:**
 
 | Palabras Clave | Respuesta | Tipo |
 |----------------|-----------|------|
-| hola,saludos,buenos | Â¡Hola! Gracias por contactar a {restaurant_name}. Para pedidos: {restaurant_web} | Contiene |
-| menu,menÃº,carta | Vea nuestro menÃº completo en {restaurant_web} | Contiene |
+| hola,saludos,buenos | ?Hola! Gracias por contactar a {restaurant_name}. Para pedidos: {restaurant_web} | Contiene |
+| menu,men¨²,carta | Vea nuestro men¨² completo en {restaurant_web} | Contiene |
 | horario,horarios | Horarios: {opening_time} - {closing_time} | Contiene |
-| estado,pedido | Para consultar estado, proporcione nÃºmero de orden | Contiene |
-| direccion,ubicacion | Nuestra direcciÃ³n: {restaurant_address} | Contiene |
+| estado,pedido | Para consultar estado, proporcione n¨²mero de orden | Contiene |
+| direccion,ubicacion | Nuestra direcci¨®n: {restaurant_address} | Contiene |
 
-#### Panel de GestiÃ³n de Conversaciones
+#### Panel de Gesti¨®n de Conversaciones
 
 - **Vista unificada** de todas las conversaciones por contacto
-- **Interface tipo chat** con burbujas de mensajes cronolÃ³gicas
-- **IdentificaciÃ³n visual** de conversaciones nuevas/no leÃ­das
-- **Respuestas manuales** desde el panel con guardado automÃ¡tico
-- **Marcado automÃ¡tico** como leÃ­do
-- **Filtros avanzados** por telÃ©fono, fecha, estado de lectura
-- **EstadÃ­sticas en tiempo real** de mensajes y conversaciones
+- **Interface tipo chat** con burbujas de mensajes cronol¨®gicas
+- **Identificaci¨®n visual** de conversaciones nuevas/no le¨ªdas
+- **Respuestas manuales** desde el panel con guardado autom¨¢tico
+- **Marcado autom¨¢tico** como le¨ªdo
+- **Filtros avanzados** por tel¨¦fono, fecha, estado de lectura
+- **Estad¨ªsticas en tiempo real** de mensajes y conversaciones
 - **Enlaces directos** a WhatsApp Web
-- **Auto-expansiÃ³n** de conversaciones nuevas
+- **Auto-expansi¨®n** de conversaciones nuevas
 - **Auto-refresh** cada 30 segundos
 
-#### Panel de ConfiguraciÃ³n de Respuestas AutomÃ¡ticas
+#### Panel de Configuraci¨®n de Respuestas Autom¨¢ticas
 
 - **Editor visual** con formularios intuitivos
-- **GestiÃ³n completa** de palabras clave y respuestas
-- **Variables dinÃ¡micas** con reemplazo automÃ¡tico:
+- **Gesti¨®n completa** de palabras clave y respuestas
+- **Variables din¨¢micas** con reemplazo autom¨¢tico:
   - `{restaurant_name}` - Nombre del restaurante
   - `{restaurant_web}` - Sitio web
-  - `{restaurant_phone}` - TelÃ©fono
+  - `{restaurant_phone}` - Tel¨¦fono
   - `{restaurant_email}` - Email
-  - `{restaurant_address}` - DirecciÃ³n
+  - `{restaurant_address}` - Direcci¨®n
   - `{opening_time}` / `{closing_time}` - Horarios
-  - `{delivery_fee}` - Costo de envÃ­o
-  - `{min_delivery_amount}` - Monto mÃ­nimo delivery
+  - `{delivery_fee}` - Costo de env¨ªo
+  - `{min_delivery_amount}` - Monto m¨ªnimo delivery
   - `{order_number}` / `{order_status}` - Info de pedidos
 - **Vista previa** de respuestas en tiempo real
-- **EstadÃ­sticas de uso** por respuesta
-- **Sistema de backup** y exportaciÃ³n
+- **Estad¨ªsticas de uso** por respuesta
+- **Sistema de backup** y exportaci¨®n
 
-#### ConfiguraciÃ³n y Seguridad
+#### Configuraci¨®n y Seguridad
 
-**ConfiguraciÃ³n en Meta for Developers:**
+**Configuraci¨®n en Meta for Developers:**
 ```
 Callback URL: https://tu-dominio.com/admin/whatsapp-webhook.php
 Verify Token: Configurable desde el panel (sin hardcodear)
@@ -877,136 +877,136 @@ Webhook Fields: messages, messaging_postbacks, message_deliveries
 
 **Credenciales seguras:**
 - Access Token de WhatsApp Business API (almacenado en BD)
-- Phone Number ID del nÃºmero WhatsApp Business
-- Webhook Token para verificaciÃ³n (configurable)
-- **Sin credenciales hardcodeadas** en el cÃ³digo
+- Phone Number ID del n¨²mero WhatsApp Business
+- Webhook Token para verificaci¨®n (configurable)
+- **Sin credenciales hardcodeadas** en el c¨®digo
 
 **Funciones de prueba integradas:**
-- âœ… Prueba de envÃ­o de mensajes
-- âœ… VerificaciÃ³n de webhook
-- âœ… ValidaciÃ³n de configuraciÃ³n
-- âœ… Logs detallados de errores
+- ? Prueba de env¨ªo de mensajes
+- ? Verificaci¨®n de webhook
+- ? Validaci¨®n de configuraci¨®n
+- ? Logs detallados de errores
 
-#### CaracterÃ­sticas TÃ©cnicas Mejoradas
+#### Caracter¨ªsticas T¨¦cnicas Mejoradas
 
-- **ConfiguraciÃ³n centralizada** usando `config/config.php` y `config/database.php`
-- **Limpieza automÃ¡tica** de nÃºmeros telefÃ³nicos argentinos (formato 549XXXXXXXXX)
-- **DetecciÃ³n automÃ¡tica** de pedidos relacionados por telÃ©fono
-- **Rate limiting** (mÃ¡ximo 1 respuesta automÃ¡tica por minuto por nÃºmero)
-- **DetecciÃ³n de duplicados** para evitar mensajes repetidos
+- **Configuraci¨®n centralizada** usando `config/config.php` y `config/database.php`
+- **Limpieza autom¨¢tica** de n¨²meros telef¨®nicos argentinos (formato 549XXXXXXXXX)
+- **Detecci¨®n autom¨¢tica** de pedidos relacionados por tel¨¦fono
+- **Rate limiting** (m¨¢ximo 1 respuesta autom¨¢tica por minuto por n¨²mero)
+- **Detecci¨®n de duplicados** para evitar mensajes repetidos
 - **Almacenamiento seguro** de mensajes y logs en base de datos
 - **Manejo de errores** robusto con fallbacks
-- **Webhook seguro** con validaciÃ³n de origen
-- **API REST** para integraciÃ³n con otros sistemas
-- **CreaciÃ³n automÃ¡tica** de tablas si no existen
+- **Webhook seguro** con validaci¨®n de origen
+- **API REST** para integraci¨®n con otros sistemas
+- **Creaci¨®n autom¨¢tica** de tablas si no existen
 
 #### Archivos del Sistema WhatsApp
 
 ```
 admin/
-â”œâ”€â”€ whatsapp-settings.php     # ConfiguraciÃ³n de WhatsApp Business API
-â”œâ”€â”€ whatsapp-messages.php     # Panel de gestiÃ³n de conversaciones  
-â”œâ”€â”€ whatsapp-answers.php      # ConfiguraciÃ³n de respuestas automÃ¡ticas
-â””â”€â”€ whatsapp-webhook.php      # Webhook para recibir mensajes
+©À©¤©¤ whatsapp-settings.php     # Configuraci¨®n de WhatsApp Business API
+©À©¤©¤ whatsapp-messages.php     # Panel de gesti¨®n de conversaciones  
+©À©¤©¤ whatsapp-answers.php      # Configuraci¨®n de respuestas autom¨¢ticas
+©¸©¤©¤ whatsapp-webhook.php      # Webhook para recibir mensajes
 
 config/
-â””â”€â”€ whatsapp_api.php         # Clase de integraciÃ³n con WhatsApp Business API
+©¸©¤©¤ whatsapp_api.php         # Clase de integraci¨®n con WhatsApp Business API
 ```
 
-#### Variables de ConfiguraciÃ³n
+#### Variables de Configuraci¨®n
 
 ```php
-// ConfiguraciÃ³n en la base de datos
-'whatsapp_enabled' => '1'                    // Habilitar envÃ­o automÃ¡tico
+// Configuraci¨®n en la base de datos
+'whatsapp_enabled' => '1'                    // Habilitar env¨ªo autom¨¢tico
 'whatsapp_fallback_enabled' => '1'          // Fallback a WhatsApp Web
-'whatsapp_auto_responses' => '1'             // Respuestas automÃ¡ticas
+'whatsapp_auto_responses' => '1'             // Respuestas autom¨¢ticas
 'whatsapp_access_token' => 'EAAxxxxxxxxx'    // Token de Meta
-'whatsapp_phone_number_id' => '123456789'    // ID del nÃºmero de WhatsApp
+'whatsapp_phone_number_id' => '123456789'    // ID del n¨²mero de WhatsApp
 'whatsapp_webhook_token' => 'mi-token-123'   // Token del webhook
 ```
 
 
 
-## ğŸ›  SoluciÃ³n de Problemas
+## ?? Soluci¨®n de Problemas
 
 ### Problemas Comunes
 
-1. **Error de conexiÃ³n a base de datos**:
+1. **Error de conexi¨®n a base de datos**:
    - Verificar credenciales en `config/config.php`
-   - Comprobar que el servidor MySQL estÃ© activo
+   - Comprobar que el servidor MySQL est¨¦ activo
 
-2. **No aparecen imÃ¡genes**:
+2. **No aparecen im¨¢genes**:
    - Verificar permisos de carpeta `uploads/`
    - Comprobar rutas en la base de datos
 
 3. **Notificaciones no funcionan**:
-   - Verificar configuraciÃ³n de JavaScript
+   - Verificar configuraci¨®n de JavaScript
    - Comprobar permisos del navegador
 
 4. **Google Maps no funciona**:
-   - Verificar API Key vÃ¡lida
+   - Verificar API Key v¨¢lida
    - Comprobar APIs habilitadas en Google Console
 
 5. **Pedidos online no funcionan**:
-   - Verificar configuraciÃ³n en Admin > ConfiguraciÃ³n
-   - Comprobar horarios de atenciÃ³n
-   - Verificar conexiÃ³n a base de datos
+   - Verificar configuraci¨®n en Admin > Configuraci¨®n
+   - Comprobar horarios de atenci¨®n
+   - Verificar conexi¨®n a base de datos
 
-### Logs y DepuraciÃ³n
+### Logs y Depuraci¨®n
 - **Logs de errores**: Activar error_log en PHP
 - **Console del navegador**: Para errores de JavaScript
 - **Network tab**: Para problemas de APIs
 
-## ğŸ“ Soporte
+## ?? Soporte
 
-### Archivos de ConfiguraciÃ³n Importantes
-- `config/config.php`: ConfiguraciÃ³n principal
+### Archivos de Configuraci¨®n Importantes
+- `config/config.php`: Configuraci¨®n principal
 - `admin/api/`: APIs del sistema
 - `database/comidasm.sql`: Estructura de base de datos
 
-### InformaciÃ³n del Sistema
-- **VersiÃ³n**: 1.0.0
+### Informaci¨®n del Sistema
+- **Versi¨®n**: 1.0.0
 - **Licencia**: MIT
-- **PHP mÃ­nimo**: 8.0
-- **MySQL mÃ­nimo**: 8.0
+- **PHP m¨ªnimo**: 8.0
+- **MySQL m¨ªnimo**: 8.0
 
 ### Contacto y Desarrollo
 - **Desarrollador**: Cellcom Technology  
 - **Sitio Web**: [www.cellcomweb.com.ar](http://www.cellcomweb.com.ar)  
-- **TelÃ©fono / WhatsApp**: +54 3482 549555  
-- **DirecciÃ³n**: Calle 9 NÂ° 539, Avellaneda, Santa Fe, Argentina  
-- **Soporte TÃ©cnico**: Disponible vÃ­a WhatsApp y web
+- **Tel¨¦fono / WhatsApp**: +54 3482 549555  
+- **Direcci¨®n**: Calle 9 N¡ã 539, Avellaneda, Santa Fe, Argentina  
+- **Soporte T¨¦cnico**: Disponible v¨ªa WhatsApp y web
 
-## ğŸš€ Puesta en ProducciÃ³n
+## ?? Puesta en Producci¨®n
 
-### Lista de VerificaciÃ³n
+### Lista de Verificaci¨®n
 
-- [ ] Cambiar todas las contraseÃ±as predefinidas
+- [ ] Cambiar todas las contrase?as predefinidas
 - [ ] Configurar datos reales del restaurante
-- [ ] Subir imÃ¡genes de productos
+- [ ] Subir im¨¢genes de productos
 - [ ] Configurar Google Maps API (opcional)
 - [ ] Probar pedidos online completos
-- [ ] Verificar horarios de atenciÃ³n
-- [ ] Configurar mÃ©todos de pago
+- [ ] Verificar horarios de atenci¨®n
+- [ ] Configurar m¨¦todos de pago
 - [ ] Probar notificaciones
 - [ ] Backup de base de datos
 - [ ] Certificado SSL configurado
 - [ ] Probar sistema de llamadas de mesero
-- [ ] Verificar impresiÃ³n de tickets
+- [ ] Verificar impresi¨®n de tickets
 - [ ] Configurar usuarios del personal
 - [ ] Configurar control de stock en productos necesarios
-- [ ] Establecer lÃ­mites de alerta de inventario
+- [ ] Establecer l¨ªmites de alerta de inventario
 - [ ] Verificar funcionamiento de ajustes de stock
 - [ ] Ejecutar instalador completo desde `/install/`
 - [ ] Configurar control de stock en productos necesarios
-- [ ] Establecer lÃ­mites de alerta de inventario
+- [ ] Establecer l¨ªmites de alerta de inventario
 - [ ] Verificar funcionamiento de ajustes de stock
 - [ ] **Eliminar carpeta `install/`** por seguridad
 
 ### Variables de Entorno Recomendadas
 
 ```php
-// ProducciÃ³n
+// Producci¨®n
 define('DEBUG_MODE', false);
 define('ENVIRONMENT', 'production');
 
@@ -1015,38 +1015,38 @@ define('DEBUG_MODE', true);
 define('ENVIRONMENT', 'development');
 ```
 
-## ğŸ“‹ Changelog
+## ?? Changelog
 
-### VersiÃ³n 2.1.0
-- Sistema completo de gestiÃ³n de restaurante
+### Versi¨®n 2.1.0
+- Sistema completo de gesti¨®n de restaurante
 - Pedidos online integrados con panel dedicado
-- Panel de administraciÃ³n responsive
-- Reportes con grÃ¡ficos avanzados
+- Panel de administraci¨®n responsive
+- Reportes con gr¨¢ficos avanzados
 - Sistema de roles y permisos granular
 - Notificaciones en tiempo real
-- MenÃº QR para mesas
-- IntegraciÃ³n con Google Maps
+- Men¨² QR para mesas
+- Integraci¨®n con Google Maps
 - Sistema de llamadas de mesero
-- GestiÃ³n completa de usuarios con interfaz mÃ³vil
-- Sistema de impresiÃ³n de tickets personalizable
-- ConfiguraciÃ³n avanzada del sistema
-- Interfaz optimizada para dispositivos tÃ¡ctiles
-- Instalador automÃ¡tico modular con verificaciÃ³n de requisitos
+- Gesti¨®n completa de usuarios con interfaz m¨®vil
+- Sistema de impresi¨®n de tickets personalizable
+- Configuraci¨®n avanzada del sistema
+- Interfaz optimizada para dispositivos t¨¢ctiles
+- Instalador autom¨¢tico modular con verificaci¨®n de requisitos
 - Sistema completo de control de stock e inventario
 - Tabla `stock_movements` para historial de movimientos
-- IntegraciÃ³n de WhatsApp Business API en instalaciÃ³n
-- ConfiguraciÃ³n automÃ¡tica de temas y respuestas automÃ¡ticas
+- Integraci¨®n de WhatsApp Business API en instalaci¨®n
+- Configuraci¨®n autom¨¢tica de temas y respuestas autom¨¢ticas
 
 
-### PrÃ³ximas Versiones
+### Pr¨®ximas Versiones
 - **v2.1.1** (En desarrollo):
-  - IntegraciÃ³n completa con Mercado Pago API
-  - Sistema de backup automÃ¡tico de base de datos
+  - Integraci¨®n completa con Mercado Pago API
+  - Sistema de backup autom¨¢tico de base de datos
   - Mejoras en la interfaz de pagos
-  - Panel de gestiÃ³n de transacciones
+  - Panel de gesti¨®n de transacciones
   - 
 ---
 
-**Â¡Bienvenido al futuro de la gestiÃ³n de restaurantes!** ğŸ½ï¸
+**?Bienvenido al futuro de la gesti¨®n de restaurantes!** ???
 
-Para soporte adicional o consultas, revise la documentaciÃ³n tÃ©cnica en los comentarios del cÃ³digo fuente.# mi_restaurant_delivery
+Para soporte adicional o consultas, revise la documentaci¨®n t¨¦cnica en los comentarios del c¨®digo fuente.# mi_restaurant_delivery
