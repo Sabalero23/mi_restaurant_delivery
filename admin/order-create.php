@@ -151,6 +151,26 @@ foreach ($products as $product) {
 
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// Incluir sistema de temas
+$theme_file = '../config/theme.php';
+if (file_exists($theme_file)) {
+    require_once $theme_file;
+    $database = new Database();
+    $db = $database->getConnection();
+    $theme_manager = new ThemeManager($db);
+    $current_theme = $theme_manager->getThemeSettings();
+} else {
+    $current_theme = array(
+        'primary_color' => '#667eea',
+        'secondary_color' => '#764ba2',
+        'accent_color' => '#ff6b6b',
+        'success_color' => '#28a745',
+        'warning_color' => '#ffc107',
+        'danger_color' => '#dc3545',
+        'info_color' => '#17a2b8'
+    );
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -160,343 +180,422 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
     <title><?php echo $current_order ? 'Editar Orden' : 'Nueva Orden'; ?> - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Tema dinámico -->
+    <?php if (file_exists('../assets/css/generate-theme.php')): ?>
+        <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
+    <?php endif; ?>
+    
     <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-            --sidebar-width: 280px;
-        }
+    /* Variables CSS para el tema */
+    :root {
+        --primary-color: <?php echo $current_theme['primary_color'] ?? '#667eea'; ?>;
+        --secondary-color: <?php echo $current_theme['secondary_color'] ?? '#764ba2'; ?>;
+        --accent-color: <?php echo $current_theme['accent_color'] ?? '#ff6b6b'; ?>;
+        --success-color: <?php echo $current_theme['success_color'] ?? '#28a745'; ?>;
+        --warning-color: <?php echo $current_theme['warning_color'] ?? '#ffc107'; ?>;
+        --danger-color: <?php echo $current_theme['danger_color'] ?? '#dc3545'; ?>;
+        --info-color: <?php echo $current_theme['info_color'] ?? '#17a2b8'; ?>;
+        
+        --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        --sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+        --sidebar-mobile-width: 100%;
+        --border-radius-base: 0.375rem;
+        --border-radius-large: 0.75rem;
+        --transition-base: all 0.3s ease;
+        --shadow-base: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-large: 0 4px 12px rgba(0,0,0,0.15);
+        --text-white: #ffffff;
+    }
 
-        body {
-            background: #f8f9fa;
-            overflow-x: hidden;
-        }
+    body {
+        background: #f8f9fa;
+        overflow-x: hidden;
+    }
 
-        /* Mobile Top Bar */
+    /* Mobile Top Bar */
+    .mobile-topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1040;
+        background: var(--primary-gradient);
+        color: var(--text-white) !important;
+        padding: 1rem;
+        display: none;
+    }
+
+    .mobile-topbar h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-white) !important;
+    }
+
+    .menu-toggle {
+        background: none;
+        border: none;
+        color: var(--text-white) !important;
+        font-size: 1.2rem;
+        padding: 0.5rem;
+        border-radius: var(--border-radius-base);
+        transition: var(--transition-base);
+    }
+
+    .menu-toggle:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Sidebar */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--sidebar-width);
+        height: 100vh;
+        background: var(--primary-gradient);
+        color: var(--text-white) !important;
+        z-index: 1030;
+        transition: transform var(--transition-base);
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1020;
+        display: none;
+        opacity: 0;
+        transition: opacity var(--transition-base);
+    }
+
+    .sidebar-backdrop.show {
+        display: block;
+        opacity: 1;
+    }
+
+    .sidebar .nav-link {
+        color: rgba(255, 255, 255, 0.8) !important;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius-base);
+        margin-bottom: 0.25rem;
+        transition: var(--transition-base);
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+    }
+
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-white) !important;
+    }
+
+    .sidebar .nav-link .badge {
+        margin-left: auto;
+    }
+
+    .sidebar-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: var(--text-white) !important;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    /* Main content */
+    .main-content {
+        margin-left: var(--sidebar-width);
+        padding: 2rem;
+        min-height: 100vh;
+        transition: margin-left var(--transition-base);
+        background: #f8f9fa !important;
+        color: #212529 !important;
+    }
+
+    /* Page header */
+    .page-header {
+        background: #ffffff !important;
+        color: #212529 !important;
+        border-radius: var(--border-radius-large);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-base);
+    }
+
+    /* Cards */
+    .card {
+        border: none;
+        border-radius: var(--border-radius-large);
+        box-shadow: var(--shadow-base);
+        background: #ffffff !important;
+        color: #212529 !important;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
+        background: #f8f9fa !important;
+        color: #212529 !important;
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+    }
+
+    /* Product cards */
+    .product-card {
+        border: none;
+        border-radius: var(--border-radius-large);
+        box-shadow: var(--shadow-base);
+        transition: transform var(--transition-base);
+        height: 100%;
+        overflow: hidden;
+        background: #ffffff !important;
+        cursor: pointer;
+    }
+
+    .product-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-large);
+    }
+
+    .product-image {
+        height: 150px;
+        object-fit: cover;
+        width: 100%;
+        background: #f8f9fa;
+    }
+
+    .product-price {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: var(--success-color);
+    }
+
+    .product-unavailable {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Order summary */
+    .order-summary {
+        background: #ffffff !important;
+        border-radius: var(--border-radius-large);
+        box-shadow: var(--shadow-base);
+        position: sticky;
+        top: 2rem;
+    }
+
+    .order-item {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem;
+    }
+
+    .order-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Category pills */
+    .category-pill {
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        border: 2px solid var(--primary-color);
+        background: white;
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: var(--transition-base);
+        display: inline-block;
+        margin: 0.25rem;
+        font-weight: 500;
+    }
+
+    .category-pill:hover,
+    .category-pill.active {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Form controls */
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+
+    /* Responsive */
+    @media (max-width: 991.98px) {
         .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            display: none;
-        }
-
-        .menu-toggle {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--primary-gradient);
-            color: white;
-            z-index: 1030;
-            transition: transform 0.3s ease-in-out;
-            overflow-y: auto;
-            padding: 1.5rem;
-        }
-
-        .sidebar-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1020;
-            display: none;
-        }
-
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.25rem;
-            transition: all 0.3s;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            text-decoration: none;
         }
 
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
         }
 
         .sidebar-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: none;
+            display: flex;
         }
 
-        /* Main content */
         .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            transition: margin-left 0.3s ease-in-out;
+            margin-left: 0;
+            padding: 1rem;
+            padding-top: 4.5rem;
         }
 
-        /* Product cards */
-        .product-card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            height: 100%;
-            overflow: hidden;
+        .page-header {
+            padding: 1rem;
         }
 
-        .product-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        .card-body {
+            padding: 1rem;
+        }
+
+        .order-summary {
+            position: relative;
+            top: 0;
+            margin-bottom: 1.5rem;
         }
 
         .product-image {
             height: 120px;
-            object-fit: cover;
-            width: 100%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .main-content {
+            padding: 0.5rem;
+            padding-top: 4.5rem;
+        }
+
+        .page-header {
+            padding: 0.75rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.25rem;
+        }
+
+        .card-body {
+            padding: 0.75rem;
+        }
+
+        .product-image {
+            height: 100px;
         }
 
         .product-price {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #28a745;
+            font-size: 1rem;
         }
 
-        /* Order summary */
-        .order-summary {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-            position: sticky;
-            top: 2rem;
-        }
-
-        .order-item {
-            border-bottom: 1px solid #f0f0f0;
-            padding: 1rem;
-        }
-
-        .order-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Page header */
-        .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        /* Category pills */
         .category-pill {
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            border: 2px solid #007bff;
-            background: white;
-            color: #007bff;
-            text-decoration: none;
-            transition: all 0.3s;
+            padding: 0.4rem 1rem;
+            font-size: 0.875rem;
         }
+    }
 
-        .category-pill:hover,
-        .category-pill.active {
-            background: #007bff;
-            color: white;
-        }
+    /* Table for order items */
+    .table {
+        color: #212529 !important;
+    }
 
-        /* Mobile responsive */
-        @media (max-width: 991.98px) {
-            .mobile-topbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+    .table th {
+        background: #f8f9fa !important;
+        color: #212529 !important;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
 
-            .sidebar {
-                transform: translateX(-100%);
-                width: 100%;
-                max-width: 350px;
-            }
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
 
-            .sidebar.show {
-                transform: translateX(0);
-            }
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
 
-            .sidebar-close {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
+    /* Quantity controls */
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-                padding-top: 5rem;
-            }
+    .quantity-control .btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-            .order-summary {
-                position: relative;
-                top: auto;
-                margin-top: 2rem;
-            }
-
-            .product-image {
-                height: 100px;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
-
-            .page-header {
-                padding: 1rem;
-            }
-
-            .product-card .card-body {
-                padding: 0.75rem;
-            }
-        }
-
-        .quantity-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .quantity-controls button {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1px solid #ddd;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .quantity-controls input {
-            width: 60px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 0.25rem;
-        }
+    .quantity-control input {
+        width: 60px;
+        text-align: center;
+    }
     </style>
 </head>
 <body>
-    <!-- Mobile Top Bar -->
-    <div class="mobile-topbar">
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <div class="d-flex align-items-center">
-                <button class="menu-toggle me-3" id="mobileMenuToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h5>
-                    <i class="fas fa-plus me-2"></i>
-                    <?php echo $current_order ? 'Editar Orden' : 'Nueva Orden'; ?>
-                </h5>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar Backdrop -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <button class="sidebar-close" id="sidebarClose">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="text-center mb-4">
-            <h4>
-                <i class="fas fa-utensils me-2"></i>
-                <?php echo $restaurant_name; ?>
-            </h4>
-            <small><?php echo $current_order ? 'Editar Orden' : 'Nueva Orden'; ?></small>
-        </div>
-
-        <nav class="nav flex-column">
-            <a class="nav-link" href="dashboard.php">
-                <i class="fas fa-tachometer-alt me-2"></i>
-                Dashboard
-            </a>
-            <a class="nav-link" href="orders.php">
-                <i class="fas fa-receipt me-2"></i>
-                Órdenes
-            </a>
-            <a class="nav-link active" href="order-create.php">
-                <i class="fas fa-plus me-2"></i>
-                Nueva Orden
-            </a>
-            <a class="nav-link" href="tables.php">
-                <i class="fas fa-table me-2"></i>
-                Mesas
-            </a>
-            <a class="nav-link" href="products.php">
-                <i class="fas fa-utensils me-2"></i>
-                Productos
-            </a>
-            
-            <hr class="text-white-50 my-3">
-            <a class="nav-link" href="logout.php">
-                <i class="fas fa-sign-out-alt me-2"></i>
-                Cerrar Sesión
-            </a>
-        </nav>
-    </div>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
 
     <!-- Main Content -->
     <div class="main-content">
         <!-- Page Header -->
         <div class="page-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div class="mb-2 mb-md-0">
                     <h2 class="mb-0">
-                        <i class="fas fa-<?php echo $current_order ? 'edit' : 'plus'; ?> me-2"></i>
-                        <?php echo $current_order ? 'Editar Orden #' . $current_order['order_number'] : 'Nueva Orden'; ?>
+                        <?php if ($current_order): ?>
+                            <i class="fas fa-edit me-2"></i>Editar Orden #<?php echo $current_order['order_number']; ?>
+                        <?php else: ?>
+                            <i class="fas fa-plus-circle me-2"></i>Nueva Orden
+                        <?php endif; ?>
                     </h2>
                     <?php if ($table): ?>
                         <p class="text-muted mb-0">
-                            <i class="fas fa-table me-1"></i>
-                            <?php echo htmlspecialchars($table['number']); ?> 
-                            (<?php echo $table['capacity']; ?> personas)
+                            <i class="fas fa-chair me-1"></i>Mesa <?php echo $table['table_number']; ?>
                         </p>
                     <?php endif; ?>
                 </div>
                 <div>
-                    <?php if ($current_order): ?>
-                        <a href="order-details.php?id=<?php echo $current_order['id']; ?>" class="btn btn-info">
-                            <i class="fas fa-eye me-1"></i>
-                            Ver Detalles
-                        </a>
-                    <?php endif; ?>
-                    <a href="<?php echo $table_id ? 'tables.php' : 'orders.php'; ?>" class="btn btn-secondary">
+                    <a href="<?php echo $table ? 'tables.php' : 'orders.php'; ?>" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-1"></i>
                         Volver
                     </a>
@@ -504,11 +603,11 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
             </div>
         </div>
 
-        <!-- Messages -->
+        <!-- Success/Error Messages -->
         <?php if ($message): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check me-2"></i>
-                <?php echo $message; ?>
+                <i class="fas fa-check-circle me-2"></i>
+                <?php echo htmlspecialchars($message); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
@@ -516,264 +615,249 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         <?php if ($error): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-circle me-2"></i>
-                <?php echo $error; ?>
+                <?php echo htmlspecialchars($error); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
 
-        <div class="row">
-            <!-- Products Section -->
-            <div class="col-lg-8">
-                <?php if (!$current_order): ?>
-                    <!-- Order Type Selection -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-clipboard-list me-2"></i>
-                                Información de la Orden
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                <input type="hidden" name="action" value="create_order">
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Tipo de Orden</label>
-                                        <select class="form-select" name="type" required onchange="toggleOrderFields(this.value)">
-                                            <option value="dine_in" <?php echo $table_id ? 'selected' : ''; ?>>Consumo en Mesa</option>
-                                            <option value="delivery">Delivery</option>
-                                            <option value="takeout">Para Llevar</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nombre del Cliente</label>
-                                        <input type="text" class="form-control" name="customer_name" 
-                                               value="<?php echo $table ? htmlspecialchars($table['number']) : ''; ?>">
-                                    </div>
-                                </div>
-                                
-                                <div class="row mb-3" id="deliveryFields" style="display: none;">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Teléfono</label>
-                                        <input type="text" class="form-control" name="customer_phone">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Dirección</label>
-                                        <input type="text" class="form-control" name="customer_address">
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Notas del Cliente</label>
-                                    <textarea class="form-control" name="customer_notes" rows="2"></textarea>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Notas Internas</label>
-                                    <textarea class="form-control" name="notes" rows="2"></textarea>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-plus me-1"></i>
-                                    Crear Orden
+        <?php if (!$current_order): ?>
+            <!-- Create Order Form -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Información de la Orden
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="create_order">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Orden *</label>
+                                <select name="type" class="form-select" required>
+                                    <option value="dine_in" <?php echo $table ? 'selected' : ''; ?>>Consumo en Mesa</option>
+                                    <option value="takeout">Para Llevar</option>
+                                    <option value="delivery">Delivery</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Nombre del Cliente</label>
+                                <input type="text" name="customer_name" class="form-control" placeholder="Opcional">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel" name="customer_phone" class="form-control" placeholder="Opcional">
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <label class="form-label">Dirección</label>
+                                <input type="text" name="customer_address" class="form-control" placeholder="Opcional - para delivery">
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label">Notas del Cliente</label>
+                                <input type="text" name="customer_notes" class="form-control" placeholder="Opcional">
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Notas Internas</label>
+                                <textarea name="notes" class="form-control" rows="2" placeholder="Opcional"></textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    Crear Orden y Agregar Productos
                                 </button>
-                            </form>
+                            </div>
                         </div>
-                    </div>
-                <?php else: ?>
+                    </form>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- Add Products to Order -->
+            <div class="row">
+                <div class="col-lg-8">
                     <!-- Category Filter -->
-                    <div class="mb-4">
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="#" class="category-pill active" onclick="filterCategory('all')">
-                                <i class="fas fa-th me-1"></i>
-                                Todos
-                            </a>
-                            <?php foreach ($categories as $category): ?>
-                                <a href="#" class="category-pill" onclick="filterCategory(<?php echo $category['id']; ?>)">
-                                    <?php echo htmlspecialchars($category['name']); ?>
-                                </a>
-                            <?php endforeach; ?>
+                    <?php if (!empty($categories)): ?>
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-filter me-2"></i>
+                                    Filtrar por Categoría
+                                </h6>
+                                <div class="d-flex flex-wrap">
+                                    <a href="#" class="category-pill active" data-category="all">
+                                        <i class="fas fa-th me-1"></i>Todas
+                                    </a>
+                                    <?php foreach ($categories as $category): ?>
+                                        <a href="#" class="category-pill" data-category="<?php echo $category['id']; ?>">
+                                            <?php echo htmlspecialchars($category['name']); ?>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
                     <!-- Products Grid -->
-                    <?php foreach ($categories as $category): ?>
-                        <?php if (isset($products_by_category[$category['id']])): ?>
-                            <div class="category-section" data-category="<?php echo $category['id']; ?>">
-                                <h4 class="mb-3">
-                                    <i class="fas fa-utensils me-2"></i>
-                                    <?php echo htmlspecialchars($category['name']); ?>
-                                </h4>
-                                <div class="row g-3 mb-4">
-                                    <?php foreach ($products_by_category[$category['id']] as $product): ?>
-                                        <div class="col-sm-6 col-lg-4 col-xl-3">
-                                            <div class="card product-card">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-utensils me-2"></i>
+                            Productos Disponibles
+                        </div>
+                        <div class="card-body">
+                            <?php if (empty($products)): ?>
+                                <div class="empty-state">
+                                    <i class="fas fa-box-open"></i>
+                                    <p>No hay productos disponibles</p>
+                                </div>
+                            <?php else: ?>
+                                <div class="row g-3" id="productsGrid">
+                                    <?php foreach ($products as $product): ?>
+                                        <div class="col-6 col-md-4 col-lg-3 product-item" data-category="<?php echo $product['category_id']; ?>">
+                                            <div class="product-card <?php echo !$product['is_available'] ? 'product-unavailable' : ''; ?>"
+                                                 onclick="<?php echo $product['is_available'] ? 'addProductToOrder(' . $product['id'] . ')' : ''; ?>">
                                                 <?php if ($product['image']): ?>
                                                     <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
-                                                         class="product-image" alt="<?php echo htmlspecialchars($product['name']); ?>">
+                                                         alt="<?php echo htmlspecialchars($product['name']); ?>" 
+                                                         class="product-image">
                                                 <?php else: ?>
-                                                    <div class="product-image bg-light d-flex align-items-center justify-content-center">
-                                                        <i class="fas fa-utensils fa-2x text-muted"></i>
+                                                    <div class="product-image d-flex align-items-center justify-content-center bg-light">
+                                                        <i class="fas fa-utensils fa-3x text-muted"></i>
                                                     </div>
                                                 <?php endif; ?>
-                                                
-                                                <div class="card-body">
-                                                    <h6 class="card-title"><?php echo htmlspecialchars($product['name']); ?></h6>
-                                                    <?php if ($product['description']): ?>
-                                                        <p class="card-text small text-muted">
-                                                            <?php echo htmlspecialchars(substr($product['description'], 0, 50)) . '...'; ?>
-                                                        </p>
-                                                    <?php endif; ?>
+                                                <div class="card-body p-3">
+                                                    <h6 class="card-title mb-2"><?php echo htmlspecialchars($product['name']); ?></h6>
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <span class="product-price"><?php echo formatPrice($product['price']); ?></span>
-                                                        <button class="btn btn-sm btn-primary" 
-                                                                onclick="addToOrder(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name']); ?>', <?php echo $product['price']; ?>)">
-                                                            <i class="fas fa-plus"></i>
-                                                        </button>
+                                                        <?php if (!$product['is_available']): ?>
+                                                            <span class="badge bg-danger">No disponible</span>
+                                                        <?php else: ?>
+                                                            <button class="btn btn-sm btn-primary">
+                                                                <i class="fas fa-plus"></i>
+                                                            </button>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                            </div>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Order Summary -->
-            <?php if ($current_order): ?>
+                <!-- Order Summary Sidebar -->
                 <div class="col-lg-4">
                     <div class="order-summary">
                         <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="fas fa-receipt me-2"></i>
-                                Resumen de Orden
-                            </h5>
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            Orden Actual
                         </div>
-                        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                        <div class="card-body p-0">
                             <?php 
                             $order_items = $orderModel->getItems($current_order['id']);
-                            $subtotal = 0;
+                            if (empty($order_items)): 
                             ?>
-                            
-                            <?php if (empty($order_items)): ?>
-                                <div class="text-center p-4 text-muted">
-                                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-                                    <p>No hay productos en la orden</p>
+                                <div class="empty-state py-4">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <p class="mb-0">Sin productos agregados</p>
                                 </div>
                             <?php else: ?>
-                                <?php foreach ($order_items as $item): ?>
-                                    <?php $subtotal += $item['subtotal']; ?>
-                                    <div class="order-item">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="mb-1"><?php echo htmlspecialchars($item['product_name']); ?></h6>
-                                            <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="removeItem(<?php echo $item['id']; ?>)">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                        
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="quantity-controls">
-                                                <button onclick="updateQuantity(<?php echo $item['id']; ?>, <?php echo $item['quantity'] - 1; ?>)"
-                                                        <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
-                                                    <i class="fas fa-minus"></i>
-                                                </button>
-                                                <input type="number" value="<?php echo $item['quantity']; ?>" min="1"
-                                                       onchange="updateQuantity(<?php echo $item['id']; ?>, this.value)">
-                                                <button onclick="updateQuantity(<?php echo $item['id']; ?>, <?php echo $item['quantity'] + 1; ?>)">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
+                                <div style="max-height: 400px; overflow-y: auto;">
+                                    <?php foreach ($order_items as $item): ?>
+                                        <div class="order-item">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div class="flex-grow-1">
+                                                    <strong><?php echo htmlspecialchars($item['product_name']); ?></strong>
+                                                    <?php if ($item['notes']): ?>
+                                                        <br><small class="text-muted"><?php echo htmlspecialchars($item['notes']); ?></small>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <form method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="remove_item">
+                                                    <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                                                    <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar este producto?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
                                             </div>
-                                            <span class="fw-bold"><?php echo formatPrice($item['subtotal']); ?></span>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="quantity-control">
+                                                    <form method="POST" class="d-flex align-items-center gap-2">
+                                                        <input type="hidden" name="action" value="update_quantity">
+                                                        <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                                                        <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] - 1; ?>" class="btn btn-sm btn-outline-secondary" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+                                                        <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>" class="form-control form-control-sm" min="1" readonly>
+                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] + 1; ?>" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <strong><?php echo formatPrice($item['subtotal']); ?></strong>
+                                            </div>
                                         </div>
-                                        
-                                        <?php if ($item['notes']): ?>
-                                            <small class="text-muted d-block mt-1">
-                                                <i class="fas fa-sticky-note me-1"></i>
-                                                <?php echo htmlspecialchars($item['notes']); ?>
-                                            </small>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </div>
                             <?php endif; ?>
                         </div>
-                        
-                        <?php if (!empty($order_items)): ?>
-                            <div class="card-footer">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <strong>Subtotal:</strong>
-                                    <strong><?php echo formatPrice($subtotal); ?></strong>
-                                </div>
-                                
-                                <div class="d-grid gap-2">
-                                    <form method="POST" class="d-inline">
-                                        <input type="hidden" name="action" value="finalize_order">
-                                        <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
-                                        <button type="submit" class="btn btn-success w-100" 
-                                                onclick="return confirm('¿Finalizar y confirmar la orden?')">
-                                            <i class="fas fa-check me-1"></i>
-                                            Finalizar Orden
-                                        </button>
-                                    </form>
-                                    
-                                    <a href="order-details.php?id=<?php echo $current_order['id']; ?>" 
-                                       class="btn btn-info w-100">
-                                        <i class="fas fa-eye me-1"></i>
-                                        Ver Detalles
-                                    </a>
-                                </div>
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong>Total:</strong>
+                                <strong class="h4 mb-0 text-success"><?php echo formatPrice($current_order['total']); ?></strong>
                             </div>
-                        <?php endif; ?>
+                            <?php if (!empty($order_items)): ?>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="finalize_order">
+                                    <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-check me-1"></i>
+                                        Finalizar Orden
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            <?php endif; ?>
-        </div>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- Add Product Modal -->
     <div class="modal fade" id="addProductModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" id="addProductForm">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="fas fa-plus me-2"></i>
-                            Agregar Producto
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
                     <div class="modal-body">
                         <input type="hidden" name="action" value="add_item">
                         <input type="hidden" name="order_id" value="<?php echo $current_order['id'] ?? ''; ?>">
-                        <input type="hidden" name="product_id" id="modalProductId">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Producto:</label>
-                            <strong id="modalProductName"></strong>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Precio:</label>
-                            <strong id="modalProductPrice"></strong>
-                        </div>
+                        <input type="hidden" name="product_id" id="modal_product_id">
                         
                         <div class="mb-3">
                             <label class="form-label">Cantidad</label>
-                            <input type="number" class="form-control" name="quantity" min="1" value="1" required>
+                            <input type="number" name="quantity" class="form-control" min="1" value="1" required>
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label">Notas (opcional)</label>
-                            <textarea class="form-control" name="item_notes" rows="2" placeholder="Ej: Sin cebolla, punto medio, etc."></textarea>
+                            <label class="form-label">Notas</label>
+                            <textarea name="item_notes" class="form-control" rows="2" placeholder="Ej: Sin cebolla, extra queso..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-plus me-1"></i>
                             Agregar
                         </button>
@@ -788,12 +872,7 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
         // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
             initializeMobileMenu();
-            
-            // Set initial order type visibility
-            const orderType = document.querySelector('select[name="type"]');
-            if (orderType) {
-                toggleOrderFields(orderType.value);
-            }
+            initializeCategoryFilter();
         });
 
         function initializeMobileMenu() {
@@ -825,14 +904,6 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
                 });
             }
 
-            document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth < 992) {
-                        setTimeout(closeSidebar, 100);
-                    }
-                });
-            });
-
             window.addEventListener('resize', function() {
                 if (window.innerWidth >= 992) {
                     closeSidebar();
@@ -849,100 +920,39 @@ $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
             document.body.style.overflow = '';
         }
 
-        function toggleOrderFields(orderType) {
-            const deliveryFields = document.getElementById('deliveryFields');
-            if (deliveryFields) {
-                if (orderType === 'delivery') {
-                    deliveryFields.style.display = 'flex';
-                    deliveryFields.querySelectorAll('input').forEach(input => {
-                        input.required = true;
+        // Category filter
+        function initializeCategoryFilter() {
+            const categoryPills = document.querySelectorAll('.category-pill');
+            const productItems = document.querySelectorAll('.product-item');
+
+            categoryPills.forEach(pill => {
+                pill.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Update active state
+                    categoryPills.forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const category = this.dataset.category;
+                    
+                    // Filter products
+                    productItems.forEach(item => {
+                        if (category === 'all' || item.dataset.category === category) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
                     });
-                } else {
-                    deliveryFields.style.display = 'none';
-                    deliveryFields.querySelectorAll('input').forEach(input => {
-                        input.required = false;
-                    });
-                }
-            }
-        }
-
-        function filterCategory(categoryId) {
-            // Update active pill
-            document.querySelectorAll('.category-pill').forEach(pill => {
-                pill.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Show/hide categories
-            document.querySelectorAll('.category-section').forEach(section => {
-                if (categoryId === 'all' || section.dataset.category == categoryId) {
-                    section.style.display = 'block';
-                } else {
-                    section.style.display = 'none';
-                }
+                });
             });
         }
 
-        function addToOrder(productId, productName, productPrice) {
-            document.getElementById('modalProductId').value = productId;
-            document.getElementById('modalProductName').textContent = productName;
-            document.getElementById('modalProductPrice').textContent = formatPrice(productPrice);
-            
-            // Reset form
-            document.getElementById('addProductForm').reset();
-            document.getElementById('modalProductId').value = productId;
-            document.querySelector('input[name="quantity"]').value = 1;
-            
-            new bootstrap.Modal(document.getElementById('addProductModal')).show();
+        // Add product to order
+        function addProductToOrder(productId) {
+            document.getElementById('modal_product_id').value = productId;
+            const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+            modal.show();
         }
-
-        function updateQuantity(itemId, newQuantity) {
-            if (newQuantity < 1) {
-                if (confirm('¿Eliminar este producto de la orden?')) {
-                    removeItem(itemId);
-                }
-                return;
-            }
-            
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = `
-                <input type="hidden" name="action" value="update_quantity">
-                <input type="hidden" name="item_id" value="${itemId}">
-                <input type="hidden" name="quantity" value="${newQuantity}">
-                <input type="hidden" name="order_id" value="<?php echo $current_order['id'] ?? ''; ?>">
-            `;
-            document.body.appendChild(form);
-            form.submit();
-        }
-
-        function removeItem(itemId) {
-            if (confirm('¿Eliminar este producto de la orden?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <input type="hidden" name="action" value="remove_item">
-                    <input type="hidden" name="item_id" value="${itemId}">
-                    <input type="hidden" name="order_id" value="<?php echo $current_order['id'] ?? ''; ?>">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
-        function formatPrice(price) {
-            return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-
-        // Auto-dismiss alerts
-        setTimeout(() => {
-            document.querySelectorAll('.alert').forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
     </script>
-
-<?php include 'footer.php'; ?>
 </body>
 </html>
