@@ -132,10 +132,7 @@ class MigrationManager {
                 throw new Exception("No se pudo leer el archivo de migración");
             }
             
-            // Iniciar transacción
-            $this->db->beginTransaction();
-            
-            // Ejecutar SQL
+            // Ejecutar SQL (los archivos SQL ya tienen sus propias transacciones)
             $this->db->exec($sql);
             
             // Calcular tiempo de ejecución
@@ -150,9 +147,6 @@ class MigrationManager {
                 $executionTime
             );
             
-            // Confirmar transacción
-            $this->db->commit();
-            
             return [
                 'success' => true,
                 'version' => $migration['version'],
@@ -161,11 +155,6 @@ class MigrationManager {
             ];
             
         } catch (Exception $e) {
-            // Revertir transacción en caso de error
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
-            
             $executionTime = microtime(true) - $startTime;
             
             // Registrar migración fallida
