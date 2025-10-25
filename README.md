@@ -925,6 +925,200 @@ config/
 'whatsapp_webhook_token' => 'mi-token-123'   // Token del webhook
 ```
 
+---
+
+## 🔄 Sistema de Actualización Automática
+
+El sistema incluye un potente módulo de actualización automática con control de licencias para mantener tu instalación siempre actualizada de forma segura.
+
+### 🎯 Características del Sistema de Actualización
+
+#### Gestión de Licencias
+- **System ID único** por instalación
+- **Licencias individuales** por cliente
+- **Validación offline** sin servidor externo
+- **Control total** del desarrollador sobre actualizaciones
+- **Seguridad mejorada** sin exponer tokens de GitHub
+
+#### Panel de Actualización
+- **Verificación automática** de actualizaciones disponibles
+- **Vista previa de cambios** antes de actualizar
+- **Listado de commits** nuevos con detalles
+- **Estadísticas de archivos** (añadidos, modificados, eliminados)
+- **Backup automático** antes de cada actualización
+- **Historial completo** de actualizaciones realizadas
+- **Sistema de rollback** para revertir cambios
+
+#### Proceso de Actualización Seguro
+```
+1. Verificación de licencia ✓
+2. Backup automático del sistema ✓
+3. Descarga de última versión desde GitHub ✓
+4. Validación de archivos ✓
+5. Instalación de actualizaciones ✓
+6. Actualización de base de datos ✓
+7. Registro en historial ✓
+```
+
+### 🔐 Sistema de Licencias
+
+#### Para el Cliente (Restaurante)
+
+**Obtener System ID:**
+1. Ir a **Configuración → Actualizar Sistema**
+2. Copiar el **System ID** único del sistema
+3. Enviar el System ID al desarrollador
+4. Recibir la **clave de licencia**
+5. Ingresar la clave en el panel
+6. Click en **"Verificar Licencia"**
+
+**Actualizar el Sistema:**
+1. Click en **"Verificar Ahora"**
+2. Revisar actualizaciones disponibles
+3. Click en **"Actualizar Sistema Ahora"**
+4. Esperar mientras se actualiza automáticamente
+5. ¡Listo! Sistema actualizado
+
+#### Para el Desarrollador
+
+**Generar Licencia:**
+1. Abrir `license-generator.html` en el navegador
+2. Pegar el **System ID** del cliente
+3. Click en **"Generar Licencia"**
+4. Copiar la licencia generada
+5. Enviar al cliente
+
+**Gestionar Actualizaciones:**
+- Control total sobre quién puede actualizar
+- Licencias únicas por instalación
+- Sin necesidad de compartir tokens de GitHub
+- Algoritmo de encriptación SHA-256
+
+### 📋 Archivos del Sistema de Actualización
+
+```
+admin/
+├── api/
+│   └── github-update.php      # API de actualización y licencias
+├── settings.php               # Panel con sección de actualizaciones
+└── backups/                   # Backups automáticos antes de actualizar
+
+database/
+└── system_updates             # Tabla de historial de actualizaciones
+
+[Desarrollador]/
+└── license-generator.html     # Generador de licencias (local)
+```
+
+### 🔧 Configuración Técnica
+
+#### Variables en Base de Datos
+
+```php
+// Tabla: settings
+'system_id' => 'XXXX-XXXX-XXXX-XXXX'          // ID único del sistema
+'system_license' => 'XXXXX-XXXXX-XXXXX-XXXXX' // Clave de licencia
+'system_commit' => 'abc123...'                 // Hash del commit actual
+'github_repo' => 'Sabalero23/mi_restaurant_delivery' // Repositorio
+'github_branch' => 'main'                      // Rama principal
+'auto_backup_before_update' => '1'             // Backup automático
+'last_update_check' => '2025-10-25 10:30:00'  // Última verificación
+```
+
+#### Tabla system_updates
+
+```sql
+CREATE TABLE IF NOT EXISTS `system_updates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `updated_by` int(11) DEFAULT NULL,
+  `status` enum('in_progress','completed','failed','rolled_back'),
+  `started_at` datetime DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `from_commit` varchar(40) DEFAULT NULL,
+  `to_commit` varchar(40) DEFAULT NULL,
+  `files_added` int(11) DEFAULT '0',
+  `files_updated` int(11) DEFAULT '0',
+  `files_deleted` int(11) DEFAULT '0',
+  `backup_path` varchar(255) DEFAULT NULL,
+  `error_message` text,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+### 🛡️ Seguridad del Sistema
+
+#### Algoritmo de Licencias
+```
+LICENCIA = SHA256(System_ID + Clave_Secreta)
+Formato: XXXXX-XXXXX-XXXXX-XXXXX (20 caracteres)
+```
+
+#### Clave Secreta
+- Definida en `github-update.php` y `license-generator.html`
+- Por defecto: `MRD2025`
+- Modificable para mayor seguridad
+- Debe ser idéntica en ambos archivos
+
+#### Validaciones
+- ✅ Verificación de licencia antes de actualizar
+- ✅ Validación de origen de archivos (GitHub)
+- ✅ Backup automático con exclusión de archivos sensibles
+- ✅ Registro completo de todas las operaciones
+- ✅ Sistema de rollback en caso de error
+
+### 📊 Panel de Control de Actualizaciones
+
+El panel de actualización muestra:
+
+- **Versión actual** del sistema instalado
+- **Commit actual** de Git
+- **Estado de actualizaciones** disponibles
+- **Lista de cambios** pendientes
+- **Archivos afectados** por tipo
+- **Historial de actualizaciones** realizadas
+- **Backups disponibles** para rollback
+
+### ⚠️ Consideraciones Importantes
+
+1. **Backup Automático**: Se crea antes de cada actualización
+2. **Archivos Excluidos**: `config.php`, `uploads/`, `backups/`
+3. **Requisitos**: PHP 7.4+, extensión ZipArchive
+4. **Permisos**: Carpetas escribibles para backup y actualización
+5. **Licencia**: Necesaria para actualizar el sistema
+6. **Internet**: Requerido para conectar con GitHub
+
+### 🔄 Flujo de Actualización Completo
+
+```
+Usuario → Verificar Actualizaciones
+    ↓
+Sistema → Validar Licencia
+    ↓
+Sistema → Consultar GitHub
+    ↓
+Sistema → Mostrar Cambios Disponibles
+    ↓
+Usuario → Confirmar Actualización
+    ↓
+Sistema → Crear Backup
+    ↓
+Sistema → Descargar Archivos
+    ↓
+Sistema → Instalar Actualización
+    ↓
+Sistema → Actualizar Base de Datos
+    ↓
+Sistema → Registrar en Historial
+    ↓
+Usuario → Sistema Actualizado ✓
+```
+
+### 📝 Notas del Desarrollador
+
+Para más información sobre el sistema de licencias, consultar:
+- `INSTRUCCIONES_LICENCIAS.md` - Manual completo del sistema de licencias
+- `license-generator.html` - Generador de licencias para desarrolladores
+- `admin/api/github-update.php` - Código fuente de la API
 
 
 ## 🛠 Solución de Problemas
@@ -1016,6 +1210,22 @@ define('ENVIRONMENT', 'development');
 ```
 
 ## 📋 Changelog
+
+
+### Versión 2.2.0 - Sistema de Actualización Automática (Octubre 2025)
+- ✅ **Sistema completo de actualización automática** desde GitHub
+- ✅ **Gestión de licencias** individuales por instalación
+- ✅ **System ID único** generado automáticamente para cada sistema
+- ✅ **Generador de licencias** para desarrolladores (license-generator.html)
+- ✅ **Panel de control de actualizaciones** con vista previa de cambios
+- ✅ **Backup automático** antes de cada actualización
+- ✅ **Sistema de rollback** para revertir cambios si es necesario
+- ✅ **Historial completo** de actualizaciones realizadas
+- ✅ **Validación de licencias offline** sin servidor externo
+- ✅ **Tabla system_updates** para registro de actualizaciones
+- ✅ **Algoritmo SHA-256** para generación segura de licencias
+- ✅ **Corregido error** "Acción no válida" en verificación de actualizaciones
+- ✅ **Documentación completa** del sistema de licencias
 
 ### Versión 2.1.0
 - Sistema completo de gestión de restaurante
