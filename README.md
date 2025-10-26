@@ -16,7 +16,8 @@ Un sistema completo de gestión para restaurantes que incluye punto de venta, pe
 - **Control de inventario** con seguimiento en tiempo real
 - **Configuración del sistema** centralizada
 - **Instalador automático** modular en 5 pasos
-- **Control de inventario** con seguimiento en tiempo real
+- **Sistema de actualización automática** con migraciones de BD
+- **Panel de historial de migraciones** con estadísticas
 
 ### 📱 Experiencia del Cliente
 - **Menú online** responsive con carrito de compras
@@ -77,6 +78,8 @@ mi_restaurant_delivery/
 │ ├── api/ # APIs internas para el frontend
 │ │ ├── products.php # API de gestión de productos
 │ │ ├── stock-movements.php # Historial de movimientos de inventario
+│ │ ├── MigrationManager.php # Gestor de migraciones SQL automáticas
+│ │ ├── github-update.php # API de actualización y licencias
 │ │ ├── update-item-status.php # Actualización del estado de ítems
 │ │ ├── delivery-stats.php # Estadísticas de delivery
 │ │ ├── delivery.php # API de gestión de deliveries
@@ -128,7 +131,8 @@ mi_restaurant_delivery/
 │ ├── whatsapp-settings.php    # Configuración de WhatsApp Business API
 │ ├── whatsapp-messages.php    # Panel de gestión de conversaciones WhatsApp  
 │ ├── whatsapp-webhook.php     # Webhook para recibir mensajes de WhatsApp
-│ └── login.php # Página de login
+│ ├── login.php # Página de login
+│ └── migrations-history.php # Panel de historial de migraciones
 │
 ├── assets/ # Recursos estáticos
 │ ├── includes/ # Archivos de inclusión
@@ -140,7 +144,12 @@ mi_restaurant_delivery/
 │ └── js/ # Scripts JavaScript
 │
 └── database/ # Scripts de base de datos
-└── bd.sql # Estructura y datos iniciales
+    ├── bd.sql # Estructura y datos iniciales
+    └── migrations/ # Migraciones SQL automáticas
+        ├── v2.2.0.sql # Sistema de licencias
+        ├── v2.2.2.sql # Primera migración de prueba
+        ├── v2.2.3.sql # Segunda migración de prueba
+        └── README.md # Guía de migraciones
 ```
 
 ## 🚀 Instalación
@@ -1009,6 +1018,128 @@ database/
 [Desarrollador]/
 └── license-generator.html     # Generador de licencias (local)
 ```
+### 🔄 Sistema de Migraciones Automáticas
+
+El sistema incluye un potente gestor de migraciones SQL que se ejecutan automáticamente durante las actualizaciones.
+
+#### ¿Qué son las Migraciones?
+
+Las migraciones son archivos SQL que contienen cambios en la base de datos (crear tablas, agregar columnas, insertar datos, etc.) y se ejecutan automáticamente cuando el cliente actualiza el sistema.
+
+#### Características
+
+- **Ejecución automática** de archivos SQL durante actualizaciones
+- **Detección inteligente** de migraciones pendientes
+- **Transacciones SQL** para rollback automático si falla
+- **Registro completo** en tabla `migrations`
+- **Panel visual** para ver historial y estadísticas
+- **Reintentos** de migraciones fallidas
+- **Sin intervención manual** del cliente
+
+#### Flujo de Trabajo
+
+**Para el Desarrollador:**
+```bash
+# 1. Crear migración
+nano database/migrations/v2.3.0.sql
+
+# 2. Escribir SQL con cambios de BD
+START TRANSACTION;
+CREATE TABLE nueva_tabla (...);
+UPDATE settings SET setting_value = '2.3.0' WHERE setting_key = 'current_system_version';
+COMMIT;
+
+# 3. Push a GitHub
+git add database/migrations/v2.3.0.sql
+git commit -m "Version 2.3.0 - Nueva funcionalidad"
+git push origin main
+```
+
+**Para el Cliente:**
+1. Panel → Actualizar Sistema
+2. Click en "Actualizar Sistema Ahora"
+3. ✅ Código actualizado + Base de datos actualizada automáticamente
+
+#### Tabla migrations
+```sql
+CREATE TABLE `migrations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `version` varchar(20) NOT NULL,
+  `filename` varchar(255) NOT NULL,
+  `executed_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `execution_time` float DEFAULT NULL,
+  `status` enum('success','failed') DEFAULT 'success',
+  `error_message` text,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `version` (`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### Panel de Historial
+
+El sistema incluye un panel visual en `admin/migrations-history.php` que muestra:
+
+- 📊 **Estadísticas:** Total de migraciones, exitosas, fallidas
+- 📋 **Historial completo** con fechas y tiempos de ejecución
+- ⚠️ **Migraciones fallidas** con mensajes de error
+- 🔄 **Botón para reintentar** migraciones que fallaron
+- ⏱️ **Tiempos de ejecución** de cada migración
+
+#### Formato de Archivos
+
+Los archivos de migración deben:
+- Estar en: `database/migrations/`
+- Nombrar como: `vX.X.X.sql` (ejemplo: `v2.3.0.sql`)
+- Usar versionado semántico
+- Incluir transacciones SQL
+- Actualizar versión del sistema
+
+**Template básico:**
+```sql
+-- =============================================
+-- Migración a versión X.X.X
+-- =============================================
+
+START TRANSACTION;
+
+-- Tus cambios aquí
+CREATE TABLE IF NOT EXISTS nueva_tabla (...);
+INSERT INTO settings (...);
+
+-- Actualizar versión
+UPDATE settings 
+SET setting_value = 'X.X.X' 
+WHERE setting_key = 'current_system_version';
+
+COMMIT;
+```
+
+#### Archivos del Sistema
+admin/
+├── api/
+│   ├── MigrationManager.php       # Clase gestora de migraciones
+│   └── github-update.php          # API con integración de migraciones
+└── migrations-history.php         # Panel de historial (opcional)
+database/
+└── migrations/                    # Carpeta de archivos SQL
+├── v2.2.0.sql                # Migración ejemplo
+├── v2.3.0.sql                # Futuras migraciones
+└── README.md                 # Guía de uso
+
+#### Ventajas
+
+✅ **Para el Desarrollador:**
+- No enviar SQL por WhatsApp/Email
+- Versionado de base de datos
+- Control total de cambios
+- Historial completo
+
+✅ **Para el Cliente:**
+- Un solo click para actualizar todo
+- Sin tocar phpMyAdmin
+- Sin errores manuales
+- Sistema siempre sincronizado
+
 
 ### 🔧 Configuración Técnica
 
@@ -1019,6 +1150,7 @@ database/
 'system_id' => 'XXXX-XXXX-XXXX-XXXX'          // ID único del sistema
 'system_license' => 'XXXXX-XXXXX-XXXXX-XXXXX' // Clave de licencia
 'system_commit' => 'abc123...'                 // Hash del commit actual
+'current_system_version' => '2.2.4'            // Versión actual del sistema
 'github_repo' => 'Sabalero23/mi_restaurant_delivery' // Repositorio
 'github_branch' => 'main'                      // Rama principal
 'auto_backup_before_update' => '1'             // Backup automático
@@ -1191,6 +1323,10 @@ Para más información sobre el sistema de licencias, consultar:
 - [ ] Configurar control de stock en productos necesarios
 - [ ] Establecer límites de alerta de inventario
 - [ ] Verificar funcionamiento de ajustes de stock
+- [ ] Verificar que existe carpeta `database/migrations/`
+- [ ] Verificar tabla `migrations` en base de datos
+- [ ] Probar sistema de actualización automática
+- [ ] Verificar panel de migraciones (`migrations-history.php`)
 - [ ] Ejecutar instalador completo desde `/install/`
 - [ ] Configurar control de stock en productos necesarios
 - [ ] Establecer límites de alerta de inventario
@@ -1212,20 +1348,43 @@ define('ENVIRONMENT', 'development');
 ## 📋 Changelog
 
 
-### Versión 2.2.0 - Sistema de Actualización Automática (Octubre 2025)
+### Versión 2.2.4 - Sistema de Migraciones Automáticas (Octubre 2025)
+
+#### Sistema de Actualización
 - ✅ **Sistema completo de actualización automática** desde GitHub
 - ✅ **Gestión de licencias** individuales por instalación
-- ✅ **System ID único** generado automáticamente para cada sistema
-- ✅ **Generador de licencias** para desarrolladores (license-generator.html)
-- ✅ **Panel de control de actualizaciones** con vista previa de cambios
+- ✅ **System ID único** generado automáticamente
+- ✅ **Generador de licencias** para desarrolladores
+- ✅ **Panel de control de actualizaciones** con vista previa
 - ✅ **Backup automático** antes de cada actualización
-- ✅ **Sistema de rollback** para revertir cambios si es necesario
-- ✅ **Historial completo** de actualizaciones realizadas
+- ✅ **Sistema de rollback** para revertir cambios
+- ✅ **Historial completo** de actualizaciones
 - ✅ **Validación de licencias offline** sin servidor externo
-- ✅ **Tabla system_updates** para registro de actualizaciones
-- ✅ **Algoritmo SHA-256** para generación segura de licencias
-- ✅ **Corregido error** "Acción no válida" en verificación de actualizaciones
-- ✅ **Documentación completa** del sistema de licencias
+
+#### Sistema de Migraciones SQL
+- ✅ **Migraciones automáticas** de base de datos
+- ✅ **Detección inteligente** de migraciones pendientes
+- ✅ **Ejecución automática** durante actualizaciones
+- ✅ **Tabla migrations** para registro de migraciones
+- ✅ **Panel de historial** de migraciones (`migrations-history.php`)
+- ✅ **Transacciones SQL** con rollback automático
+- ✅ **Reintentos** de migraciones fallidas
+- ✅ **Estadísticas** de ejecución
+- ✅ **Clase MigrationManager** para gestión completa
+- ✅ **Versionado semántico** (vX.X.X.sql)
+- ✅ **Sin intervención manual** del cliente
+
+#### Correcciones
+- ✅ **Corregido** error "Acción no válida" en verificación
+- ✅ **Corregido** error "There is no active transaction"
+- ✅ **Mejorada** sincronización de commits
+- ✅ **Optimizado** sistema de detección de actualizaciones
+
+#### Documentación
+- ✅ **Manual completo** del sistema de migraciones
+- ✅ **Guía de uso** en carpeta migrations/
+- ✅ **Templates** de ejemplo
+- ✅ **Scripts SQL** de instalación y reparación
 
 ### Versión 2.1.0
 - Sistema completo de gestión de restaurante
@@ -1249,12 +1408,11 @@ define('ENVIRONMENT', 'development');
 
 
 ### Próximas Versiones
-- **v2.1.1** (En desarrollo):
+- **v2.5.0** (Planificado):
   - Integración completa con Mercado Pago API
-  - Sistema de backup automático de base de datos
   - Mejoras en la interfaz de pagos
   - Panel de gestión de transacciones
-  - 
+  - Sistema de reportes avanzados
 ---
 
 **¡Bienvenido al futuro de la gestión de restaurantes!** 🍽️

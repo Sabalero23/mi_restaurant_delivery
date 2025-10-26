@@ -41,7 +41,11 @@ $productModel = new Product();
 $categoryModel = new Category();
 
 $categories = $categoryModel->getAll();
-$products = $productModel->getAll(null, false); // Include inactive products
+$products = $productModel->getAll(); // Solo mostrar productos activos
+$inactive_products = $productModel->getAll(null, false); // Todos los productos
+$inactive_products = array_filter($inactive_products, function($p) {
+    return $p['is_active'] == 0; // Solo inactivos
+});
 
 // Obtener base de datos para funciones adicionales
 $database = new Database();
@@ -172,12 +176,18 @@ function deleteProduct() {
     
     $id = intval($_POST['id']);
     
-    if ($productModel->delete($id)) {
-        return ['success' => true, 'message' => 'Producto eliminado exitosamente'];
-    } else {
-        return ['success' => false, 'message' => 'Error al eliminar el producto'];
+    try {
+        $result = $productModel->delete($id);
+        return $result;
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ];
     }
 }
+
 
 function toggleAvailability() {
     global $productModel;
@@ -1331,6 +1341,38 @@ $low_stock_products = getLowStockProducts();
                 </div>
             <?php endforeach; ?>
         </div>
+        
+        <?php if (!empty($inactive_products)): ?>
+    <div class="mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="text-muted">
+                <i class="fas fa-archive me-2"></i>
+                Productos Desactivados (<?php echo count($inactive_products); ?>)
+            </h4>
+            <button class="btn btn-outline-secondary btn-sm" onclick="toggleInactive()">
+                <i class="fas fa-eye"></i>
+                <span id="toggleText">Mostrar</span>
+            </button>
+        </div>
+        <div id="inactiveProducts" style="display: none;">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Estos productos están desactivados porque tienen pedidos asociados. 
+                Puede reactivarlos editándolos y marcándolos como activos.
+            </div>
+            <div class="row g-3 g-md-4">
+                <?php foreach ($inactive_products as $product): ?>
+                    <!-- Mismo HTML que los productos activos -->
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="card product-card product-inactive">
+                            <!-- ... contenido del producto ... -->
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
     </div>
 
     <!-- Product Modal -->
@@ -2816,6 +2858,19 @@ function updateSearchResults(count) {
         const total = document.querySelectorAll('.product-item').length;
         resultCounter.innerHTML = `<i class="fas fa-search me-1"></i>Mostrando ${count} de ${total} productos`;
         resultCounter.className = 'text-muted small mb-2';
+    }
+}
+
+function toggleInactive() {
+    const container = document.getElementById('inactiveProducts');
+    const text = document.getElementById('toggleText');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        text.textContent = 'Ocultar';
+    } else {
+        container.style.display = 'none';
+        text.textContent = 'Mostrar';
     }
 }
 

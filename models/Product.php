@@ -156,21 +156,133 @@ class Product {
         }
     }
     
-    /**
-     * Elimina un producto (soft delete)
-     */
-    public function delete($id) {
-        $query = "UPDATE products SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+/**
+ * Verifica si un producto tiene pedidos asociados
+ */
+public function hasOrders($id) {
+    try {
+        $query = "SELECT COUNT(*) as count 
+                  FROM order_items 
+                  WHERE product_id = :id";
         
-        try {
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':id', $id);
-            return $stmt->execute();
-        } catch (PDOException $e) {
-            error_log("Error deleting product: " . $e->getMessage());
-            return false;
-        }
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        $result = $stmt->fetch();
+        return $result['count'] > 0;
+        
+    } catch (PDOException $e) {
+        error_log("Error checking product orders: " . $e->getMessage());
+        // Si hay error, asumir que tiene pedidos (seguro)
+        return true;
     }
+}
+
+/**
+ * Soft Delete - Solo marca el producto como inactivo
+ */
+public function softDelete($id) {
+    $query = "UPDATE products 
+              SET is_active = 0, 
+                  updated_at = CURRENT_TIMESTAMP 
+              WHERE id = :id";
+    
+    try {
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    } catch (PDOException $e) {
+        error_log("Error soft deleting product: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Hard Delete - Elimina permanentemente el producto
+ */
+public function hardDelete($id) {
+    try {
+        // Primero obtener la información del producto para eliminar la imagen
+        $product = $this->getById($id);
+        
+        if ($product && !empty($product['image'])) {
+            // Eliminar la imagen física del servidor
+            $imagePath = '../' . ltrim($product['image'], '/');
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+                error_log("Deleted product image: " . $imagePath);
+            }
+        }
+        
+        // Eliminar el producto de la base de datos
+        $query = "DELETE FROM products WHERE id = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        
+        $result = $stmt->execute();
+        
+        if ($result) {
+            error_log("Product ID $id deleted permanently from database");
+        }
+        
+        return $result;
+        
+    } catch (PDOException $e) {
+        error_log("Error hard deleting product: " . $e->getMessage());
+        throw new Exception("Error al eliminar producto: " . $e->getMessage());
+    }
+}
+
+/**
+ * Eliminación inteligente:
+ * - Si tiene pedidos: Soft delete (desactivar)
+ * - Si NO tiene pedidos: Hard delete (eliminar permanentemente)
+ */
+public function delete($id) {
+    try {
+        // Verificar si el producto tiene pedidos asociados
+        if ($this->hasOrders($id)) {
+            // Tiene pedidos: Solo desactivar
+            if ($this->softDelete($id)) {
+                return [
+                    'success' => true,
+                    'type' => 'soft',
+                    'message' => 'Producto desactivado correctamente (tiene pedidos asociados)'
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'type' => 'soft',
+                    'message' => 'Error al desactivar el producto'
+                ];
+            }
+        } else {
+            // NO tiene pedidos: Eliminar permanentemente
+            if ($this->hardDelete($id)) {
+                return [
+                    'success' => true,
+                    'type' => 'hard',
+                    'message' => 'Producto eliminado permanentemente de la base de datos'
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'type' => 'hard',
+                    'message' => 'Error al eliminar el producto'
+                ];
+            }
+        }
+        
+    } catch (Exception $e) {
+        error_log("Error in smart delete: " . $e->getMessage());
+        return [
+            'success' => false,
+            'type' => 'error',
+            'message' => 'Error: ' . $e->getMessage()
+        ];
+    }
+}
     
     /**
      * Obtiene todos los productos activos (compatible con order-create.php)
