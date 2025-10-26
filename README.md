@@ -1417,4 +1417,4 @@ define('ENVIRONMENT', 'development');
 
 **¡Bienvenido al futuro de la gestión de restaurantes!** 🍽️
 
-Para soporte adicional o consultas, revise la documentación técnica en los comentarios del código fuente.# mi_restaurant_delivery
+Para soporte adicional o consultas, revise la documentación técnica en los comentarios del código fuente.# mi_restaurant_delivery.
