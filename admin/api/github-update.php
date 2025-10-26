@@ -509,25 +509,54 @@ function performUpdate($db) {
         // 8. Actualizar log de actualización
         updateUpdateLog($db, $updateId, 'completed', 'Actualización completada exitosamente');
         
-        $query = "UPDATE system_updates SET 
-                  completed_at = NOW(),
-                  from_commit = ?,
-                  to_commit = ?,
-                  files_added = ?,
-                  files_updated = ?,
-                  files_deleted = ?,
-                  update_details = ?
-                  WHERE id = ?";
-        $stmt = $db->prepare($query);
-        $stmt->execute([
-            $currentCommit,
-            $newCommit,
-            $fileStats['added'],
-            $fileStats['modified'],
-            $fileStats['removed'],
-            $detailsJson,
-            $updateId
-        ]);
+        // Verificar si existe la columna update_details
+        $hasDetailsColumn = false;
+        try {
+            $checkColumn = $db->query("SHOW COLUMNS FROM system_updates LIKE 'update_details'");
+            $hasDetailsColumn = $checkColumn->rowCount() > 0;
+        } catch (Exception $e) {
+            $hasDetailsColumn = false;
+        }
+        
+        if ($hasDetailsColumn) {
+            $query = "UPDATE system_updates SET 
+                      completed_at = NOW(),
+                      from_commit = ?,
+                      to_commit = ?,
+                      files_added = ?,
+                      files_updated = ?,
+                      files_deleted = ?,
+                      update_details = ?
+                      WHERE id = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $currentCommit,
+                $newCommit,
+                $fileStats['added'],
+                $fileStats['modified'],
+                $fileStats['removed'],
+                $detailsJson,
+                $updateId
+            ]);
+        } else {
+            $query = "UPDATE system_updates SET 
+                      completed_at = NOW(),
+                      from_commit = ?,
+                      to_commit = ?,
+                      files_added = ?,
+                      files_updated = ?,
+                      files_deleted = ?
+                      WHERE id = ?";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                $currentCommit,
+                $newCommit,
+                $fileStats['added'],
+                $fileStats['modified'],
+                $fileStats['removed'],
+                $updateId
+            ]);
+        }
         
         echo json_encode([
             'success' => true,
