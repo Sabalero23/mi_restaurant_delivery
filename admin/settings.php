@@ -1314,21 +1314,21 @@ p {
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <h2 class="text-success mb-0" id="files-added">0</h2>
-                                    <small class="text-muted">Archivos Nuevos</small>
+                                <div class="text-center p-3 bg-success rounded">
+                                    <h2 class="text-white mb-0" id="files-added">0</h2>
+                                    <small class="text-white">Archivos Nuevos</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <h2 class="text-warning mb-0" id="files-modified">0</h2>
-                                    <small class="text-muted">Archivos Modificados</small>
+                                <div class="text-center p-3 bg-warning rounded">
+                                    <h2 class="text-white mb-0" id="files-modified">0</h2>
+                                    <small class="text-white">Archivos Modificados</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <h2 class="text-danger mb-0" id="files-removed">0</h2>
-                                    <small class="text-muted">Archivos Eliminados</small>
+                                <div class="text-center p-3 bg-danger rounded">
+                                    <h2 class="text-white mb-0" id="files-removed">0</h2>
+                                    <small class="text-white">Archivos Eliminados</small>
                                 </div>
                             </div>
                         </div>
@@ -1345,7 +1345,7 @@ p {
                                 <i class="fas fa-download me-2"></i>
                                 Actualizar Sistema Ahora
                             </button>
-                            <button class="btn btn-outline-secondary" onclick="showChangesDetails()">
+                            <button class="btn btn-outline-secondary" onclick="showAvailableChanges()">
                                 <i class="fas fa-eye me-1"></i>
                                 Ver Detalles
                             </button>
@@ -2016,6 +2016,7 @@ p {
                         data.logs.forEach(log => {
                             const statusBadge = getStatusBadge(log.status);
                             const date = new Date(log.started_at).toLocaleString('es-AR');
+                            const hasDetails = log.update_details && log.update_details !== 'null';
                             
                             html += `
                                 <tr>
@@ -2023,12 +2024,13 @@ p {
                                     <td>${log.username || 'Sistema'}</td>
                                     <td>${statusBadge}</td>
                                     <td>
-                                        <span class="badge bg-success">${log.files_added} nuevos</span>
-                                        <span class="badge bg-warning">${log.files_updated} modificados</span>
-                                        ${log.files_deleted > 0 ? `<span class="badge bg-danger">${log.files_deleted} eliminados</span>` : ''}
+                                        <span class="badge bg-success">${log.files_added || 0} nuevos</span>
+                                        <span class="badge bg-warning">${log.files_updated || 0} modificados</span>
+                                        ${(log.files_deleted || 0) > 0 ? `<span class="badge bg-danger">${log.files_deleted} eliminados</span>` : ''}
                                     </td>
-                                    <td><code>${log.commit_hash ? log.commit_hash.substring(0, 7) : 'N/A'}</code></td>
+                                    <td><code>${log.commit_hash || 'N/A'}</code></td>
                                     <td>
+                                        ${hasDetails ? `<button class="btn btn-sm btn-outline-info me-1" onclick="viewUpdateDetails(${log.id})"><i class="fas fa-info-circle me-1"></i>Ver detalles</button>` : ''}
                                         ${log.backup_path ? `<button class="btn btn-sm btn-outline-primary" onclick="rollbackToBackup('${log.backup_path}')"><i class="fas fa-undo me-1"></i>Revertir</button>` : ''}
                                     </td>
                                 </tr>
@@ -2039,6 +2041,178 @@ p {
                         document.getElementById('updates-history').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay actualizaciones registradas</td></tr>';
                     }
                 });
+        }
+
+        // Ver detalles de una actualización
+        function viewUpdateDetails(updateId) {
+            fetch(`api/github-update.php?action=get_update_details&id=${updateId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showUpdateDetailsModal(data.update, data.details);
+                    } else {
+                        alert('Error al cargar detalles: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+        }
+
+        // Mostrar modal con detalles de la actualización
+        function showUpdateDetailsModal(update, details) {
+            let modalHTML = `
+                <div class="modal fade" id="updateDetailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Detalles de la Actualización
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <strong><i class="fas fa-calendar-alt me-2"></i>Información General</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p><strong>Fecha:</strong> ${new Date(update.started_at).toLocaleString('es-AR')}</p>
+                                                <p><strong>Usuario:</strong> ${update.username || 'Sistema'}</p>
+                                                <p><strong>Estado:</strong> ${getStatusBadge(update.status)}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Commit anterior:</strong> <code>${update.from_commit ? update.from_commit.substring(0, 7) : 'N/A'}</code></p>
+                                                <p><strong>Commit nuevo:</strong> <code>${update.to_commit ? update.to_commit.substring(0, 7) : 'N/A'}</code></p>
+                                                ${update.backup_path ? `<p><strong>Backup:</strong> ${update.backup_path}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <strong><i class="fas fa-chart-bar me-2"></i>Resumen de Cambios</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-success">
+                                                    <h3 class="text-white mb-0">${update.files_added || 0}</h3>
+                                                    <small class="text-white">Archivos Nuevos</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-warning">
+                                                    <h3 class="text-white mb-0">${update.files_updated || 0}</h3>
+                                                    <small class="text-white">Archivos Modificados</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-danger">
+                                                    <h3 class="text-white mb-0">${update.files_deleted || 0}</h3>
+                                                    <small class="text-white">Archivos Eliminados</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+            `;
+
+            if (details) {
+                if (details.added && details.added.length > 0) {
+                    modalHTML += `
+                        <div class="card mb-3">
+                            <div class="card-header bg-success text-white">
+                                <strong><i class="fas fa-plus-circle me-2"></i>Archivos Nuevos (${details.added.length})</strong>
+                            </div>
+                            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                <ul class="list-unstyled mb-0">
+                    `;
+                    details.added.forEach(file => {
+                        modalHTML += `<li class="py-1"><i class="fas fa-file text-success me-2"></i><code>${file}</code></li>`;
+                    });
+                    modalHTML += `
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (details.modified && details.modified.length > 0) {
+                    modalHTML += `
+                        <div class="card mb-3">
+                            <div class="card-header bg-warning">
+                                <strong><i class="fas fa-edit me-2"></i>Archivos Modificados (${details.modified.length})</strong>
+                            </div>
+                            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                <ul class="list-unstyled mb-0">
+                    `;
+                    details.modified.forEach(file => {
+                        modalHTML += `<li class="py-1"><i class="fas fa-file-code text-warning me-2"></i><code>${file}</code></li>`;
+                    });
+                    modalHTML += `
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (details.removed && details.removed.length > 0) {
+                    modalHTML += `
+                        <div class="card mb-3">
+                            <div class="card-header bg-danger text-white">
+                                <strong><i class="fas fa-trash-alt me-2"></i>Archivos Eliminados (${details.removed.length})</strong>
+                            </div>
+                            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                <ul class="list-unstyled mb-0">
+                    `;
+                    details.removed.forEach(file => {
+                        modalHTML += `<li class="py-1"><i class="fas fa-times-circle text-danger me-2"></i><code>${file}</code></li>`;
+                    });
+                    modalHTML += `
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                modalHTML += `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay detalles específicos de archivos disponibles para esta actualización.
+                    </div>
+                `;
+            }
+
+            modalHTML += `
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-1"></i>Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('updateDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            const modal = new bootstrap.Modal(document.getElementById('updateDetailsModal'));
+            modal.show();
+
+            document.getElementById('updateDetailsModal').addEventListener('hidden.bs.modal', function () {
+                this.remove();
+            });
         }
 
         // Obtener badge de estado
@@ -2086,8 +2260,179 @@ p {
             loadUpdateHistory();
         });
 
-        function showChangesDetails() {
-            alert('Esta función mostrará los detalles de los cambios disponibles. Por implementar.');
+        // Mostrar cambios disponibles antes de actualizar
+        function showAvailableChanges() {
+            fetch('api/github-update.php?action=get_changes')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showChangesModal(data.changes, data.commits);
+                    } else {
+                        alert('Error al obtener cambios: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+        }
+
+        // Mostrar modal con cambios disponibles
+        function showChangesModal(changes, commits) {
+            let modalHTML = `
+                <div class="modal fade" id="changesModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header bg-info text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-code-branch me-2"></i>
+                                    Cambios Disponibles
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Los siguientes archivos se actualizarán cuando ejecutes la actualización del sistema.
+                                </div>
+
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <strong><i class="fas fa-chart-bar me-2"></i>Resumen</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-success">
+                                                    <h3 class="text-white mb-0">${changes.added.length}</h3>
+                                                    <small class="text-white">Archivos Nuevos</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-warning">
+                                                    <h3 class="text-white mb-0">${changes.modified.length}</h3>
+                                                    <small class="text-white">Archivos Modificados</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="rounded p-3 bg-danger">
+                                                    <h3 class="text-white mb-0">${changes.removed.length}</h3>
+                                                    <small class="text-white">Archivos Eliminados</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+            `;
+
+            if (commits && commits.length > 0) {
+                modalHTML += `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <strong><i class="fas fa-history me-2"></i>Commits Recientes (${commits.length})</strong>
+                        </div>
+                        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                `;
+                commits.forEach(commit => {
+                    modalHTML += `
+                        <li class="mb-2">
+                            <code class="text-primary">${commit.sha}</code> - ${commit.message}
+                            <br><small class="text-muted">${commit.author} • ${commit.date}</small>
+                        </li>
+                    `;
+                });
+                modalHTML += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (changes.added.length > 0) {
+                modalHTML += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <strong><i class="fas fa-plus-circle me-2"></i>Archivos Nuevos (${changes.added.length})</strong>
+                        </div>
+                        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                `;
+                changes.added.forEach(file => {
+                    modalHTML += `<li class="py-1"><i class="fas fa-file text-success me-2"></i><code>${file.name}</code> <small class="text-muted">(+${file.additions})</small></li>`;
+                });
+                modalHTML += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (changes.modified.length > 0) {
+                modalHTML += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning">
+                            <strong><i class="fas fa-edit me-2"></i>Archivos Modificados (${changes.modified.length})</strong>
+                        </div>
+                        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                `;
+                changes.modified.forEach(file => {
+                    modalHTML += `<li class="py-1"><i class="fas fa-file-code text-warning me-2"></i><code>${file.name}</code> <small class="text-muted">(+${file.additions} -${file.deletions})</small></li>`;
+                });
+                modalHTML += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (changes.removed.length > 0) {
+                modalHTML += `
+                    <div class="card mb-3">
+                        <div class="card-header bg-danger text-white">
+                            <strong><i class="fas fa-trash-alt me-2"></i>Archivos Eliminados (${changes.removed.length})</strong>
+                        </div>
+                        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
+                `;
+                changes.removed.forEach(file => {
+                    modalHTML += `<li class="py-1"><i class="fas fa-times-circle text-danger me-2"></i><code>${file.name}</code></li>`;
+                });
+                modalHTML += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            modalHTML += `
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-1"></i>Cerrar
+                                </button>
+                                <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="performUpdate()">
+                                    <i class="fas fa-download me-1"></i>Actualizar Ahora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('changesModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            const modal = new bootstrap.Modal(document.getElementById('changesModal'));
+            modal.show();
+
+            document.getElementById('changesModal').addEventListener('hidden.bs.modal', function () {
+                this.remove();
+            });
         }
     </script>
     <script>

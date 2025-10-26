@@ -41,6 +41,9 @@ switch ($action) {
     case 'get_logs':
         getUpdateLogs($db);
         break;
+    case 'get_update_details':
+        getUpdateDetails($db);
+        break;
     case 'verify_license':
         verifyLicense($db);
         break;
@@ -399,7 +402,40 @@ function performUpdate($db) {
             updateUpdateLog($db, $updateId, 'in_progress', 'Backup creado', $backupResult['path']);
         }
         
-        // 2. Descargar archivos del repositorio
+        // 2. Obtener estadísticas de GitHub ANTES de descargar
+        updateUpdateLog($db, $updateId, 'in_progress', 'Analizando cambios...');
+        
+        $compareUrl = "https://api.github.com/repos/{$settings['repo']}/compare/{$currentCommit}...{$settings['branch']}";
+        $headers = ['User-Agent: PHP-GitHub-Updater'];
+        $compareResponse = makeGithubRequest($compareUrl, $headers);
+        
+        $fileStats = ['added' => 0, 'modified' => 0, 'removed' => 0];
+        $fileDetails = ['added' => [], 'modified' => [], 'removed' => []];
+        
+        if ($compareResponse && isset($compareResponse['files'])) {
+            foreach ($compareResponse['files'] as $file) {
+                $fileName = $file['filename'];
+                
+                switch ($file['status']) {
+                    case 'added':
+                        $fileStats['added']++;
+                        $fileDetails['added'][] = $fileName;
+                        break;
+                    case 'modified':
+                        $fileStats['modified']++;
+                        $fileDetails['modified'][] = $fileName;
+                        break;
+                    case 'removed':
+                        $fileStats['removed']++;
+                        $fileDetails['removed'][] = $fileName;
+                        break;
+                }
+            }
+        }
+        
+        $detailsJson = json_encode($fileDetails);
+        
+        // 3. Descargar archivos del repositorio
         updateUpdateLog($db, $updateId, 'in_progress', 'Descargando archivos desde GitHub...');
         
         $zipUrl = "https://github.com/{$settings['repo']}/archive/refs/heads/{$settings['branch']}.zip";
@@ -479,15 +515,17 @@ function performUpdate($db) {
                   to_commit = ?,
                   files_added = ?,
                   files_updated = ?,
-                  files_deleted = ?
+                  files_deleted = ?,
+                  update_details = ?
                   WHERE id = ?";
         $stmt = $db->prepare($query);
         $stmt->execute([
             $currentCommit,
             $newCommit,
-            $stats['added'] ?? 0,
-            $stats['modified'] ?? 0,
-            $stats['deleted'] ?? 0,
+            $fileStats['added'],
+            $fileStats['modified'],
+            $fileStats['removed'],
+            $detailsJson,
             $updateId
         ]);
         
@@ -495,9 +533,9 @@ function performUpdate($db) {
             'success' => true,
             'message' => 'Sistema actualizado exitosamente',
             'stats' => [
-                'added' => $stats['added'] ?? 0,
-                'updated' => $stats['modified'] ?? 0,
-                'deleted' => $stats['deleted'] ?? 0
+                'added' => $fileStats['added'],
+                'updated' => $fileStats['modified'],
+                'deleted' => $fileStats['removed']
             ],
             'migrations' => [
                 'executed' => $migrationsExecuted,
@@ -514,6 +552,48 @@ function performUpdate($db) {
         echo json_encode([
             'success' => false,
             'message' => 'Error durante la actualización: ' . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Obtener detalles de una actualización específica
+ */
+function getUpdateDetails($db) {
+    try {
+        $updateId = $_GET['id'] ?? $_POST['id'] ?? '';
+        
+        if (empty($updateId)) {
+            throw new Exception('ID de actualización no especificado');
+        }
+        
+        $query = "SELECT su.*, u.username 
+                  FROM system_updates su
+                  LEFT JOIN users u ON su.updated_by = u.id
+                  WHERE su.id = ?";
+        $stmt = $db->prepare($query);
+        $stmt->execute([$updateId]);
+        $update = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$update) {
+            throw new Exception('Actualización no encontrada');
+        }
+        
+        $details = null;
+        if (!empty($update['update_details'])) {
+            $details = json_decode($update['update_details'], true);
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'update' => $update,
+            'details' => $details
+        ]);
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al obtener detalles: ' . $e->getMessage()
         ]);
     }
 }
