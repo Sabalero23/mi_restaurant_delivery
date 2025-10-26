@@ -195,6 +195,58 @@ function deleteProduct() {
     }
 }
 
+/**
+ * Reactiva un producto desactivado
+ */
+function reactivateProduct() {
+    global $productModel;
+    
+    $id = intval($_POST['id']);
+    
+    // Verificar que el producto existe
+    $product = $productModel->getById($id);
+    if (!$product) {
+        return ['success' => false, 'message' => 'Producto no encontrado'];
+    }
+    
+    // Usar el método updateActiveStatus para reactivar
+    if ($productModel->updateActiveStatus($id, 1)) {
+        return ['success' => true, 'message' => 'Producto reactivado exitosamente'];
+    } else {
+        return ['success' => false, 'message' => 'Error al reactivar el producto'];
+    }
+}
+
+/**
+ * Fuerza la eliminación permanente de un producto (hard delete)
+ * Incluso si tiene pedidos asociados
+ */
+function forceDeleteProduct() {
+    global $productModel;
+    
+    $id = intval($_POST['id']);
+    
+    // Verificar que el producto existe
+    $product = $productModel->getById($id);
+    if (!$product) {
+        return ['success' => false, 'message' => 'Producto no encontrado'];
+    }
+    
+    try {
+        // Forzar eliminación permanente usando hardDelete
+        if ($productModel->hardDelete($id)) {
+            return [
+                'success' => true, 
+                'message' => 'Producto eliminado permanentemente de la base de datos'
+            ];
+        } else {
+            return ['success' => false, 'message' => 'Error al eliminar el producto'];
+        }
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}
+
 
 function toggleAvailability() {
     global $productModel;
@@ -985,6 +1037,50 @@ $low_stock_products = getLowStockProducts();
             font-size: 1.4rem;
         }
     }
+    
+    /* Estilos para productos inactivos */
+.product-inactive {
+    border: 2px solid #6c757d !important;
+    opacity: 0.85;
+}
+
+.product-inactive:hover {
+    opacity: 1;
+}
+
+.inactive-product-item .card-title {
+    color: #6c757d !important;
+}
+
+.inactive-product-item .badge {
+    opacity: 0.8;
+}
+
+/* Animación suave al mostrar/ocultar */
+#inactiveProducts {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Botón de toggle mejorado */
+#toggleInactiveBtn {
+    transition: all 0.3s ease;
+}
+
+#toggleInactiveBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
     </style>
 </head>
 <body>
