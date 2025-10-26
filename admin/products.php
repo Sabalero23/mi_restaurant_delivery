@@ -69,6 +69,13 @@ if ($_POST && isset($_POST['action'])) {
         case 'adjust_stock':
             $result = adjustStock();
             break;
+                case 'reactivate':
+            $result = reactivateProduct();
+            break;
+            
+        case 'force_delete':
+            $result = forceDeleteProduct();
+            break;
     }
     
     if (isset($result['success']) && $result['success']) {
@@ -248,6 +255,8 @@ function adjustStock() {
         return ['success' => false, 'message' => 'Error al ajustar el stock'];
     }
 }
+
+
 
 // Función para registrar movimientos de stock (opcional)
 function logStockMovement($product_id, $adjustment, $old_stock, $new_stock, $reason) {
@@ -1342,37 +1351,159 @@ $low_stock_products = getLowStockProducts();
             <?php endforeach; ?>
         </div>
         
+                <!-- Sección de Productos Desactivados -->
         <?php if (!empty($inactive_products)): ?>
-    <div class="mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="text-muted">
-                <i class="fas fa-archive me-2"></i>
-                Productos Desactivados (<?php echo count($inactive_products); ?>)
-            </h4>
-            <button class="btn btn-outline-secondary btn-sm" onclick="toggleInactive()">
-                <i class="fas fa-eye"></i>
-                <span id="toggleText">Mostrar</span>
-            </button>
-        </div>
-        <div id="inactiveProducts" style="display: none;">
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i>
-                Estos productos están desactivados porque tienen pedidos asociados. 
-                Puede reactivarlos editándolos y marcándolos como activos.
-            </div>
-            <div class="row g-3 g-md-4">
-                <?php foreach ($inactive_products as $product): ?>
-                    <!-- Mismo HTML que los productos activos -->
-                    <div class="col-6 col-md-4 col-lg-3">
-                        <div class="card product-card product-inactive">
-                            <!-- ... contenido del producto ... -->
-                        </div>
+        <div class="mt-5 pt-4 border-top">
+            <div class="page-header mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-1">
+                            <i class="fas fa-archive me-2 text-muted"></i>
+                            Productos Desactivados
+                        </h4>
+                        <p class="text-muted small mb-0">
+                            <?php echo count($inactive_products); ?> producto<?php echo count($inactive_products) != 1 ? 's' : ''; ?> desactivado<?php echo count($inactive_products) != 1 ? 's' : ''; ?> 
+                            (con pedidos asociados)
+                        </p>
                     </div>
-                <?php endforeach; ?>
+                    <button class="btn btn-outline-secondary" onclick="toggleInactive()" id="toggleInactiveBtn">
+                        <i class="fas fa-eye me-1"></i>
+                        <span id="toggleText">Mostrar</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="inactiveProducts" style="display: none;">
+                <!-- Alerta informativa -->
+                <div class="alert alert-info d-flex align-items-start mb-4">
+                    <i class="fas fa-info-circle me-3 mt-1"></i>
+                    <div>
+                        <strong>¿Por qué están aquí estos productos?</strong>
+                        <p class="mb-0 mt-1">
+                            Estos productos fueron desactivados automáticamente porque tienen pedidos asociados. 
+                            No se eliminaron para preservar el historial de ventas. 
+                            Puede <strong>reactivarlos</strong> editándolos o <strong>eliminarlos permanentemente</strong> desde aquí 
+                            (se eliminará el producto pero se mantendrán los registros de pedidos).
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Grid de productos inactivos -->
+                <div class="row g-3 g-md-4">
+                    <?php foreach ($inactive_products as $product): ?>
+                        <div class="col-6 col-md-4 col-lg-3 inactive-product-item" 
+                             data-category="<?php echo $product['category_id']; ?>"
+                             data-name="<?php echo strtolower($product['name']); ?>"
+                             data-product-id="<?php echo $product['id']; ?>">
+                            <div class="card product-card product-inactive">
+                                
+                                <!-- Imagen del producto -->
+                                <?php if ($product['image']): ?>
+                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
+                                         class="card-img-top product-image" 
+                                         alt="<?php echo htmlspecialchars($product['name']); ?>"
+                                         style="opacity: 0.6;">
+                                <?php else: ?>
+                                    <div class="product-image d-flex align-items-center justify-content-center bg-light" style="opacity: 0.6;">
+                                        <i class="fas fa-utensils fa-3x text-muted"></i>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <!-- Badge de desactivado -->
+                                <div class="position-absolute top-0 start-0 m-2">
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-ban me-1"></i>
+                                        DESACTIVADO
+                                    </span>
+                                </div>
+                                
+                                <div class="card-body d-flex flex-column p-2 p-md-3">
+                                    <!-- Header con nombre y opciones -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0 flex-grow-1 text-muted">
+                                            <?php echo htmlspecialchars($product['name']); ?>
+                                        </h6>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary p-1" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item text-success" onclick="reactivateProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name']); ?>')">
+                                                    <i class="fas fa-check-circle me-2"></i>Reactivar
+                                                </a></li>
+                                                <li><a class="dropdown-item" onclick="editProduct(<?php echo $product['id']; ?>)">
+                                                    <i class="fas fa-edit me-2"></i>Editar
+                                                </a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" onclick="forceDeleteProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name']); ?>')">
+                                                    <i class="fas fa-trash-alt me-2"></i>Eliminar definitivamente
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Descripción -->
+                                    <?php if (!empty($product['description'])): ?>
+                                        <p class="card-text text-muted small mb-2 d-none d-md-block">
+                                            <?php echo htmlspecialchars(substr($product['description'], 0, 50)); ?>...
+                                        </p>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Categoría -->
+                                    <div class="mb-2">
+                                        <span class="badge bg-secondary small">
+                                            <?php echo $product['category_name'] ?? 'Sin categoría'; ?>
+                                        </span>
+                                        <?php if ($product['track_inventory']): ?>
+                                            <span class="badge bg-secondary small ms-1">
+                                                <i class="fas fa-boxes me-1"></i>Inventario
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Info de stock si aplica -->
+                                    <?php if ($product['track_inventory'] && $product['stock_quantity'] !== null): ?>
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">Stock:</small>
+                                                <span class="small text-muted">
+                                                    <?php echo $product['stock_quantity']; ?> unidades
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <!-- Precio -->
+                                    <div class="mt-auto">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="h6 text-muted mb-0">
+                                                <?php echo formatPrice($product['price']); ?>
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Acciones -->
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-success flex-fill" 
+                                                    onclick="reactivateProduct(<?php echo $product['id']; ?>, '<?php echo htmlspecialchars($product['name']); ?>')"
+                                                    title="Reactivar producto">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Reactivar
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    onclick="editProduct(<?php echo $product['id']; ?>)" 
+                                                    title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
-    </div>
-<?php endif; ?>
+        <?php endif; ?>
     </div>
 
     <!-- Product Modal -->
@@ -2861,21 +2992,83 @@ function updateSearchResults(count) {
     }
 }
 
+// Función para mostrar/ocultar productos inactivos
 function toggleInactive() {
     const container = document.getElementById('inactiveProducts');
     const text = document.getElementById('toggleText');
+    const btn = document.getElementById('toggleInactiveBtn');
+    const icon = btn.querySelector('i');
     
     if (container.style.display === 'none') {
         container.style.display = 'block';
         text.textContent = 'Ocultar';
+        icon.className = 'fas fa-eye-slash me-1';
     } else {
         container.style.display = 'none';
         text.textContent = 'Mostrar';
+        icon.className = 'fas fa-eye me-1';
     }
 }
 
+// Función para reactivar un producto
+function reactivateProduct(id, name) {
+    if (!confirm(`¿Desea reactivar el producto "${name}"?\n\nEl producto volverá a estar disponible en el menú.`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.style.display = 'none';
+    
+    form.innerHTML = `
+        <input type="hidden" name="action" value="reactivate">
+        <input type="hidden" name="id" value="${id}">
+    `;
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Función para forzar eliminación permanente
+function forceDeleteProduct(id, name) {
+    const confirmMessage = `⚠️ ATENCIÓN: Eliminación Permanente
+
+¿Está COMPLETAMENTE SEGURO de que desea eliminar permanentemente "${name}"?
+
+Esta acción:
+• Eliminará el producto de la base de datos
+• Eliminará su imagen del servidor
+• NO se puede deshacer
+• Los pedidos existentes NO se verán afectados (mantendrán el nombre del producto)
+
+¿Desea continuar?`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    // Segunda confirmación
+    if (!confirm(`Última confirmación:\n\n¿Eliminar "${name}" PERMANENTEMENTE?`)) {
+        return;
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.style.display = 'none';
+    
+    form.innerHTML = `
+        <input type="hidden" name="action" value="force_delete">
+        <input type="hidden" name="id" value="${id}">
+    `;
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
 // ====== INICIALIZACIÓN FINAL ======
-// Asegurar que todas las funciones estén disponibles globalmente
+
+window.reactivateProduct = reactivateProduct;
+window.forceDeleteProduct = forceDeleteProduct;
 window.newProduct = newProduct;
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
