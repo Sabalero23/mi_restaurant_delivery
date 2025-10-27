@@ -57,63 +57,54 @@ $type_texts = [
         
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
+            font-size: 11px;
+            line-height: 1.2;
             width: 80mm;
             margin: 0 auto;
-            padding: 5mm;
+            padding: 3mm;
             background: white;
             color: #000;
         }
         
         .kitchen-header {
             text-align: center;
-            background: #000;
-            color: #fff;
-            padding: 15px;
-            margin: -5mm -5mm 10px -5mm;
-            border-bottom: 4px solid #ff6b6b;
-        }
-        
-        .kitchen-header h1 {
-            font-size: 24px;
-            margin: 0 0 5px 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            padding: 8px 0;
+            margin-bottom: 5px;
+            border-bottom: 2px solid #000;
         }
         
         .kitchen-header .order-number {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: bold;
-            color: #ff6b6b;
-            margin: 10px 0;
-            letter-spacing: 3px;
-        }
-        
-        .order-type {
-            background: #ff6b6b;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            padding: 12px;
-            margin: 10px -5mm;
-            text-transform: uppercase;
+            color: #000;
+            margin: 5px 0;
             letter-spacing: 2px;
         }
         
+        .order-type {
+            background: #000;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            padding: 6px;
+            margin: 5px -3mm;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
         .order-info {
-            background: #f8f9fa;
-            padding: 12px;
-            margin: 10px -5mm;
-            border-left: 5px solid #667eea;
+            padding: 6px 0;
+            margin: 5px 0;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            font-size: 10px;
         }
         
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
-            font-size: 15px;
+            margin: 3px 0;
         }
         
         .info-row strong {
@@ -121,83 +112,86 @@ $type_texts = [
         }
         
         .section-title {
-            background: #667eea;
-            color: white;
-            font-size: 18px;
+            font-size: 12px;
             font-weight: bold;
-            padding: 10px;
-            margin: 15px -5mm 10px -5mm;
+            padding: 5px 0;
+            margin: 8px 0 5px 0;
             text-transform: uppercase;
+            border-bottom: 2px solid #000;
         }
         
         .item {
             background: #fff;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            padding: 8px 10px;
-            margin-bottom: 8px;
+            border: 1px solid #000;
+            border-radius: 3px;
+            padding: 5px 6px;
+            margin-bottom: 4px;
             page-break-inside: avoid;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
         }
         
         .item-quantity {
-            background: #ff6b6b;
+            background: #000;
             color: white;
-            font-size: 18px;
+            font-size: 13px;
             font-weight: bold;
-            width: 35px;
-            height: 35px;
+            min-width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            float: left;
-            margin-right: 10px;
-            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        
+        .item-content {
+            flex: 1;
         }
         
         .item-name {
-            font-size: 15px;
+            font-size: 12px;
             font-weight: bold;
             color: #000;
-            margin-bottom: 4px;
             text-transform: uppercase;
             line-height: 1.2;
         }
         
         .item-notes {
             background: #fff9e6;
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            margin-top: 10px;
-            font-size: 14px;
+            border-left: 3px solid #ffc107;
+            padding: 5px;
+            margin-top: 4px;
+            font-size: 10px;
             font-weight: bold;
             color: #856404;
         }
         
         .item-notes::before {
-            content: '⚠️ NOTA: ';
+            content: '⚠️ ';
             font-weight: bold;
-            color: #ff6b6b;
+            color: #000;
         }
         
         .separator {
             border: none;
-            border-top: 3px dashed #000;
-            margin: 20px -5mm;
+            border-top: 2px dashed #000;
+            margin: 10px -3mm;
         }
         
         .footer {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 3px solid #000;
-            font-size: 13px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 2px solid #000;
+            font-size: 10px;
         }
         
         .time {
-            font-size: 16px;
+            font-size: 11px;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 5px;
         }
         
         .no-print {
@@ -214,9 +208,7 @@ $type_texts = [
                 print-color-adjust: exact;
             }
             
-            .kitchen-header,
             .order-type,
-            .section-title,
             .item-quantity,
             .item-notes {
                 -webkit-print-color-adjust: exact;
@@ -230,7 +222,7 @@ $type_texts = [
             right: 10px;
             background: white;
             padding: 15px;
-            border: 3px solid #667eea;
+            border: 3px solid #000;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
@@ -247,12 +239,12 @@ $type_texts = [
         }
         
         .print-btn {
-            background: #667eea;
+            background: #000;
             color: white;
         }
         
         .print-btn:hover {
-            background: #5568d3;
+            background: #333;
         }
         
         .close-btn {
@@ -264,14 +256,20 @@ $type_texts = [
             background: #5a6268;
         }
         
-        /* Highlight urgent info */
-        .urgent {
-            animation: pulse 2s infinite;
+        .notes-section {
+            margin: 8px 0;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        .notes-section .item-notes {
+            margin: 5px 0;
+            padding: 6px;
+            font-size: 10px;
+        }
+        
+        .notes-section strong {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 11px;
         }
     </style>
 </head>
@@ -288,12 +286,11 @@ $type_texts = [
 
     <!-- Kitchen Header -->
     <div class="kitchen-header">
-        <h1>🍴 COCINA</h1>
         <div class="order-number">#<?php echo $order['order_number']; ?></div>
     </div>
     
     <!-- Order Type -->
-    <div class="order-type <?php echo $order['type'] === 'delivery' ? 'urgent' : ''; ?>">
+    <div class="order-type">
         <?php echo $type_texts[$order['type']]; ?>
         <?php if ($order['table_number']): ?>
             - MESA <?php echo $order['table_number']; ?>
@@ -322,52 +319,52 @@ $type_texts = [
     
     <!-- Items Section -->
     <div class="section-title">
-        📋 PRODUCTOS A PREPARAR
+        📋 PRODUCTOS
     </div>
     
     <?php foreach ($order_items as $item): ?>
         <div class="item">
             <div class="item-quantity"><?php echo $item['quantity']; ?>x</div>
-            <div class="item-name"><?php echo htmlspecialchars($item['product_name']); ?></div>
-            <div style="clear: both;"></div>
-            
-            <?php if (!empty($item['notes'])): ?>
-                <div class="item-notes">
-                    <?php echo nl2br(htmlspecialchars($item['notes'])); ?>
-                </div>
-            <?php endif; ?>
+            <div class="item-content">
+                <div class="item-name"><?php echo htmlspecialchars($item['product_name']); ?></div>
+                <?php if (!empty($item['notes'])): ?>
+                    <div class="item-notes">
+                        <?php echo nl2br(htmlspecialchars($item['notes'])); ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     <?php endforeach; ?>
     
-    <!-- Separator -->
-    <div class="separator"></div>
-    
     <!-- Order Notes -->
     <?php if (!empty($order['notes']) || !empty($order['customer_notes'])): ?>
+        <div class="separator"></div>
         <div class="section-title">
-            📝 NOTAS IMPORTANTES
+            📝 NOTAS
         </div>
-        <div class="item-notes" style="margin: 10px 0;">
+        <div class="notes-section">
             <?php if (!empty($order['notes'])): ?>
-                <div style="margin-bottom: 8px;">
-                    <strong>Notas de la orden:</strong><br>
+                <div class="item-notes">
+                    <strong>Orden:</strong>
                     <?php echo nl2br(htmlspecialchars($order['notes'])); ?>
                 </div>
             <?php endif; ?>
             <?php if (!empty($order['customer_notes'])): ?>
-                <div>
-                    <strong>Notas del cliente:</strong><br>
+                <div class="item-notes">
+                    <strong>Cliente:</strong>
                     <?php echo nl2br(htmlspecialchars($order['customer_notes'])); ?>
                 </div>
             <?php endif; ?>
         </div>
-        <div class="separator"></div>
     <?php endif; ?>
+    
+    <!-- Separator -->
+    <div class="separator"></div>
     
     <!-- Footer -->
     <div class="footer">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
-            ¡ORDEN LISTA PARA PREPARAR!
+        <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px;">
+            ¡ORDEN LISTA!
         </div>
         <div class="time">
             🕐 <?php echo date('d/m/Y H:i:s'); ?>
