@@ -798,33 +798,51 @@ body {
     color: #155724;
 }
 
+
+/* Responsive improvements */
+
 /* Footer mejorado */
 footer {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     margin-top: 4rem;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
 }
 
 footer h5 {
     color: #fff;
     font-weight: 700;
     margin-bottom: 1rem;
+    font-size: 1.1rem;
 }
 
 footer p {
-    color: #adb5bd;
+    color: rgba(255, 255, 255, 0.8);
     margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
 footer a {
     color: #20c997;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 footer a:hover {
     color: #17a2b8;
 }
 
-/* Responsive improvements */
+footer .hover-link:hover {
+    color: #fff !important;
+    text-decoration: underline !important;
+}
+
+footer .text-white-50 {
+    transition: all 0.3s ease;
+}
+
+footer hr {
+    opacity: 0.3;
+}
+
 @media (max-width: 768px) {
     .header h1 {
         font-size: 2rem;
@@ -1272,9 +1290,6 @@ p {
         Debe enviar el WhatsApp para confirmar su pedido y recibir actualizaciones.
     </div>
     
-    <div class="alert alert-info mb-4">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>¿Por qué es necesario?</strong><br>
         Para poder enviarle confirmación, tiempo de entrega y actualizaciones del estado de su pedido.
     </div>
     
@@ -1313,11 +1328,12 @@ p {
         </div>
     </div>
 
+
     <!-- Footer -->
     <footer class="text-white py-4 mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <h5><?php echo $restaurant_name; ?></h5>
                     <p class="mb-1">
                         <i class="fas fa-map-marker-alt me-2"></i>
@@ -1327,29 +1343,62 @@ p {
                         <i class="fas fa-phone me-2"></i>
                         <?php echo $settings['restaurant_phone'] ?? 'Teléfono no disponible'; ?>
                     </p>
+                    <?php if ($whatsapp_number): ?>
+                    <p class="mb-0">
+                        <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $whatsapp_number); ?>" 
+                           class="text-success text-decoration-none" target="_blank">
+                            <i class="fab fa-whatsapp me-2"></i>
+                            WhatsApp: <?php echo $whatsapp_number; ?>
+                        </a>
+                    </p>
+                    <?php endif; ?>
                 </div>
-                <div class="col-md-6 text-md-end">
+                <div class="col-md-4 text-center">
                     <h5>Horarios de atención</h5>
-                    <p class="mb-1">Lunes a Domingo: <?php echo $opening_time; ?> - <?php echo $closing_time; ?></p>
+                    <p class="mb-1">Lunes a Domingo</p>
+                    <p class="mb-1"><?php echo $opening_time; ?> - <?php echo $closing_time; ?></p>
                     <p class="mb-0">
                         <i class="fas fa-utensils me-2"></i>
                         Cocina hasta las <?php echo $kitchen_closing_time; ?>
                     </p>
-                    <?php if ($whatsapp_number): ?>
-                        <p class="mt-2">
-                            <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $whatsapp_number); ?>" 
-                               class="text-success text-decoration-none" target="_blank">
-                                <i class="fab fa-whatsapp me-2"></i>
-                                WhatsApp: <?php echo $whatsapp_number; ?>
-                            </a>
-                        </p>
-                    <?php endif; ?>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <h5>Información Legal</h5>
+                    <p class="mb-1">
+                        <a href="privacy.php" class="text-white-50 text-decoration-none hover-link">
+                            <i class="fas fa-shield-alt me-2"></i>Política de Privacidad
+                        </a>
+                    </p>
+                    <p class="mb-1">
+                        <a href="terms.php" class="text-white-50 text-decoration-none hover-link">
+                            <i class="fas fa-file-contract me-2"></i>Términos y Condiciones
+                        </a>
+                    </p>
+                    <p class="mb-0">
+                        <a href="conditions.php" class="text-white-50 text-decoration-none hover-link">
+                            <i class="fas fa-handshake me-2"></i>Condiciones de Servicio
+                        </a>
+                    </p>
+                </div>
+            </div>
+            <hr class="my-3 bg-white opacity-25">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <small class="text-white-50">
+                        <i class="fas fa-utensils me-1"></i>
+                        Sistema de Gestión Gastronómica v2.1.0
+                        | 
+                        Desarrollado por 
+                        <a href="https://cellcomweb.com.ar" target="_blank" class="text-info text-decoration-none">
+                            Cellcom Technology
+                        </a>
+                        | © <?php echo date('Y'); ?>
+                    </small>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
     <?php if ($google_maps_api_key && $google_maps_api_key !== 'TU_API_KEY_AQUI'): ?>
