@@ -181,6 +181,10 @@ if (file_exists($theme_file)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    
     <!-- Tema dinámico -->
     <?php if (file_exists('../assets/css/generate-theme.php')): ?>
         <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
@@ -355,39 +359,58 @@ if (file_exists($theme_file)) {
         font-weight: 600;
     }
 
-    /* Product cards */
-    .product-card {
-        border: none;
-        border-radius: var(--border-radius-large);
-        box-shadow: var(--shadow-base);
-        transition: transform var(--transition-base);
-        height: 100%;
-        overflow: hidden;
-        background: #ffffff !important;
-        cursor: pointer;
+    /* DataTables customization */
+    .dataTables_wrapper {
+        padding: 0;
     }
 
-    .product-card:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--shadow-large);
+    .dataTables_filter input {
+        border-radius: var(--border-radius-base);
+        border-color: #dee2e6;
     }
 
-    .product-image {
-        height: 150px;
+    .dataTables_filter input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    table.dataTable thead th {
+        background: #f8f9fa !important;
+        border-bottom: 2px solid #dee2e6 !important;
+        font-weight: 600;
+        color: #212529 !important;
+    }
+
+    table.dataTable tbody tr {
+        transition: var(--transition-base);
+    }
+
+    table.dataTable tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .product-image-small {
+        width: 50px;
+        height: 50px;
         object-fit: cover;
-        width: 100%;
-        background: #f8f9fa;
+        border-radius: 8px;
     }
 
+    .product-image-placeholder {
+        width: 50px;
+        height: 50px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Product price */
     .product-price {
-        font-size: 1.25rem;
+        font-size: 1.1rem;
         font-weight: bold;
         color: var(--success-color);
-    }
-
-    .product-unavailable {
-        opacity: 0.6;
-        cursor: not-allowed;
     }
 
     /* Order summary */
@@ -447,6 +470,40 @@ if (file_exists($theme_file)) {
         border-color: var(--secondary-color);
     }
 
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    /* Quantity controls */
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .quantity-control .btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .quantity-control input {
+        width: 60px;
+        text-align: center;
+    }
+
     /* Responsive */
     @media (max-width: 991.98px) {
         .mobile-topbar {
@@ -486,10 +543,6 @@ if (file_exists($theme_file)) {
             top: 0;
             margin-bottom: 1.5rem;
         }
-
-        .product-image {
-            height: 120px;
-        }
     }
 
     @media (max-width: 576px) {
@@ -510,10 +563,6 @@ if (file_exists($theme_file)) {
             padding: 0.75rem;
         }
 
-        .product-image {
-            height: 100px;
-        }
-
         .product-price {
             font-size: 1rem;
         }
@@ -522,52 +571,6 @@ if (file_exists($theme_file)) {
             padding: 0.4rem 1rem;
             font-size: 0.875rem;
         }
-    }
-
-    /* Table for order items */
-    .table {
-        color: #212529 !important;
-    }
-
-    .table th {
-        background: #f8f9fa !important;
-        color: #212529 !important;
-        font-weight: 600;
-        border-bottom: 2px solid #dee2e6;
-    }
-
-    /* Empty state */
-    .empty-state {
-        text-align: center;
-        padding: 3rem 1rem;
-        color: #6c757d;
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-    }
-
-    /* Quantity controls */
-    .quantity-control {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .quantity-control .btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .quantity-control input {
-        width: 60px;
-        text-align: center;
     }
     </style>
 </head>
@@ -702,7 +705,7 @@ if (file_exists($theme_file)) {
                         </div>
                     <?php endif; ?>
 
-                    <!-- Products Grid -->
+                    <!-- Products Table with DataTables -->
                     <div class="card">
                         <div class="card-header">
                             <i class="fas fa-utensils me-2"></i>
@@ -715,36 +718,72 @@ if (file_exists($theme_file)) {
                                     <p>No hay productos disponibles</p>
                                 </div>
                             <?php else: ?>
-                                <div class="row g-3" id="productsGrid">
-                                    <?php foreach ($products as $product): ?>
-                                        <div class="col-6 col-md-4 col-lg-3 product-item" data-category="<?php echo $product['category_id']; ?>">
-                                            <div class="product-card <?php echo !$product['is_available'] ? 'product-unavailable' : ''; ?>"
-                                                 onclick="<?php echo $product['is_available'] ? 'addProductToOrder(' . $product['id'] . ')' : ''; ?>">
-                                                <?php if ($product['image']): ?>
-                                                    <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
-                                                         alt="<?php echo htmlspecialchars($product['name']); ?>" 
-                                                         class="product-image">
-                                                <?php else: ?>
-                                                    <div class="product-image d-flex align-items-center justify-content-center bg-light">
-                                                        <i class="fas fa-utensils fa-3x text-muted"></i>
-                                                    </div>
-                                                <?php endif; ?>
-                                                <div class="card-body p-3">
-                                                    <h6 class="card-title mb-2"><?php echo htmlspecialchars($product['name']); ?></h6>
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <span class="product-price"><?php echo formatPrice($product['price']); ?></span>
-                                                        <?php if (!$product['is_available']): ?>
-                                                            <span class="badge bg-danger">No disponible</span>
+                                <div class="table-responsive">
+                                    <table id="productsTable" class="table table-hover" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Imagen</th>
+                                                <th>Producto</th>
+                                                <th>Categoría</th>
+                                                <th>Precio</th>
+                                                <th>Estado</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($products as $product): ?>
+                                                <tr class="<?php echo !$product['is_available'] ? 'table-secondary' : ''; ?>">
+                                                    <td>
+                                                        <?php if ($product['image']): ?>
+                                                            <img src="../<?php echo htmlspecialchars($product['image']); ?>" 
+                                                                 alt="<?php echo htmlspecialchars($product['name']); ?>" 
+                                                                 class="product-image-small">
                                                         <?php else: ?>
-                                                            <button class="btn btn-sm btn-primary">
-                                                                <i class="fas fa-plus"></i>
+                                                            <div class="product-image-placeholder">
+                                                                <i class="fas fa-utensils text-muted"></i>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <strong><?php echo htmlspecialchars($product['name']); ?></strong>
+                                                        <?php if ($product['description']): ?>
+                                                            <br><small class="text-muted"><?php echo htmlspecialchars(substr($product['description'], 0, 50)); ?><?php echo strlen($product['description']) > 50 ? '...' : ''; ?></small>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php 
+                                                        $category = array_filter($categories, function($cat) use ($product) {
+                                                            return $cat['id'] == $product['category_id'];
+                                                        });
+                                                        $category = reset($category);
+                                                        echo $category ? htmlspecialchars($category['name']) : 'Sin categoría';
+                                                        ?>
+                                                    </td>
+                                                    <td>
+                                                        <span class="product-price"><?php echo formatPrice($product['price']); ?></span>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($product['is_available']): ?>
+                                                            <span class="badge bg-success">Disponible</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger">No disponible</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ($product['is_available']): ?>
+                                                            <button type="button" class="btn btn-sm btn-primary" onclick="addProductToOrder(<?php echo $product['id']; ?>)">
+                                                                <i class="fas fa-plus me-1"></i>Agregar
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <button type="button" class="btn btn-sm btn-secondary" disabled>
+                                                                <i class="fas fa-ban me-1"></i>No disponible
                                                             </button>
                                                         <?php endif; ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -867,12 +906,24 @@ if (file_exists($theme_file)) {
         </div>
     </div>
 
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Bootstrap Bundle -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    
     <script>
         // Mobile menu functionality
         document.addEventListener('DOMContentLoaded', function() {
             initializeMobileMenu();
             initializeCategoryFilter();
+            initializeDataTable();
         });
 
         function initializeMobileMenu() {
@@ -920,10 +971,29 @@ if (file_exists($theme_file)) {
             document.body.style.overflow = '';
         }
 
+        // Initialize DataTable
+        function initializeDataTable() {
+            if (document.getElementById('productsTable')) {
+                $('#productsTable').DataTable({
+                    responsive: true,
+                    language: {
+                        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+                    },
+                    pageLength: 10,
+                    order: [[1, 'asc']], // Ordenar por nombre de producto
+                    columnDefs: [
+                        { orderable: false, targets: [0, 5] }, // Deshabilitar ordenamiento en imagen y acciones
+                        { responsivePriority: 1, targets: 1 }, // Prioridad en responsive para nombre
+                        { responsivePriority: 2, targets: 5 }  // Prioridad en responsive para acciones
+                    ],
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip'
+                });
+            }
+        }
+
         // Category filter
         function initializeCategoryFilter() {
             const categoryPills = document.querySelectorAll('.category-pill');
-            const productItems = document.querySelectorAll('.product-item');
 
             categoryPills.forEach(pill => {
                 pill.addEventListener('click', function(e) {
@@ -935,14 +1005,16 @@ if (file_exists($theme_file)) {
                     
                     const category = this.dataset.category;
                     
-                    // Filter products
-                    productItems.forEach(item => {
-                        if (category === 'all' || item.dataset.category === category) {
-                            item.style.display = 'block';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
+                    // Filter DataTable
+                    const table = $('#productsTable').DataTable();
+                    
+                    if (category === 'all') {
+                        table.column(2).search('').draw();
+                    } else {
+                        // Get category name from the pill text
+                        const categoryName = this.textContent.trim();
+                        table.column(2).search(categoryName).draw();
+                    }
                 });
             });
         }
