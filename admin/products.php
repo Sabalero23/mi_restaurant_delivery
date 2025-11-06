@@ -91,8 +91,8 @@ function createProduct() {
     
     $data = [
         'category_id' => $_POST['category_id'] ?: null,
-        'name' => sanitize($_POST['name']),
-        'description' => sanitize($_POST['description']),
+        'name' => trim($_POST['name']),
+        'description' => trim($_POST['description']),
         'price' => floatval($_POST['price']),
         'cost' => floatval($_POST['cost']),
         'preparation_time' => intval($_POST['preparation_time']),
@@ -137,8 +137,8 @@ function updateProduct() {
     
     $data = [
         'category_id' => $_POST['category_id'] ?: null,
-        'name' => sanitize($_POST['name']),
-        'description' => sanitize($_POST['description']),
+        'name' => trim($_POST['name']),
+        'description' => trim($_POST['description']),
         'price' => floatval($_POST['price']),
         'cost' => floatval($_POST['cost']),
         'preparation_time' => intval($_POST['preparation_time']),
