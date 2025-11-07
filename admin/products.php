@@ -76,6 +76,9 @@ if ($_POST && isset($_POST['action'])) {
         case 'force_delete':
             $result = forceDeleteProduct();
             break;
+        case 'bulk_update':
+            $result = bulkUpdateProducts();
+            break;
     }
     
     if (isset($result['success']) && $result['success']) {
@@ -244,6 +247,62 @@ function forceDeleteProduct() {
         }
     } catch (Exception $e) {
         return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Actualización masiva de productos
+ */
+function bulkUpdateProducts() {
+    global $productModel;
+    
+    if (!isset($_POST['products']) || !is_array($_POST['products'])) {
+        return ['success' => false, 'message' => 'No se recibieron productos para actualizar'];
+    }
+    
+    $updated = 0;
+    $errors = [];
+    
+    foreach ($_POST['products'] as $productData) {
+        $id = intval($productData['id']);
+        $product = $productModel->getById($id);
+        
+        if (!$product) {
+            $errors[] = "Producto ID $id no encontrado";
+            continue;
+        }
+        
+        $data = [
+            'stock_quantity' => isset($productData['stock']) ? intval($productData['stock']) : $product['stock_quantity'],
+            'cost' => isset($productData['cost']) ? floatval($productData['cost']) : $product['cost'],
+            'price' => isset($productData['price']) ? floatval($productData['price']) : $product['price'],
+            // Mantener los demás campos sin cambios
+            'category_id' => $product['category_id'],
+            'name' => $product['name'],
+            'description' => $product['description'],
+            'preparation_time' => $product['preparation_time'],
+            'is_available' => $product['is_available'],
+            'is_active' => $product['is_active'],
+            'track_inventory' => $product['track_inventory'],
+            'low_stock_alert' => $product['low_stock_alert'],
+            'image' => $product['image']
+        ];
+        
+        if ($productModel->update($id, $data)) {
+            $updated++;
+        } else {
+            $errors[] = "Error al actualizar producto ID $id";
+        }
+    }
+    
+    if ($updated > 0) {
+        $message = "Se actualizaron $updated producto(s) exitosamente";
+        if (!empty($errors)) {
+            $message .= ". Errores: " . implode(", ", $errors);
+        }
+        return ['success' => true, 'message' => $message];
+    } else {
+        return ['success' => false, 'message' => 'No se pudo actualizar ningún producto. ' . implode(", ", $errors)];
     }
 }
 
@@ -1081,6 +1140,37 @@ $low_stock_products = getLowStockProducts();
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
+
+/* Estilos para el modal de edición masiva */
+.bulk-edit-modal .modal-dialog {
+    max-width: 90%;
+}
+
+.bulk-edit-table {
+    font-size: 0.9rem;
+}
+
+.bulk-edit-table th {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.bulk-edit-table input {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.bulk-edit-input {
+    width: 100%;
+    min-width: 80px;
+}
     </style>
 </head>
 <body>
@@ -1097,9 +1187,13 @@ $low_stock_products = getLowStockProducts();
                     <p class="text-muted mb-0">Administra el menú de tu restaurante</p>
                 </div>
                 <div>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#productModal" onclick="newProduct()">
+                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#productModal" onclick="newProduct()">
                         <i class="fas fa-plus me-1"></i>
                         <span class="d-none d-sm-inline">Nuevo </span>Producto
+                    </button>
+                    <button class="btn btn-info" onclick="openBulkEditModal()">
+                        <i class="fas fa-edit me-1"></i>
+                        <span class="d-none d-sm-inline">Edición </span>Masiva
                     </button>
                 </div>
             </div>
@@ -1938,6 +2032,55 @@ $low_stock_products = getLowStockProducts();
                         <button type="submit" class="btn btn-primary" id="submitStockBtn">
                             <i class="fas fa-save me-1"></i>
                             Ajustar Stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edición Masiva -->
+    <div class="modal fade bulk-edit-modal" id="bulkEditModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edición Masiva de Productos
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="bulkEditForm" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="bulk_update">
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Edita los campos que desees modificar. Solo se actualizarán los productos cuyos valores cambies.
+                        </div>
+
+                        <div class="table-container">
+                            <table class="table table-striped table-hover bulk-edit-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30%">Producto</th>
+                                        <th style="width: 15%">Stock Actual</th>
+                                        <th style="width: 20%">Precio Costo</th>
+                                        <th style="width: 20%">Precio Venta</th>
+                                        <th style="width: 15%">Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bulkEditTableBody">
+                                    <!-- Se llenará dinámicamente con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Guardar Todos los Cambios
                         </button>
                     </div>
                 </form>
@@ -3161,10 +3304,182 @@ Esta acción:
     form.submit();
 }
 
+// ====== FUNCIONES DE EDICIÓN MASIVA ======
+let originalBulkData = {};
+
+function openBulkEditModal() {
+    // Cargar todos los productos activos
+    fetch('get_all_products.php')
+        .then(response => response.json())
+        .then(products => {
+            const tbody = document.getElementById('bulkEditTableBody');
+            tbody.innerHTML = '';
+            originalBulkData = {};
+            
+            products.forEach(product => {
+                // Guardar datos originales
+                originalBulkData[product.id] = {
+                    stock: product.stock_quantity || 0,
+                    cost: product.cost,
+                    price: product.price
+                };
+                
+                const row = document.createElement('tr');
+                const profit = product.price - product.cost;
+                const profitPercent = product.cost > 0 ? ((profit / product.cost) * 100).toFixed(1) : 0;
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${escapeHtml(product.name)}</strong>
+                        ${product.category_name ? '<br><small class="text-muted">' + escapeHtml(product.category_name) + '</small>' : ''}
+                    </td>
+                    <td>
+                        ${product.track_inventory ? 
+                            `<input type="number" class="form-control bulk-edit-input" 
+                                   data-product-id="${product.id}" 
+                                   data-field="stock" 
+                                   value="${product.stock_quantity || 0}" 
+                                   min="0" 
+                                   onchange="updateBulkProfit(${product.id})">` 
+                            : '<span class="text-muted">N/A</span>'}
+                    </td>
+                    <td>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control bulk-edit-input" 
+                                   data-product-id="${product.id}" 
+                                   data-field="cost" 
+                                   value="${product.cost}" 
+                                   min="0" 
+                                   step="0.01" 
+                                   onchange="updateBulkProfit(${product.id})">
+                        </div>
+                    </td>
+                    <td>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control bulk-edit-input" 
+                                   data-product-id="${product.id}" 
+                                   data-field="price" 
+                                   value="${product.price}" 
+                                   min="0" 
+                                   step="0.01" 
+                                   onchange="updateBulkProfit(${product.id})">
+                        </div>
+                    </td>
+                    <td>
+                        <span id="profit-${product.id}" class="badge ${profit >= 0 ? 'bg-success' : 'bg-danger'}">
+                            $${profit.toFixed(2)} (${profitPercent}%)
+                        </span>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('bulkEditModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar los productos');
+        });
+}
+
+function updateBulkProfit(productId) {
+    const costInput = document.querySelector(`input[data-product-id="${productId}"][data-field="cost"]`);
+    const priceInput = document.querySelector(`input[data-product-id="${productId}"][data-field="price"]`);
+    const profitSpan = document.getElementById(`profit-${productId}`);
+    
+    if (costInput && priceInput && profitSpan) {
+        const cost = parseFloat(costInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const profit = price - cost;
+        const profitPercent = cost > 0 ? ((profit / cost) * 100).toFixed(1) : 0;
+        
+        profitSpan.className = `badge ${profit >= 0 ? 'bg-success' : 'bg-danger'}`;
+        profitSpan.textContent = `$${profit.toFixed(2)} (${profitPercent}%)`;
+    }
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Interceptar envío del formulario de edición masiva
+document.addEventListener('DOMContentLoaded', function() {
+    const bulkEditForm = document.getElementById('bulkEditForm');
+    if (bulkEditForm) {
+        bulkEditForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const products = [];
+            const inputs = document.querySelectorAll('.bulk-edit-input');
+            
+            inputs.forEach(input => {
+                const productId = input.dataset.productId;
+                const field = input.dataset.field;
+                const value = input.value;
+                
+                // Solo agregar si el valor cambió
+                if (originalBulkData[productId] && originalBulkData[productId][field] != value) {
+                    let product = products.find(p => p.id == productId);
+                    if (!product) {
+                        product = { id: productId };
+                        products.push(product);
+                    }
+                    product[field] = value;
+                }
+            });
+            
+            if (products.length === 0) {
+                alert('No hay cambios para guardar');
+                return;
+            }
+            
+            if (!confirm(`¿Desea guardar los cambios en ${products.length} producto(s)?`)) {
+                return;
+            }
+            
+            // Crear formulario con los productos modificados
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            let formHtml = '<input type="hidden" name="action" value="bulk_update">';
+            products.forEach((product, index) => {
+                formHtml += `<input type="hidden" name="products[${index}][id]" value="${product.id}">`;
+                if (product.stock !== undefined) {
+                    formHtml += `<input type="hidden" name="products[${index}][stock]" value="${product.stock}">`;
+                }
+                if (product.cost !== undefined) {
+                    formHtml += `<input type="hidden" name="products[${index}][cost]" value="${product.cost}">`;
+                }
+                if (product.price !== undefined) {
+                    formHtml += `<input type="hidden" name="products[${index}][price]" value="${product.price}">`;
+                }
+            });
+            
+            form.innerHTML = formHtml;
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+});
+
 // ====== INICIALIZACIÓN FINAL ======
 
 window.reactivateProduct = reactivateProduct;
 window.forceDeleteProduct = forceDeleteProduct;
+window.openBulkEditModal = openBulkEditModal;
+window.updateBulkProfit = updateBulkProfit;
 window.newProduct = newProduct;
 window.editProduct = editProduct;
 window.deleteProduct = deleteProduct;
