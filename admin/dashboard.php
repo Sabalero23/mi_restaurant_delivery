@@ -1076,6 +1076,10 @@ let currentCallId = null;
 let lastOnlineOrdersCount = <?php echo isset($online_stats['pending_online']) ? $online_stats['pending_online'] : 0; ?>;
 let audioContext = null;
 let hasPermissionOnlineOrders = <?php echo $auth->hasPermission('online_orders') ? 'true' : 'false'; ?>;
+let lastTableOrdersCount = 0;
+let hasPermissionTableOrders = <?php echo $auth->hasPermission('orders') ? 'true' : 'false'; ?>;
+let lastTableOrderId = null;
+
 let notificationSoundsEnabled = true;
 
 // Inicializar audio context después de interacción del usuario
@@ -1234,6 +1238,187 @@ function checkCalls() {
         });
 }
 
+function checkTableOrders() {
+    if (!hasPermissionTableOrders) {
+        console.log('Sin permisos para verificar órdenes de mesa');
+        return;
+    }
+
+    console.log('Verificando nuevas órdenes de mesa...');
+
+    fetch('api/table-orders-recent.php?recent=5', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Respuesta API órdenes de mesa:', data);
+        
+        if (data && Array.isArray(data) && data.length > 0) {
+            const latestOrder = data[0];
+            const currentLatestId = latestOrder.id;
+            
+            console.log(`Última orden ID - Actual: ${currentLatestId}, Anterior: ${lastTableOrderId}`);
+            
+            // Si hay un ID anterior y es diferente al actual, hay nueva orden
+            if (lastTableOrderId !== null && currentLatestId !== lastTableOrderId) {
+                console.log('¡NUEVA ORDEN DE MESA DETECTADA!');
+                
+                // Mostrar alerta
+                showTableOrderAlert(latestOrder);
+                
+                // Reproducir sonido
+                playNotificationSound('default');
+                
+                // Vibración si está disponible
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            }
+            
+            // Actualizar el último ID
+            lastTableOrderId = currentLatestId;
+            
+            // También actualizar el contador (para otras funciones que lo usen)
+            lastTableOrdersCount = data.length;
+        } else if (data && Array.isArray(data) && data.length === 0) {
+            console.log('No hay órdenes de mesa actualmente');
+            lastTableOrderId = null;
+            lastTableOrdersCount = 0;
+        }
+    })
+    .catch(error => {
+        console.error('Error verificando órdenes de mesa:', error);
+    });
+}
+
+
+function showTableOrderAlert(order) {
+    console.log('Mostrando alerta de nueva orden de mesa:', order);
+    
+    // Crear modal dinámicamente si no existe
+    let modal = document.getElementById('tableOrderModal');
+    if (!modal) {
+        modal = createTableOrderModal();
+        document.body.appendChild(modal);
+    }
+    
+    const info = modal.querySelector('#tableOrderInfo');
+    const details = modal.querySelector('#tableOrderDetails');
+    
+    // Configurar contenido
+    const tableNumber = order.table_number || order.table_id || 'N/A';
+    const waiterName = order.waiter_name || 'Mesero';
+    const orderNumber = order.order_number || order.id;
+    
+    info.innerHTML = `
+        <i class="fas fa-utensils fa-3x text-primary mb-3"></i>
+        <h4>¡Nueva Orden de Mesa!</h4>
+    `;
+    
+    details.innerHTML = `
+        <div class="alert alert-info mb-0">
+            <div class="mb-2">
+                <i class="fas fa-receipt me-2"></i>
+                <strong>Orden:</strong> #${orderNumber}
+            </div>
+            <div class="mb-2">
+                <i class="fas fa-chair me-2"></i>
+                <strong>Mesa:</strong> ${tableNumber}
+            </div>
+            <div class="mb-2">
+                <i class="fas fa-user me-2"></i>
+                <strong>Mesero:</strong> ${waiterName}
+            </div>
+            <div>
+                <i class="fas fa-dollar-sign me-2"></i>
+                <strong>Total:</strong> ${formatPrice(order.total)}
+            </div>
+        </div>
+    `;
+
+    // Mostrar notificación visual flotante
+    const message = `🍽️ Nueva orden - Mesa ${tableNumber} por ${waiterName}`;
+    showVisualNotification(message, 'primary');
+
+    // Mostrar modal
+    try {
+        const bsModal = new bootstrap.Modal(modal, {
+            backdrop: 'static',
+            keyboard: false
+        });
+        bsModal.show();
+        
+        console.log('Modal de orden de mesa mostrado');
+    } catch (e) {
+        console.error('Error mostrando modal de orden de mesa:', e);
+    }
+}
+
+function createTableOrderModal() {
+    const modalHtml = `
+        <div class="modal fade" id="tableOrderModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-bell me-2"></i>
+                            Notificación de Orden
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3" id="tableOrderInfo">
+                            <i class="fas fa-utensils fa-3x text-primary mb-3"></i>
+                            <h4>Nueva Orden de Mesa</h4>
+                        </div>
+                        <div id="tableOrderDetails">
+                            <!-- Detalles de la orden -->
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button class="btn btn-primary me-2" onclick="goToOrders()">
+                            <i class="fas fa-list me-1"></i>Ver Órdenes
+                        </button>
+                        <button class="btn btn-outline-primary me-2" onclick="goToKitchen()">
+                            <i class="fas fa-fire me-1"></i>Ver Cocina
+                        </button>
+                        <button class="btn btn-secondary" onclick="dismissTableOrderAlert()">
+                            <i class="fas fa-times me-1"></i>Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = modalHtml;
+    return tempDiv.firstElementChild;
+}
+
+function goToOrders() {
+    window.location.href = 'orders.php';
+}
+
+function goToKitchen() {
+    window.location.href = 'kitchen.php';
+}
+
+function dismissTableOrderAlert() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('tableOrderModal'));
+    if (modal) {
+        modal.hide();
+    }
+}
+
 function checkOnlineOrders() {
     if (!hasPermissionOnlineOrders) {
         console.log('Sin permisos para verificar pedidos online');
@@ -1313,6 +1498,8 @@ function checkOnlineOrders() {
         console.error('Error verificando pedidos online:', error);
     });
 }
+
+
 
 // Verificar mensajes de WhatsApp nuevos
 let lastWhatsAppCheck = new Date().toISOString();
@@ -1625,6 +1812,11 @@ if (hasPermissionOnlineOrders) {
     setInterval(checkOnlineOrders, 15000);
 }
 
+// Revisar órdenes de mesa cada 10 segundos
+if (hasPermissionTableOrders) {
+    setInterval(checkTableOrders, 10000);
+}
+
 // Mobile menu functionality
 document.addEventListener('DOMContentLoaded', function() {
     initializeMobileMenu();
@@ -1650,7 +1842,18 @@ if (hasPermissionWhatsApp) {
     } else {
         console.log('Usuario sin permisos para pedidos online');
     }
-    
+        // Configurar verificación de órdenes de mesa
+    if (hasPermissionTableOrders) {
+        console.log('Configurando verificación automática de órdenes de mesa...');
+        
+        // Verificar inmediatamente después de 2 segundos
+        setTimeout(() => {
+            console.log('Primera verificación de órdenes de mesa...');
+            checkTableOrders();
+        }, 2000);
+    } else {
+        console.log('Usuario sin permisos para órdenes de mesa');
+    }
     console.log('Sistema de notificaciones inicializado');
     
     // Agregar después de la configuración de pedidos online

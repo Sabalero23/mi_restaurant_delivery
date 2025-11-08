@@ -18,10 +18,17 @@ $tableModel = new Table();
 $productModel = new Product();
 $categoryModel = new Category();
 
+// Initialize session cart if not exists
+if (!isset($_SESSION['temp_order'])) {
+    $_SESSION['temp_order'] = [
+        'items' => [],
+        'order_data' => []
+    ];
+}
+
 // Handle form submissions
 $message = '';
 $error = '';
-$current_order = null;
 $table_id = isset($_GET['table_id']) ? intval($_GET['table_id']) : null;
 $table = null;
 
@@ -33,109 +40,153 @@ if ($table_id) {
         $table_id = null;
     } else {
         // Check if table has active order
-        $current_order = $orderModel->getActiveOrderByTable($table_id);
+        $existing_order = $orderModel->getActiveOrderByTable($table_id);
+        if ($existing_order) {
+            // Redirect to existing order
+            header("Location: order-details.php?id=" . $existing_order['id']);
+            exit;
+        }
     }
 }
 
 if ($_POST && isset($_POST['action'])) {
     switch ($_POST['action']) {
-        case 'create_order':
-            $order_data = [
+        case 'save_order_info':
+            // Save order information to session
+            $_SESSION['temp_order']['order_data'] = [
                 'type' => sanitize($_POST['type']),
                 'table_id' => $table_id,
                 'customer_name' => sanitize($_POST['customer_name']),
                 'customer_phone' => sanitize($_POST['customer_phone']),
                 'customer_address' => sanitize($_POST['customer_address']),
                 'customer_notes' => sanitize($_POST['customer_notes']),
-                'waiter_id' => $_SESSION['user_id'],
-                'notes' => sanitize($_POST['notes']),
-                'subtotal' => 0,
-                'total' => 0
+                'notes' => sanitize($_POST['notes'])
             ];
-            
-            $order_id = $orderModel->create($order_data);
-            if ($order_id) {
-                // If it's a dine-in order, mark table as occupied
-                if ($_POST['type'] === 'dine_in' && $table_id) {
-                    $tableModel->occupyTable($table_id);
-                }
-                
-                // Redirect to add items
-                header("Location: order-create.php?order_id=$order_id" . ($table_id ? "&table_id=$table_id" : ""));
-                exit;
-            } else {
-                $error = 'Error al crear la orden';
-            }
+            $message = 'Información guardada. Ahora agrega productos a la orden.';
             break;
             
         case 'add_item':
-            $order_id = intval($_POST['order_id']);
             $product_id = intval($_POST['product_id']);
             $quantity = intval($_POST['quantity']);
             $notes = sanitize($_POST['item_notes']);
             
-            if ($orderModel->addItem($order_id, $product_id, $quantity, $notes)) {
-                $orderModel->updateTotal($order_id);
-                $message = 'Producto agregado exitosamente';
+            $product = $productModel->getById($product_id);
+            if ($product && $quantity > 0) {
+                $item_id = uniqid(); // Generate unique ID for cart item
                 
-                // Reload current order
-                $current_order = $orderModel->getById($order_id);
+                $_SESSION['temp_order']['items'][$item_id] = [
+                    'product_id' => $product_id,
+                    'product_name' => $product['name'],
+                    'quantity' => $quantity,
+                    'unit_price' => $product['price'],
+                    'subtotal' => $quantity * $product['price'],
+                    'notes' => $notes
+                ];
+                
+                $message = 'Producto agregado al carrito';
             } else {
                 $error = 'Error al agregar el producto';
             }
             break;
             
         case 'update_quantity':
-            $item_id = intval($_POST['item_id']);
+            $item_id = sanitize($_POST['item_id']);
             $quantity = intval($_POST['quantity']);
             
-            if ($orderModel->updateItemQuantity($item_id, $quantity)) {
-                $order_id = intval($_POST['order_id']);
-                $orderModel->updateTotal($order_id);
+            if (isset($_SESSION['temp_order']['items'][$item_id]) && $quantity > 0) {
+                $_SESSION['temp_order']['items'][$item_id]['quantity'] = $quantity;
+                $_SESSION['temp_order']['items'][$item_id]['subtotal'] = 
+                    $quantity * $_SESSION['temp_order']['items'][$item_id]['unit_price'];
                 $message = 'Cantidad actualizada';
-                
-                // Reload current order
-                $current_order = $orderModel->getById($order_id);
             } else {
                 $error = 'Error al actualizar la cantidad';
             }
             break;
             
         case 'remove_item':
-            $item_id = intval($_POST['item_id']);
+            $item_id = sanitize($_POST['item_id']);
             
-            if ($orderModel->removeItem($item_id)) {
-                $order_id = intval($_POST['order_id']);
-                $orderModel->updateTotal($order_id);
+            if (isset($_SESSION['temp_order']['items'][$item_id])) {
+                unset($_SESSION['temp_order']['items'][$item_id]);
                 $message = 'Producto eliminado';
-                
-                // Reload current order
-                $current_order = $orderModel->getById($order_id);
             } else {
                 $error = 'Error al eliminar el producto';
             }
             break;
             
         case 'finalize_order':
-            $order_id = intval($_POST['order_id']);
+            // Validate that we have order data and items
+            if (empty($_SESSION['temp_order']['order_data'])) {
+                $error = 'Debes completar la información de la orden primero';
+                break;
+            }
             
-            if ($orderModel->updateStatus($order_id, 'confirmed')) {
-                $message = 'Orden finalizada y confirmada';
+            if (empty($_SESSION['temp_order']['items'])) {
+                $error = 'Debes agregar al menos un producto a la orden';
+                break;
+            }
+            
+            // Calculate totals
+            $subtotal = 0;
+            foreach ($_SESSION['temp_order']['items'] as $item) {
+                $subtotal += $item['subtotal'];
+            }
+            
+            // Get settings for tax calculation
+            $settings = getSettings();
+            $tax_rate = floatval($settings['tax_rate'] ?? 0) / 100;
+            $delivery_fee_amount = floatval($settings['delivery_fee'] ?? 0);
+            
+            $tax = $subtotal * $tax_rate;
+            $delivery_fee = ($_SESSION['temp_order']['order_data']['type'] === 'delivery') ? $delivery_fee_amount : 0;
+            $total = $subtotal + $tax + $delivery_fee;
+            
+            // Create order in database
+            $order_data = $_SESSION['temp_order']['order_data'];
+            $order_data['subtotal'] = $subtotal;
+            $order_data['tax'] = $tax;
+            $order_data['delivery_fee'] = $delivery_fee;
+            $order_data['total'] = $total;
+            $order_data['waiter_id'] = $_SESSION['user_id'];
+            $order_data['created_by'] = $_SESSION['user_id'];
+            $order_data['status'] = 'confirmed';
+            
+            $order_id = $orderModel->create($order_data);
+            
+            if ($order_id) {
+                // Add items to order
+                foreach ($_SESSION['temp_order']['items'] as $item) {
+                    $orderModel->addItem(
+                        $order_id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        $item['unit_price'],
+                        $item['notes']
+                    );
+                }
+                
+                // If it's a dine-in order, mark table as occupied
+                if ($order_data['type'] === 'dine_in' && $order_data['table_id']) {
+                    $tableModel->occupyTable($order_data['table_id']);
+                }
+                
+                // Clear session
+                unset($_SESSION['temp_order']);
+                
+                // Redirect to order details
                 header("Location: order-details.php?id=$order_id");
                 exit;
             } else {
-                $error = 'Error al finalizar la orden';
+                $error = 'Error al crear la orden';
             }
             break;
-    }
-}
-
-// Get order if order_id is in URL
-if (isset($_GET['order_id'])) {
-    $current_order = $orderModel->getById(intval($_GET['order_id']));
-    if ($current_order && !$table_id && $current_order['table_id']) {
-        $table_id = $current_order['table_id'];
-        $table = $tableModel->getById($table_id);
+            
+        case 'cancel_order':
+            // Clear session
+            unset($_SESSION['temp_order']);
+            header("Location: " . ($table_id ? "tables.php" : "orders.php"));
+            exit;
+            break;
     }
 }
 
@@ -149,8 +200,24 @@ foreach ($products as $product) {
     $products_by_category[$product['category_id']][] = $product;
 }
 
+// Calculate cart totals
+$cart_subtotal = 0;
+$cart_items = $_SESSION['temp_order']['items'] ?? [];
+foreach ($cart_items as $item) {
+    $cart_subtotal += $item['subtotal'];
+}
+
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+$tax_rate = floatval($settings['tax_rate'] ?? 0) / 100;
+$delivery_fee_amount = floatval($settings['delivery_fee'] ?? 0);
+
+$cart_tax = $cart_subtotal * $tax_rate;
+$cart_delivery = (isset($_SESSION['temp_order']['order_data']['type']) && 
+                  $_SESSION['temp_order']['order_data']['type'] === 'delivery') ? $delivery_fee_amount : 0;
+$cart_total = $cart_subtotal + $cart_tax + $cart_delivery;
+
+$has_order_data = !empty($_SESSION['temp_order']['order_data']);
 
 // Incluir sistema de temas
 $theme_file = '../config/theme.php';
@@ -177,7 +244,7 @@ if (file_exists($theme_file)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $current_order ? 'Editar Orden' : 'Nueva Orden'; ?> - <?php echo $restaurant_name; ?></title>
+    <title>Nueva Orden - <?php echo $restaurant_name; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -191,7 +258,6 @@ if (file_exists($theme_file)) {
     <?php endif; ?>
     
     <style>
-    /* Variables CSS para el tema */
     :root {
         --primary-color: <?php echo $current_theme['primary_color'] ?? '#667eea'; ?>;
         --secondary-color: <?php echo $current_theme['secondary_color'] ?? '#764ba2'; ?>;
@@ -399,78 +465,40 @@ if (file_exists($theme_file)) {
     .product-image-placeholder {
         width: 50px;
         height: 50px;
-        background: #f8f9fa;
-        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 2px dashed #dee2e6;
     }
 
-    /* Product price */
     .product-price {
         font-size: 1.1rem;
-        font-weight: bold;
+        font-weight: 600;
         color: var(--success-color);
     }
 
-    /* Order summary */
-    .order-summary {
-        background: #ffffff !important;
-        border-radius: var(--border-radius-large);
-        box-shadow: var(--shadow-base);
-        position: sticky;
-        top: 2rem;
-    }
-
-    .order-item {
-        border-bottom: 1px solid #f0f0f0;
-        padding: 1rem;
-    }
-
-    .order-item:last-child {
-        border-bottom: none;
-    }
-
-    /* Category pills */
     .category-pill {
+        display: inline-block;
         padding: 0.5rem 1.25rem;
-        border-radius: 50px;
-        border: 2px solid var(--primary-color);
-        background: white;
-        color: var(--primary-color);
+        margin: 0.25rem;
+        border-radius: 2rem;
+        background: #f8f9fa;
+        color: #495057;
         text-decoration: none;
         transition: var(--transition-base);
-        display: inline-block;
-        margin: 0.25rem;
-        font-weight: 500;
+        border: 2px solid #dee2e6;
     }
 
     .category-pill:hover,
     .category-pill.active {
         background: var(--primary-color);
-        color: white;
+        color: var(--text-white) !important;
+        border-color: var(--primary-color);
         transform: translateY(-2px);
     }
 
-    /* Form controls */
-    .form-control:focus,
-    .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-
-    /* Buttons */
-    .btn-primary {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-    }
-
-    .btn-primary:hover {
-        background: var(--secondary-color);
-        border-color: var(--secondary-color);
-    }
-
-    /* Empty state */
     .empty-state {
         text-align: center;
         padding: 3rem 1rem;
@@ -480,38 +508,31 @@ if (file_exists($theme_file)) {
     .empty-state i {
         font-size: 4rem;
         margin-bottom: 1rem;
-        opacity: 0.3;
+        opacity: 0.5;
     }
 
-    /* Quantity controls */
-    .quantity-control {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    /* Cart summary styling */
+    .cart-summary {
+        position: sticky;
+        top: 2rem;
     }
 
-    .quantity-control .btn {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .cart-item {
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.75rem 0;
     }
 
-    .quantity-control input {
-        width: 60px;
-        text-align: center;
+    .cart-item:last-child {
+        border-bottom: none;
     }
 
-    /* Responsive */
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* Mobile Responsive */
     @media (max-width: 991.98px) {
-        .mobile-topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .sidebar {
             transform: translateX(-100%);
         }
@@ -524,29 +545,14 @@ if (file_exists($theme_file)) {
             display: flex;
         }
 
+        .mobile-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .main-content {
             margin-left: 0;
-            padding: 1rem;
-            padding-top: 4.5rem;
-        }
-
-        .page-header {
-            padding: 1rem;
-        }
-
-        .card-body {
-            padding: 1rem;
-        }
-
-        .order-summary {
-            position: relative;
-            top: 0;
-            margin-bottom: 1.5rem;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .main-content {
             padding: 0.5rem;
             padding-top: 4.5rem;
         }
@@ -571,6 +577,11 @@ if (file_exists($theme_file)) {
             padding: 0.4rem 1rem;
             font-size: 0.875rem;
         }
+
+        .cart-summary {
+            position: relative;
+            top: 0;
+        }
     }
     </style>
 </head>
@@ -585,20 +596,23 @@ if (file_exists($theme_file)) {
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div class="mb-2 mb-md-0">
                     <h2 class="mb-0">
-                        <?php if ($current_order): ?>
-                            <i class="fas fa-edit me-2"></i>Editar Orden #<?php echo $current_order['order_number']; ?>
-                        <?php else: ?>
-                            <i class="fas fa-plus-circle me-2"></i>Nueva Orden
-                        <?php endif; ?>
+                        <i class="fas fa-plus-circle me-2"></i>Nueva Orden
                     </h2>
                     <?php if ($table): ?>
                         <p class="text-muted mb-0">
-                            <i class="fas fa-chair me-1"></i>Mesa <?php echo $table['table_number']; ?>
+                            <i class="fas fa-chair me-1"></i>Mesa <?php echo $table['number']; ?>
                         </p>
                     <?php endif; ?>
                 </div>
                 <div>
-                    <a href="<?php echo $table ? 'tables.php' : 'orders.php'; ?>" class="btn btn-secondary">
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas cancelar? Se perderán todos los datos.');">
+                        <input type="hidden" name="action" value="cancel_order">
+                        <button type="submit" class="btn btn-secondary me-2">
+                            <i class="fas fa-times me-1"></i>
+                            Cancelar
+                        </button>
+                    </form>
+                    <a href="<?php echo $table ? 'tables.php' : 'orders.php'; ?>" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i>
                         Volver
                     </a>
@@ -623,64 +637,77 @@ if (file_exists($theme_file)) {
             </div>
         <?php endif; ?>
 
-        <?php if (!$current_order): ?>
-            <!-- Create Order Form -->
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-file-alt me-2"></i>
-                    Información de la Orden
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <input type="hidden" name="action" value="create_order">
-                        
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo de Orden *</label>
-                                <select name="type" class="form-select" required>
-                                    <option value="dine_in" <?php echo $table ? 'selected' : ''; ?>>Consumo en Mesa</option>
-                                    <option value="takeout">Para Llevar</option>
-                                    <option value="delivery">Delivery</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Nombre del Cliente</label>
-                                <input type="text" name="customer_name" class="form-control" placeholder="Opcional">
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Teléfono</label>
-                                <input type="tel" name="customer_phone" class="form-control" placeholder="Opcional">
-                            </div>
-                            
-                            <div class="col-md-8">
-                                <label class="form-label">Dirección</label>
-                                <input type="text" name="customer_address" class="form-control" placeholder="Opcional - para delivery">
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">Notas del Cliente</label>
-                                <input type="text" name="customer_notes" class="form-control" placeholder="Opcional">
-                            </div>
-                            
-                            <div class="col-12">
-                                <label class="form-label">Notas Internas</label>
-                                <textarea name="notes" class="form-control" rows="2" placeholder="Opcional"></textarea>
-                            </div>
-                            
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-1"></i>
-                                    Crear Orden y Agregar Productos
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
+        <!-- Order Information Form -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file-alt me-2"></i>
+                Información de la Orden
+                <?php if ($has_order_data): ?>
+                    <span class="badge bg-success ms-2">
+                        <i class="fas fa-check me-1"></i>Guardado
+                    </span>
+                <?php endif; ?>
             </div>
-        <?php else: ?>
-            <!-- Add Products to Order -->
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="save_order_info">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Orden *</label>
+                            <select name="type" class="form-select" required>
+                                <option value="dine_in" <?php echo ($table || (isset($_SESSION['temp_order']['order_data']['type']) && $_SESSION['temp_order']['order_data']['type'] === 'dine_in')) ? 'selected' : ''; ?>>Consumo en Mesa</option>
+                                <option value="takeout" <?php echo (isset($_SESSION['temp_order']['order_data']['type']) && $_SESSION['temp_order']['order_data']['type'] === 'takeout') ? 'selected' : ''; ?>>Para Llevar</option>
+                                <option value="delivery" <?php echo (isset($_SESSION['temp_order']['order_data']['type']) && $_SESSION['temp_order']['order_data']['type'] === 'delivery') ? 'selected' : ''; ?>>Delivery</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre del Cliente</label>
+                            <input type="text" name="customer_name" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_SESSION['temp_order']['order_data']['customer_name'] ?? ''); ?>"
+                                   placeholder="Opcional">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" name="customer_phone" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_SESSION['temp_order']['order_data']['customer_phone'] ?? ''); ?>"
+                                   placeholder="Opcional">
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" name="customer_address" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_SESSION['temp_order']['order_data']['customer_address'] ?? ''); ?>"
+                                   placeholder="Opcional - para delivery">
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Notas del Cliente</label>
+                            <input type="text" name="customer_notes" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_SESSION['temp_order']['order_data']['customer_notes'] ?? ''); ?>"
+                                   placeholder="Opcional">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label">Notas Internas</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Opcional"><?php echo htmlspecialchars($_SESSION['temp_order']['order_data']['notes'] ?? ''); ?></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                <?php echo $has_order_data ? 'Actualizar Información' : 'Guardar y Agregar Productos'; ?>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <?php if ($has_order_data): ?>
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Category Filter -->
@@ -705,7 +732,7 @@ if (file_exists($theme_file)) {
                         </div>
                     <?php endif; ?>
 
-                    <!-- Products Table with DataTables -->
+                    <!-- Products Table -->
                     <div class="card">
                         <div class="card-header">
                             <i class="fas fa-utensils me-2"></i>
@@ -750,33 +777,29 @@ if (file_exists($theme_file)) {
                                                             <br><small class="text-muted"><?php echo htmlspecialchars(substr($product['description'], 0, 50)); ?><?php echo strlen($product['description']) > 50 ? '...' : ''; ?></small>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <td><?php echo htmlspecialchars($product['category_name']); ?></td>
                                                     <td>
-                                                        <?php 
-                                                        $category = array_filter($categories, function($cat) use ($product) {
-                                                            return $cat['id'] == $product['category_id'];
-                                                        });
-                                                        $category = reset($category);
-                                                        echo $category ? htmlspecialchars($category['name']) : 'Sin categoría';
-                                                        ?>
-                                                    </td>
-                                                    <td>
-                                                        <span class="product-price"><?php echo formatPrice($product['price']); ?></span>
+                                                        <span class="product-price">
+                                                            <?php echo formatPrice($product['price']); ?>
+                                                        </span>
                                                     </td>
                                                     <td>
                                                         <?php if ($product['is_available']): ?>
                                                             <span class="badge bg-success">Disponible</span>
                                                         <?php else: ?>
-                                                            <span class="badge bg-danger">No disponible</span>
+                                                            <span class="badge bg-secondary">No Disponible</span>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
                                                         <?php if ($product['is_available']): ?>
-                                                            <button type="button" class="btn btn-sm btn-primary" onclick="addProductToOrder(<?php echo $product['id']; ?>)">
-                                                                <i class="fas fa-plus me-1"></i>Agregar
+                                                            <button class="btn btn-sm btn-primary" 
+                                                                    onclick="addProductToCart(<?php echo $product['id']; ?>)">
+                                                                <i class="fas fa-plus me-1"></i>
+                                                                Agregar
                                                             </button>
                                                         <?php else: ?>
-                                                            <button type="button" class="btn btn-sm btn-secondary" disabled>
-                                                                <i class="fas fa-ban me-1"></i>No disponible
+                                                            <button class="btn btn-sm btn-secondary" disabled>
+                                                                No Disponible
                                                             </button>
                                                         <?php endif; ?>
                                                     </td>
@@ -790,82 +813,101 @@ if (file_exists($theme_file)) {
                     </div>
                 </div>
 
-                <!-- Order Summary Sidebar -->
+                <!-- Cart Summary -->
                 <div class="col-lg-4">
-                    <div class="order-summary">
-                        <div class="card-header">
-                            <i class="fas fa-shopping-cart me-2"></i>
-                            Orden Actual
-                        </div>
-                        <div class="card-body p-0">
-                            <?php 
-                            $order_items = $orderModel->getItems($current_order['id']);
-                            if (empty($order_items)): 
-                            ?>
-                                <div class="empty-state py-4">
-                                    <i class="fas fa-shopping-cart"></i>
-                                    <p class="mb-0">Sin productos agregados</p>
-                                </div>
-                            <?php else: ?>
-                                <div style="max-height: 400px; overflow-y: auto;">
-                                    <?php foreach ($order_items as $item): ?>
-                                        <div class="order-item">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <div class="flex-grow-1">
-                                                    <strong><?php echo htmlspecialchars($item['product_name']); ?></strong>
-                                                    <?php if ($item['notes']): ?>
-                                                        <br><small class="text-muted"><?php echo htmlspecialchars($item['notes']); ?></small>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <form method="POST" class="d-inline">
-                                                    <input type="hidden" name="action" value="remove_item">
-                                                    <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
-                                                    <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar este producto?')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="quantity-control">
-                                                    <form method="POST" class="d-flex align-items-center gap-2">
-                                                        <input type="hidden" name="action" value="update_quantity">
-                                                        <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
-                                                        <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
-                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] - 1; ?>" class="btn btn-sm btn-outline-secondary" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
-                                                            <i class="fas fa-minus"></i>
-                                                        </button>
-                                                        <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>" class="form-control form-control-sm" min="1" readonly>
-                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] + 1; ?>" class="btn btn-sm btn-outline-secondary">
-                                                            <i class="fas fa-plus"></i>
+                    <div class="cart-summary">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                Resumen del Pedido
+                            </div>
+                            <div class="card-body">
+                                <?php if (empty($cart_items)): ?>
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-cart-plus fa-3x mb-3 opacity-50"></i>
+                                        <p>No hay productos en el carrito</p>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="mb-3">
+                                        <?php foreach ($cart_items as $item_id => $item): ?>
+                                            <div class="cart-item">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div class="flex-grow-1">
+                                                        <strong><?php echo htmlspecialchars($item['product_name']); ?></strong>
+                                                        <?php if ($item['notes']): ?>
+                                                            <br><small class="text-muted"><?php echo htmlspecialchars($item['notes']); ?></small>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <form method="POST" style="display:inline;">
+                                                        <input type="hidden" name="action" value="remove_item">
+                                                        <input type="hidden" name="item_id" value="<?php echo $item_id; ?>">
+                                                        <button type="submit" class="btn btn-xs btn-outline-danger ms-2" title="Eliminar">
+                                                            <i class="fas fa-times"></i>
                                                         </button>
                                                     </form>
                                                 </div>
-                                                <strong><?php echo formatPrice($item['subtotal']); ?></strong>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <form method="POST" class="d-flex align-items-center">
+                                                        <input type="hidden" name="action" value="update_quantity">
+                                                        <input type="hidden" name="item_id" value="<?php echo $item_id; ?>">
+                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] - 1; ?>" 
+                                                                class="btn btn-xs btn-outline-secondary" 
+                                                                <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+                                                        <span class="mx-2"><strong><?php echo $item['quantity']; ?></strong></span>
+                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] + 1; ?>" 
+                                                                class="btn btn-xs btn-outline-secondary">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </form>
+                                                    <strong><?php echo formatPrice($item['subtotal']); ?></strong>
+                                                </div>
                                             </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="card-footer bg-light">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <strong>Total:</strong>
-                                <strong class="h4 mb-0 text-success"><?php echo formatPrice($current_order['total']); ?></strong>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                            <?php if (!empty($order_items)): ?>
-                                <form method="POST">
-                                    <input type="hidden" name="action" value="finalize_order">
-                                    <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
-                                    <button type="submit" class="btn btn-success w-100">
-                                        <i class="fas fa-check me-1"></i>
-                                        Finalizar Orden
-                                    </button>
-                                </form>
+                            <?php if (!empty($cart_items)): ?>
+                                <div class="card-footer bg-light">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <strong><?php echo formatPrice($cart_subtotal); ?></strong>
+                                    </div>
+                                    <?php if ($cart_tax > 0): ?>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Impuestos (<?php echo number_format($tax_rate * 100, 1); ?>%):</span>
+                                            <strong><?php echo formatPrice($cart_tax); ?></strong>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($cart_delivery > 0): ?>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Envío:</span>
+                                            <strong><?php echo formatPrice($cart_delivery); ?></strong>
+                                        </div>
+                                    <?php endif; ?>
+                                    <hr>
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <strong>Total:</strong>
+                                        <strong class="h4 mb-0 text-success"><?php echo formatPrice($cart_total); ?></strong>
+                                    </div>
+                                    <form method="POST">
+                                        <input type="hidden" name="action" value="finalize_order">
+                                        <button type="submit" class="btn btn-success w-100">
+                                            <i class="fas fa-check me-1"></i>
+                                            Finalizar Orden
+                                        </button>
+                                    </form>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Completa la información de la orden para poder agregar productos.
             </div>
         <?php endif; ?>
     </div>
@@ -881,7 +923,6 @@ if (file_exists($theme_file)) {
                 <form method="POST">
                     <div class="modal-body">
                         <input type="hidden" name="action" value="add_item">
-                        <input type="hidden" name="order_id" value="<?php echo $current_order['id'] ?? ''; ?>">
                         <input type="hidden" name="product_id" id="modal_product_id">
                         
                         <div class="mb-3">
@@ -1019,8 +1060,8 @@ if (file_exists($theme_file)) {
             });
         }
 
-        // Add product to order
-        function addProductToOrder(productId) {
+        // Add product to cart
+        function addProductToCart(productId) {
             document.getElementById('modal_product_id').value = productId;
             const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
             modal.show();
