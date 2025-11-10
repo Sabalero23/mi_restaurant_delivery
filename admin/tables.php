@@ -1023,6 +1023,9 @@ if (file_exists($theme_file)) {
             document.getElementById('tableDetailsTitle').innerHTML = 
                 `<i class="fas fa-table me-2"></i>${table.number || 'Mesa'} - Detalles`;
             
+            const hasActiveOrders = table.active_orders && table.active_orders.length > 0;
+            const isOccupied = table.status == 'occupied' || table.status == 'reserved';
+            
             let content = `
                 <div class="row">
                     <div class="col-md-6">
@@ -1035,25 +1038,80 @@ if (file_exists($theme_file)) {
                                 ${getStatusText(table.status)}
                             </span>
                         </p>
+            `;
+            
+            if (hasActiveOrders) {
+                content += `
+                        <h6 class="mt-3">Órdenes Activas</h6>
+                        <div class="list-group">
+                `;
+                table.active_orders.forEach(order => {
+                    content += `
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Orden #${order.order_number}</strong>
+                                        <br><small class="text-muted">${order.item_count} producto(s) - $${parseFloat(order.calculated_total).toFixed(2)}</small>
+                                    </div>
+                                    <span class="badge bg-${getOrderStatusColor(order.status)}">${getOrderStatusText(order.status)}</span>
+                                </div>
+                            </div>
+                    `;
+                });
+                content += `
+                        </div>
+                `;
+            }
+            
+            content += `
                     </div>
                     <div class="col-md-6">
                         <h6>Acciones Rápidas</h6>
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-sm" onclick="createOrder(${table.id})">
+            `;
+            
+            if (hasActiveOrders) {
+                const firstOrder = table.active_orders[0];
+                content += `
+                            <a href="order-create.php?order_id=${firstOrder.id}&table_id=${table.id}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit me-1"></i>Editar Orden
+                            </a>
+                `;
+            } else {
+                content += `
+                            <a href="order-create.php?table_id=${table.id}" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus me-1"></i>Nueva Orden
+                            </a>
+                `;
+            }
+            
+            if (hasActiveOrders) {
+                content += `
+                            <button class="btn btn-secondary btn-sm" disabled>
+                                <i class="fas fa-lock me-1"></i>No se puede liberar (orden activa)
                             </button>
-                            <button class="btn btn-success btn-sm" onclick="changeStatus(${table.id}, 'available')">
-                                <i class="fas fa-check me-1"></i>Marcar Libre
+                `;
+            } else {
+                if (table.status == 'available') {
+                    content += `
+                            <button class="btn btn-info btn-sm" onclick="reserveTable(${table.id})">
+                                <i class="fas fa-calendar-check me-1"></i>Reservar Mesa
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="changeStatus(${table.id}, 'occupied')">
-                                <i class="fas fa-user me-1"></i>Marcar Ocupada
+                    `;
+                } else {
+                    content += `
+                            <button class="btn btn-success btn-sm" onclick="freeTable(${table.id})">
+                                <i class="fas fa-unlock me-1"></i>Liberar Mesa
                             </button>
+                    `;
+                }
+            }
+            
+            content += `
                         </div>
                     </div>
                 </div>
             `;
-            
-            // Resto del código...
             
             document.getElementById('tableDetailsContent').innerHTML = content;
             new bootstrap.Modal(document.getElementById('tableDetailsModal')).show();
@@ -1161,6 +1219,60 @@ if (file_exists($theme_file)) {
         if (sidebar) sidebar.classList.remove('show');
         if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
         document.body.style.overflow = '';
+    }
+    
+    function reserveTable(tableId) {
+        if (!confirm('¿Deseas marcar esta mesa como RESERVADA/OCUPADA?')) {
+            return;
+        }
+        
+        fetch('ajax_handler.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=occupy_table&table_id=${tableId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Mesa marcada como RESERVADA');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'No se pudo reservar la mesa'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al procesar la solicitud');
+        });
+    }
+
+    function freeTable(tableId) {
+        if (!confirm('¿Deseas LIBERAR esta mesa?')) {
+            return;
+        }
+        
+        fetch('ajax_handler.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=free_table&table_id=${tableId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Mesa liberada exitosamente');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'No se pudo liberar la mesa'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al procesar la solicitud');
+        });
     }
     
     // Helper functions
