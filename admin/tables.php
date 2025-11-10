@@ -18,7 +18,6 @@ $orderModel = new Order();
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
 
-// AGREGAR ESTAS LÍNEAS:
 // Obtener información del usuario actual
 $user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
 $role = $_SESSION['role_name'] ?? 'usuario';
@@ -89,6 +88,26 @@ if ($_POST && isset($_POST['action'])) {
 $tables = $tableModel->getAll();
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
+
+// ============ NUEVO: Obtener solo meseros (role_id = 4) ============
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+    
+    $query = "SELECT u.id, u.full_name, u.username 
+              FROM users u 
+              WHERE u.role_id = 4 
+              AND u.is_active = 1 
+              ORDER BY u.full_name ASC";
+    
+    $stmt = $db->prepare($query);
+    $stmt->execute();
+    $waiters = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch(PDOException $e) {
+    $waiters = [];
+    error_log("Error al obtener meseros: " . $e->getMessage());
+}
+// ============ FIN NUEVO ============
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -639,8 +658,7 @@ if (file_exists($theme_file)) {
         }
     .system-header .container-fluid {
     height: 60px;
-    display: flex
-;
+    display: flex;
     align-items: center;
     padding: 0 1rem;
     background-color: white;
@@ -1318,9 +1336,6 @@ if (file_exists($theme_file)) {
         return texts[status] || status;
     }
     
-
-
-
     function formatPrice(price) {
         return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
