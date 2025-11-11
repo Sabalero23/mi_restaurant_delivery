@@ -828,88 +828,9 @@ p {
             </div>
         </div>
 
-        <!-- Statistics Cards -->
-        <div class="row g-2 g-md-2 mb-2">
-            <?php if (isset($stats['pending_orders'])): ?>
-                <div class="col-6 col-md-6 col-xl-3">
-                    <div class="stat-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-primary-gradient me-3">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['pending_orders']; ?></h3>
-                                <p class="text-muted mb-0 small">Órdenes Pendientes</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
+ 
 
-            <?php if (isset($online_stats['pending_online'])): ?>
-                <div class="col-6 col-md-6 col-xl-3">
-                    <div class="stat-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-online-gradient me-3">
-                                <i class="fas fa-globe"></i>
-                            </div>
-                            <div>
-                                <h3 class="mb-0" id="pending-online-count"><?php echo $online_stats['pending_online']; ?></h3>
-                                <p class="text-muted mb-0 small">Pedidos Online Pendientes</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <?php if (isset($stats['preparing_orders'])): ?>
-                <div class="col-6 col-md-6 col-xl-3">
-                    <div class="stat-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-warning-gradient me-3">
-                                <i class="fas fa-fire"></i>
-                            </div>
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['preparing_orders']; ?></h3>
-                                <p class="text-muted mb-0 small">En Preparación</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <?php if (isset($stats['occupied_tables'])): ?>
-                <div class="col-6 col-md-6 col-xl-3">
-                    <div class="stat-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-success-gradient me-3">
-                                <i class="fas fa-table"></i>
-                            </div>
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['occupied_tables']; ?>/<?php echo $stats['occupied_tables'] + $stats['available_tables']; ?></h3>
-                                <p class="text-muted mb-0 small">Mesas Ocupadas</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <?php if (isset($stats['pending_deliveries'])): ?>
-                <div class="col-6 col-md-6 col-xl-3">
-                    <div class="stat-card">
-                        <div class="d-flex align-items-center">
-                            <div class="stat-icon bg-info-gradient me-3">
-                                <i class="fas fa-motorcycle"></i>
-                            </div>
-                            <div>
-                                <h3 class="mb-0"><?php echo $stats['pending_deliveries']; ?></h3>
-                                <p class="text-muted mb-0 small">Entregas Pendientes</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
+          
         
             <!-- Tables Panel for roles with table permissions -->
             <?php if ($auth->hasPermission('tables')): ?>

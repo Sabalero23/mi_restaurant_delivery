@@ -111,10 +111,30 @@ $per_page = 20;
 $conditions = [];
 $params = [];
 
+// NUEVO: Filtrar órdenes según el rol del usuario
+// Los meseros solo ven las órdenes que ellos crearon
+if ($_SESSION['role_name'] === 'mesero') {
+    $conditions[] = "o.created_by = ?";
+    $params[] = $_SESSION['user_id'];
+}
+// Administrador, mostrador y gerente ven todas las órdenes (no agregar condición)
+
 if ($status_filter) {
     $conditions[] = "o.status = ?";
     $params[] = $status_filter;
 }
+
+if ($type_filter) {
+    $conditions[] = "o.type = ?";
+    $params[] = $type_filter;
+}
+
+if ($date_filter) {
+    $conditions[] = "DATE(o.created_at) = ?";
+    $params[] = $date_filter;
+}
+
+$where_clause = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
 if ($type_filter) {
     $conditions[] = "o.type = ?";
