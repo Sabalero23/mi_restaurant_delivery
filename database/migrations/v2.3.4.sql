@@ -31,6 +31,18 @@ SET `setting_value` = '2.3.4'
 WHERE `setting_key` = 'current_system_version';
 
 -- =============================================
+-- Actualizar hash del último commit
+-- =============================================
+UPDATE `settings` 
+SET `setting_value` = 'MANUAL_v2.3.4' 
+WHERE `setting_key` = 'system_commit';
+
+-- Si no existe el campo system_commit, crearlo
+INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
+VALUES ('system_commit', 'MANUAL_v2.3.4', 'Hash del último commit instalado')
+ON DUPLICATE KEY UPDATE `setting_value` = 'MANUAL_v2.3.4';
+
+-- =============================================
 -- Registrar fecha de esta migración
 -- =============================================
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
