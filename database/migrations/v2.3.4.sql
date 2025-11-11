@@ -9,6 +9,10 @@
 -- Autor: Cellcom Technology
 -- =============================================
 
+-- Desactivar verificación de claves foráneas temporalmente
+SET FOREIGN_KEY_CHECKS = 0;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET AUTOCOMMIT = 0;
 START TRANSACTION;
 
 -- =============================================
@@ -81,7 +85,72 @@ ON DUPLICATE KEY UPDATE
     `setting_value` = VALUES(`setting_value`),
     `description` = VALUES(`description`);
 
+-- =============================================
+-- Verificar y agregar índices para optimizar consultas
+-- =============================================
 
+-- Índice compuesto para órdenes por usuario creador y estado
+-- Verificar si existe antes de crear
+SET @exist_idx1 := (SELECT COUNT(*) FROM information_schema.statistics 
+                    WHERE table_schema = DATABASE() 
+                    AND table_name = 'orders' 
+                    AND index_name = 'idx_created_by_status');
+SET @sqlstmt1 := IF(@exist_idx1 > 0, 
+                    'SELECT ''Index idx_created_by_status already exists'' AS msg', 
+                    'CREATE INDEX idx_created_by_status ON orders (created_by, status)');
+PREPARE stmt1 FROM @sqlstmt1;
+EXECUTE stmt1;
+DEALLOCATE PREPARE stmt1;
+
+-- Índice compuesto para órdenes por mesa y estado
+SET @exist_idx2 := (SELECT COUNT(*) FROM information_schema.statistics 
+                    WHERE table_schema = DATABASE() 
+                    AND table_name = 'orders' 
+                    AND index_name = 'idx_table_status');
+SET @sqlstmt2 := IF(@exist_idx2 > 0, 
+                    'SELECT ''Index idx_table_status already exists'' AS msg', 
+                    'CREATE INDEX idx_table_status ON orders (table_id, status)');
+PREPARE stmt2 FROM @sqlstmt2;
+EXECUTE stmt2;
+DEALLOCATE PREPARE stmt2;
+
+-- Índice compuesto para mesas por mesero y estado
+SET @exist_idx3 := (SELECT COUNT(*) FROM information_schema.statistics 
+                    WHERE table_schema = DATABASE() 
+                    AND table_name = 'tables' 
+                    AND index_name = 'idx_waiter_status');
+SET @sqlstmt3 := IF(@exist_idx3 > 0, 
+                    'SELECT ''Index idx_waiter_status already exists'' AS msg', 
+                    'CREATE INDEX idx_waiter_status ON tables (waiter_id, status)');
+PREPARE stmt3 FROM @sqlstmt3;
+EXECUTE stmt3;
+DEALLOCATE PREPARE stmt3;
+
+-- =============================================
+-- Verificar integridad de datos existentes
+-- =============================================
+
+-- Contar mesas sin mesero asignado
+SELECT 
+    COUNT(*) as mesas_sin_mesero,
+    'Mesas que no tienen mesero asignado' as descripcion
+FROM `tables` 
+WHERE `waiter_id` IS NULL;
+
+-- Contar órdenes sin usuario creador
+SELECT 
+    COUNT(*) as ordenes_sin_creador,
+    'Órdenes que no tienen usuario creador registrado' as descripcion
+FROM `orders` 
+WHERE `created_by` IS NULL;
+
+-- Contar meseros activos en el sistema
+SELECT 
+    COUNT(*) as total_meseros,
+    'Total de meseros activos en el sistema' as descripcion
+FROM `users` u
+INNER JOIN `roles` r ON u.role_id = r.id
+WHERE r.name = 'mesero' AND u.is_active = 1;
 
 -- =============================================
 -- Registrar log detallado de cambios de esta versión
@@ -174,6 +243,18 @@ Ejemplo 3 - Mostrador/Gerente:
   - Control total sobre mesas y órdenes
   - Pueden gestionar asignaciones de meseros
 
+PRUEBAS RECOMENDADAS:
+1. Login como mesero → verificar solo ve sus mesas/órdenes
+2. Login como admin → verificar ve todo sin restricción
+3. Crear orden como mesero → verificar aparece en su lista
+4. Asignar mesa a mesero → verificar mesero la ve
+5. Verificar estadísticas se calculan correctamente
+6. Probar filtros en orders.php con datos filtrados',
+    'Log de cambios versión 2.3.4'
+)
+ON DUPLICATE KEY UPDATE 
+    `setting_value` = VALUES(`setting_value`),
+    `description` = VALUES(`description`);
 
 -- =============================================
 -- Verificación: Mostrar información de la migración
@@ -187,6 +268,9 @@ SELECT
     NOW() AS timestamp_completado;
 
 COMMIT;
+
+-- Reactivar verificación de claves foráneas
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================
 -- NOTAS DE LA VERSIÓN 2.3.4
