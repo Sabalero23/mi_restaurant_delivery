@@ -110,13 +110,24 @@ if ($_POST && isset($_POST['action'])) {
     }
 }
 
-// Get tables with waiter information
+
+// Get tables with waiter information - FILTRADO POR ROL
 $tables_query = "SELECT t.*, u.full_name as waiter_name, u.username as waiter_username
                  FROM tables t
-                 LEFT JOIN users u ON t.waiter_id = u.id
-                 ORDER BY t.number";
-$tables_stmt = $db->prepare($tables_query);
-$tables_stmt->execute();
+                 LEFT JOIN users u ON t.waiter_id = u.id";
+
+// NUEVO: Filtrar mesas según el rol del usuario
+// Los meseros solo ven las mesas asignadas a ellos
+if ($_SESSION['role_name'] === 'mesero') {
+    $tables_query .= " WHERE t.waiter_id = :current_user_id";
+    $tables_stmt = $db->prepare($tables_query . " ORDER BY t.number");
+    $tables_stmt->execute(['current_user_id' => $_SESSION['user_id']]);
+} else {
+    // Administrador, mostrador y gerente ven todas las mesas
+    $tables_stmt = $db->prepare($tables_query . " ORDER BY t.number");
+    $tables_stmt->execute();
+}
+
 $tables = $tables_stmt->fetchAll();
 
 $settings = getSettings();
