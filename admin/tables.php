@@ -18,6 +18,7 @@ $orderModel = new Order();
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
 
+// AGREGAR ESTAS LÍNEAS:
 // Obtener información del usuario actual
 $user_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Usuario';
 $role = $_SESSION['role_name'] ?? 'usuario';
@@ -26,6 +27,19 @@ $role = $_SESSION['role_name'] ?? 'usuario';
 $stats = array();
 $online_stats = array();
 
+// Get database connection for waiter queries
+$database = new Database();
+$db = $database->getConnection();
+
+// Get list of waiters for assignment
+$waiters_query = "SELECT id, full_name, username FROM users 
+                  WHERE role_id IN (SELECT id FROM roles WHERE name IN ('mesero', 'administrador', 'gerente', 'mostrador'))
+                  AND is_active = 1
+                  ORDER BY full_name";
+$waiters_stmt = $db->prepare($waiters_query);
+$waiters_stmt->execute();
+$waiters = $waiters_stmt->fetchAll();
+
 // Handle form submissions
 $message = '';
 $error = '';
@@ -33,14 +47,19 @@ $error = '';
 if ($_POST && isset($_POST['action'])) {
     switch ($_POST['action']) {
         case 'create_table':
-            $data = [
-                'number' => sanitize($_POST['number']),
-                'capacity' => intval($_POST['capacity']),
-                'location' => sanitize($_POST['location']),
-                'status' => 'available'
-            ];
+            $waiter_id = isset($_POST['waiter_id']) && $_POST['waiter_id'] !== '' ? intval($_POST['waiter_id']) : null;
             
-            if ($tableModel->create($data)) {
+            // Use direct query to include waiter_id
+            $query = "INSERT INTO tables (number, capacity, location, status, waiter_id) VALUES (?, ?, ?, ?, ?)";
+            $stmt = $db->prepare($query);
+            
+            if ($stmt->execute([
+                sanitize($_POST['number']),
+                intval($_POST['capacity']),
+                sanitize($_POST['location']),
+                'available',
+                $waiter_id
+            ])) {
                 $message = 'Mesa creada exitosamente';
             } else {
                 $error = 'Error al crear la mesa';
@@ -49,14 +68,20 @@ if ($_POST && isset($_POST['action'])) {
             
         case 'update_table':
             $id = intval($_POST['id']);
-            $data = [
-                'number' => sanitize($_POST['number']),
-                'capacity' => intval($_POST['capacity']),
-                'location' => sanitize($_POST['location']),
-                'status' => $_POST['status']
-            ];
+            $waiter_id = isset($_POST['waiter_id']) && $_POST['waiter_id'] !== '' ? intval($_POST['waiter_id']) : null;
             
-            if ($tableModel->update($id, $data)) {
+            // Use direct query to include waiter_id
+            $query = "UPDATE tables SET number = ?, capacity = ?, location = ?, status = ?, waiter_id = ? WHERE id = ?";
+            $stmt = $db->prepare($query);
+            
+            if ($stmt->execute([
+                sanitize($_POST['number']),
+                intval($_POST['capacity']),
+                sanitize($_POST['location']),
+                $_POST['status'],
+                $waiter_id,
+                $id
+            ])) {
                 $message = 'Mesa actualizada exitosamente';
             } else {
                 $error = 'Error al actualizar la mesa';
@@ -85,29 +110,17 @@ if ($_POST && isset($_POST['action'])) {
     }
 }
 
-$tables = $tableModel->getAll();
+// Get tables with waiter information
+$tables_query = "SELECT t.*, u.full_name as waiter_name, u.username as waiter_username
+                 FROM tables t
+                 LEFT JOIN users u ON t.waiter_id = u.id
+                 ORDER BY t.number";
+$tables_stmt = $db->prepare($tables_query);
+$tables_stmt->execute();
+$tables = $tables_stmt->fetchAll();
+
 $settings = getSettings();
 $restaurant_name = $settings['restaurant_name'] ?? 'Mi Restaurante';
-
-// ============ NUEVO: Obtener solo meseros (role_id = 4) ============
-try {
-    $database = new Database();
-    $db = $database->getConnection();
-    
-    $query = "SELECT u.id, u.full_name, u.username 
-              FROM users u 
-              WHERE u.role_id = 4 
-              AND u.is_active = 1 
-              ORDER BY u.full_name ASC";
-    
-    $stmt = $db->prepare($query);
-    $stmt->execute();
-    $waiters = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch(PDOException $e) {
-    $waiters = [];
-    error_log("Error al obtener meseros: " . $e->getMessage());
-}
-// ============ FIN NUEVO ============
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -658,7 +671,8 @@ if (file_exists($theme_file)) {
         }
     .system-header .container-fluid {
     height: 60px;
-    display: flex;
+    display: flex
+;
     align-items: center;
     padding: 0 1rem;
     background-color: white;
@@ -830,6 +844,13 @@ if (file_exists($theme_file)) {
                             </div>
                         <?php endif; ?>
                         
+                        <?php if (isset($table['waiter_name']) && $table['waiter_name']): ?>
+                            <div class="mt-1" style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.9); font-weight: 500;">
+                                <i class="fas fa-user-tie me-1"></i>
+                                <?php echo htmlspecialchars($table['waiter_name']); ?>
+                            </div>
+                        <?php endif; ?>
+                        
                         <?php if (isset($table['active_orders']) && $table['active_orders'] > 0): ?>
                             <div class="mt-2" style="font-size: 0.7rem;">
                                 <i class="fas fa-receipt me-1"></i>
@@ -939,6 +960,19 @@ if (file_exists($theme_file)) {
                             <input type="text" class="form-control" name="location" id="tableLocation" placeholder="Ej: Salón principal, Terraza, etc.">
                         </div>
                         
+                        <div class="mb-3">
+                            <label class="form-label">Mesero Asignado</label>
+                            <select class="form-select" name="waiter_id" id="tableWaiter">
+                                <option value="">Sin asignar</option>
+                                <?php foreach ($waiters as $waiter): ?>
+                                    <option value="<?php echo $waiter['id']; ?>">
+                                        <?php echo htmlspecialchars($waiter['full_name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text">Selecciona el mesero responsable de esta mesa</div>
+                        </div>
+                        
                         <div class="mb-3" id="statusField" style="display: none;">
                             <label class="form-label">Estado</label>
                             <select class="form-select" name="status" id="tableStatus">
@@ -978,6 +1012,7 @@ if (file_exists($theme_file)) {
         document.getElementById('tableCapacity').value = table.capacity;
         document.getElementById('tableLocation').value = table.location || '';
         document.getElementById('tableStatus').value = table.status;
+        document.getElementById('tableWaiter').value = table.waiter_id || '';
         document.getElementById('statusField').style.display = 'block';
         
         new bootstrap.Modal(document.getElementById('tableModal')).show();
@@ -1336,6 +1371,9 @@ if (file_exists($theme_file)) {
         return texts[status] || status;
     }
     
+
+
+
     function formatPrice(price) {
         return '$' + parseFloat(price).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
