@@ -1,7 +1,7 @@
 -- =============================================
--- Migración v2.3.5 - Actualización Automática
+-- Migracion v2.3.5 - Actualizacion Automatica
 -- =============================================
--- Descripción: Sistema de commits automático
+-- Descripcion: Sistema de commits automatico
 --              Genera y guarda el hash correctamente
 --              Compatible con instalaciones manuales y Git
 -- Fecha: 2025-11-12
@@ -11,9 +11,9 @@
 START TRANSACTION;
 
 -- =============================================
--- 1. FUNCIÓN: Generar hash único del sistema
+-- 1. FUNCION: Generar hash unico del sistema
 -- =============================================
--- Genera un hash basado en timestamp + versión
+-- Genera un hash basado en timestamp + version
 SET @new_commit_hash = SHA2(CONCAT(
     '2.3.5',
     '_',
@@ -37,7 +37,7 @@ AND (
 );
 
 -- =============================================
--- 3. GUARDAR: Nuevo commit hash automático
+-- 3. GUARDAR: Nuevo commit hash automatico
 -- =============================================
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
 VALUES (
@@ -63,27 +63,27 @@ ON DUPLICATE KEY UPDATE
     `setting_value` = (SELECT `setting_value` FROM (SELECT * FROM `settings`) AS temp WHERE `setting_key` = 'system_commit');
 
 -- =============================================
--- 5. Actualizar versión del sistema
+-- 5. Actualizar version del sistema
 -- =============================================
 UPDATE `settings` 
 SET `setting_value` = '2.3.5',
-    `description` = 'Versión actual del sistema'
+    `description` = 'Version actual del sistema'
 WHERE `setting_key` = 'current_system_version';
 
 -- Si no existe, crearla
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
-VALUES ('current_system_version', '2.3.5', 'Versión actual del sistema')
+VALUES ('current_system_version', '2.3.5', 'Version actual del sistema')
 ON DUPLICATE KEY UPDATE 
     `setting_value` = '2.3.5',
-    `description` = 'Versión actual del sistema';
+    `description` = 'Version actual del sistema';
 
 -- =============================================
--- 6. Registrar fecha y método de instalación
+-- 6. Registrar fecha y metodo de instalacion
 -- =============================================
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
 VALUES 
-    ('migration_v235_date', NOW(), 'Fecha de migración a v2.3.5'),
-    ('migration_v235_method', 'manual_sql', 'Método de instalación: SQL manual'),
+    ('migration_v235_date', NOW(), 'Fecha de migracion a v2.3.5'),
+    ('migration_v235_method', 'manual_sql', 'Metodo de instalacion: SQL manual'),
     ('migration_v235_commit', @new_commit_hash, 'Hash del commit v2.3.5')
 ON DUPLICATE KEY UPDATE 
     `setting_value` = VALUES(`setting_value`),
@@ -104,24 +104,24 @@ SET `permissions` = JSON_ARRAY(
 `updated_at` = NOW()
 WHERE `name` = 'administrador';
 
--- GERENTE: Gestión completa excepto configuración
+-- GERENTE: Gestion completa excepto configuracion
 UPDATE `roles` 
 SET `permissions` = JSON_ARRAY(
     'orders', 'online_orders', 'products', 'users', 
     'reports', 'tables', 'kitchen', 'delivery', 
     'kardex', 'whatsapp'
 ),
-`description` = 'Gestión completa del restaurante excepto configuración del sistema',
+`description` = 'Gestion completa del restaurante excepto configuracion del sistema',
 `updated_at` = NOW()
 WHERE `name` = 'gerente';
 
--- MOSTRADOR: Gestión de órdenes y productos
+-- MOSTRADOR: Gestion de ordenes y productos
 UPDATE `roles` 
 SET `permissions` = JSON_ARRAY(
     'orders', 'online_orders', 'products', 
     'tables', 'kitchen', 'delivery', 'kardex', 'whatsapp'
 ),
-`description` = 'Gestión de órdenes, productos, mesas y delivery',
+`description` = 'Gestion de ordenes, productos, mesas y delivery',
 `updated_at` = NOW()
 WHERE `name` = 'mostrador';
 
@@ -130,7 +130,7 @@ UPDATE `roles`
 SET `permissions` = JSON_ARRAY(
     'orders', 'tables'
 ),
-`description` = 'Gestión de mesas y pedidos de clientes',
+`description` = 'Gestion de mesas y pedidos de clientes',
 `updated_at` = NOW()
 WHERE `name` = 'mesero';
 
@@ -139,7 +139,7 @@ UPDATE `roles`
 SET `permissions` = JSON_ARRAY(
     'kitchen', 'online_orders', 'kardex'
 ),
-`description` = 'Visualización y actualización de pedidos en cocina',
+`description` = 'Visualizacion y actualizacion de pedidos en cocina',
 `updated_at` = NOW()
 WHERE `name` = 'cocina';
 
@@ -148,7 +148,7 @@ UPDATE `roles`
 SET `permissions` = JSON_ARRAY(
     'delivery'
 ),
-`description` = 'Gestión de entregas a domicilio',
+`description` = 'Gestion de entregas a domicilio',
 `updated_at` = NOW()
 WHERE `name` = 'delivery';
 
@@ -170,11 +170,11 @@ ON DUPLICATE KEY UPDATE
     `permissions` = VALUES(`permissions`),
     `updated_at` = NOW();
 
--- Rol ATENCIÓN AL CLIENTE
+-- Rol ATENCION AL CLIENTE
 INSERT INTO `roles` (`name`, `description`, `permissions`, `created_at`, `updated_at`) 
 VALUES (
     'atencion_cliente',
-    'Atención al cliente vía WhatsApp y pedidos online',
+    'Atencion al cliente via WhatsApp y pedidos online',
     JSON_ARRAY('online_orders', 'whatsapp', 'orders'),
     NOW(),
     NOW()
@@ -191,7 +191,7 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
 VALUES 
     ('permissions_kardex_enabled', '1', 'Permisos de Kardex habilitados'),
     ('permissions_whatsapp_enabled', '1', 'Permisos de WhatsApp habilitados'),
-    ('permissions_last_update', NOW(), 'Última actualización de permisos')
+    ('permissions_last_update', NOW(), 'Ultima actualizacion de permisos')
 ON DUPLICATE KEY UPDATE 
     `setting_value` = VALUES(`setting_value`),
     `description` = VALUES(`description`);
@@ -203,59 +203,59 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
 VALUES (
     'migration_v235_log',
     CONCAT(
-        'Actualización de sistema v2.3.5 - ', NOW(), '\n\n',
-        'CARACTERÍSTICAS NUEVAS:\n',
-        '• Sistema de commits automático\n',
-        '• Hash SHA-256 generado: ', SUBSTRING(@new_commit_hash, 1, 16), '...\n',
-        '• Permisos para Kardex (control de inventario)\n',
-        '• Permisos para WhatsApp (atención al cliente)\n',
-        '• 2 nuevos roles opcionales: inventario y atención_cliente\n\n',
+        'Actualizacion de sistema v2.3.5 - ', NOW(), '\n\n',
+        'CARACTERISTICAS NUEVAS:\n',
+        '- Sistema de commits automatico\n',
+        '- Hash SHA-256 generado: ', SUBSTRING(@new_commit_hash, 1, 16), '...\n',
+        '- Permisos para Kardex (control de inventario)\n',
+        '- Permisos para WhatsApp (atencion al cliente)\n',
+        '- 2 nuevos roles opcionales: inventario y atencion_cliente\n\n',
         'PERMISOS ACTUALIZADOS:\n',
-        '• administrador: Todos los permisos incluido kardex y whatsapp\n',
-        '• gerente: Gestión completa con kardex y whatsapp\n',
-        '• mostrador: Operaciones diarias con kardex y whatsapp\n',
-        '• mesero: Solo mesas y órdenes\n',
-        '• cocina: Pedidos con acceso a kardex\n',
-        '• delivery: Solo entregas\n',
-        '• inventario (nuevo): Control de stock\n',
-        '• atencion_cliente (nuevo): WhatsApp y pedidos online\n\n',
+        '- administrador: Todos los permisos incluido kardex y whatsapp\n',
+        '- gerente: Gestion completa con kardex y whatsapp\n',
+        '- mostrador: Operaciones diarias con kardex y whatsapp\n',
+        '- mesero: Solo mesas y ordenes\n',
+        '- cocina: Pedidos con acceso a kardex\n',
+        '- delivery: Solo entregas\n',
+        '- inventario (nuevo): Control de stock\n',
+        '- atencion_cliente (nuevo): WhatsApp y pedidos online\n\n',
         'CORRECCIONES:\n',
-        '• Eliminados commits con prefijo MANUAL_\n',
-        '• Sistema genera hash automáticamente\n',
-        '• Commit anterior guardado como backup\n\n',
-        'MÉTODO DE INSTALACIÓN: SQL Manual\n',
+        '- Eliminados commits con prefijo MANUAL_\n',
+        '- Sistema genera hash automaticamente\n',
+        '- Commit anterior guardado como backup\n\n',
+        'METODO DE INSTALACION: SQL Manual\n',
         'BASE DE DATOS: ', DATABASE(), '\n',
         'SERVIDOR: ', @@hostname
     ),
-    'Log completo de migración v2.3.5'
+    'Log completo de migracion v2.3.5'
 )
 ON DUPLICATE KEY UPDATE 
     `setting_value` = VALUES(`setting_value`),
     `description` = VALUES(`description`);
 
 -- =============================================
--- 11. Optimización de tablas
+-- 11. Optimizacion de tablas
 -- =============================================
 OPTIMIZE TABLE `settings`;
 OPTIMIZE TABLE `roles`;
 OPTIMIZE TABLE `users`;
 
 -- =============================================
--- 12. VERIFICACIÓN FINAL - Mostrar resultados
+-- 12. VERIFICACION FINAL - Mostrar resultados
 -- =============================================
 SELECT 
-    '✓ Migración completada exitosamente' AS '🎉 ESTADO',
+    'Migracion completada exitosamente' AS 'ESTADO',
     '' AS '';
 
 SELECT 
-    'VERSIÓN DEL SISTEMA' AS '📌 INFORMACIÓN',
-    (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version') AS 'Versión',
-    SUBSTRING(@new_commit_hash, 1, 7) AS 'Commit (corto)',
-    SUBSTRING(@new_commit_hash, 1, 16) AS 'Commit Hash',
-    (SELECT setting_value FROM settings WHERE setting_key = 'migration_v235_date') AS 'Fecha Instalación'
+    'VERSION DEL SISTEMA' AS 'INFORMACION',
+    (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version') AS 'Version',
+    SUBSTRING(@new_commit_hash, 1, 7) AS 'Commit_Corto',
+    SUBSTRING(@new_commit_hash, 1, 16) AS 'Commit_Hash',
+    (SELECT setting_value FROM settings WHERE setting_key = 'migration_v235_date') AS 'Fecha_Instalacion'
 UNION ALL
 SELECT 
-    'MÉTODO',
+    'METODO',
     (SELECT setting_value FROM settings WHERE setting_key = 'migration_v235_method'),
     '-',
     '-',
@@ -263,7 +263,7 @@ SELECT
 
 -- Mostrar permisos actualizados
 SELECT 
-    '📋 ROLES Y PERMISOS' AS '───────────────',
+    'ROLES Y PERMISOS' AS '---------------',
     '' AS '',
     '' AS '',
     '' AS '',
@@ -271,19 +271,19 @@ SELECT
 
 SELECT 
     name AS 'Rol',
-    description AS 'Descripción',
-    JSON_LENGTH(permissions) AS 'Cantidad Permisos',
+    description AS 'Descripcion',
+    JSON_LENGTH(permissions) AS 'Cant_Permisos',
     CASE 
-        WHEN JSON_CONTAINS(permissions, '"kardex"') THEN '✓'
-        WHEN JSON_CONTAINS(permissions, '"all"') THEN '✓ (all)'
-        ELSE '✗'
+        WHEN JSON_CONTAINS(permissions, '"kardex"') THEN 'SI'
+        WHEN JSON_CONTAINS(permissions, '"all"') THEN 'SI (all)'
+        ELSE 'NO'
     END AS 'Kardex',
     CASE 
-        WHEN JSON_CONTAINS(permissions, '"whatsapp"') THEN '✓'
-        WHEN JSON_CONTAINS(permissions, '"all"') THEN '✓ (all)'
-        ELSE '✗'
+        WHEN JSON_CONTAINS(permissions, '"whatsapp"') THEN 'SI'
+        WHEN JSON_CONTAINS(permissions, '"all"') THEN 'SI (all)'
+        ELSE 'NO'
     END AS 'WhatsApp',
-    updated_at AS 'Última Actualización'
+    updated_at AS 'Ultima_Actualizacion'
 FROM roles
 ORDER BY 
     CASE name
@@ -298,9 +298,9 @@ ORDER BY
         ELSE 9
     END;
 
--- Estadísticas de usuarios por rol
+-- Estadisticas de usuarios por rol
 SELECT 
-    '👥 USUARIOS POR ROL' AS '───────────────',
+    'USUARIOS POR ROL' AS '---------------',
     '' AS '',
     '' AS '',
     '' AS '',
@@ -314,13 +314,13 @@ SELECT
     SUM(CASE WHEN u.is_active = 0 THEN 1 ELSE 0 END) AS 'Inactivos',
     CASE 
         WHEN JSON_CONTAINS(r.permissions, '"kardex"') OR JSON_CONTAINS(r.permissions, '"all"') 
-        THEN '✓ Acceso Kardex'
-        ELSE '✗ Sin acceso'
+        THEN 'Acceso Kardex'
+        ELSE 'Sin acceso'
     END AS 'Kardex',
     CASE 
         WHEN JSON_CONTAINS(r.permissions, '"whatsapp"') OR JSON_CONTAINS(r.permissions, '"all"') 
-        THEN '✓ Acceso WhatsApp'
-        ELSE '✗ Sin acceso'
+        THEN 'Acceso WhatsApp'
+        ELSE 'Sin acceso'
     END AS 'WhatsApp'
 FROM roles r
 LEFT JOIN users u ON u.role_id = r.id
@@ -329,7 +329,7 @@ ORDER BY COUNT(u.id) DESC;
 
 -- Resumen final
 SELECT 
-    '✅ RESUMEN FINAL' AS '═══════════════════',
+    'RESUMEN FINAL' AS '===================',
     '' AS '',
     '' AS '',
     '' AS '',
@@ -337,7 +337,7 @@ SELECT
     '' AS '';
 
 SELECT 
-    'Total Roles Actualizados' AS 'Métrica',
+    'Total Roles Actualizados' AS 'Metrica',
     COUNT(*) AS 'Valor',
     '' AS '',
     '' AS '',
@@ -383,10 +383,10 @@ SELECT
     ''
 FROM users WHERE is_active = 1;
 
--- Mensaje de éxito
+-- Mensaje de exito
 SELECT 
-    '🎊 ¡ACTUALIZACIÓN COMPLETADA!' AS '',
-    CONCAT('Versión: ', (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version')) AS '',
+    'ACTUALIZACION COMPLETADA' AS '',
+    CONCAT('Version: ', (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version')) AS '',
     CONCAT('Commit: ', SUBSTRING(@new_commit_hash, 1, 7)) AS '',
     CONCAT('Fecha: ', NOW()) AS '',
     'Sistema listo para usar' AS '',
@@ -395,26 +395,26 @@ SELECT
 COMMIT;
 
 -- =============================================
--- NOTAS POST-INSTALACIÓN
+-- NOTAS POST-INSTALACION
 -- =============================================
 /*
-✅ INSTALACIÓN COMPLETADA
+INSTALACION COMPLETADA
 
-QUÉ SE ACTUALIZÓ:
-1. Sistema de commits automático (sin necesidad de Git)
+QUE SE ACTUALIZO:
+1. Sistema de commits automatico (sin necesidad de Git)
 2. Permisos para Kardex en 6 roles
 3. Permisos para WhatsApp en 5 roles
 4. 2 nuevos roles opcionales creados
-5. Hash SHA-256 único generado automáticamente
+5. Hash SHA-256 unico generado automaticamente
 6. Commit anterior guardado como backup
 
-VERIFICAR EN LA APLICACIÓN:
-1. Ir a Configuración → Actualizar Sistema
+VERIFICAR EN LA APLICACION:
+1. Ir a Configuracion -> Actualizar Sistema
 2. Verificar que "Commit" muestre primeros 7 caracteres del hash
-3. Verificar que "Versión del Sistema" muestre: 2.3.5
-4. Los roles actualizados deberían tener acceso a Kardex/WhatsApp según corresponda
+3. Verificar que "Version del Sistema" muestre: 2.3.5
+4. Los roles actualizados deberian tener acceso a Kardex/WhatsApp segun corresponda
 
-CONSULTAS ÚTILES POST-MIGRACIÓN:
+CONSULTAS UTILES POST-MIGRACION:
 */
 
 -- Ver commit actual completo
@@ -423,15 +423,15 @@ CONSULTAS ÚTILES POST-MIGRACIÓN:
 -- Ver commit anterior (backup)
 -- SELECT setting_value FROM settings WHERE setting_key = 'system_commit_previous';
 
--- Ver todos los permisos de un rol específico
+-- Ver todos los permisos de un rol especifico
 -- SELECT name, permissions FROM roles WHERE name = 'administrador';
 
--- Ver qué usuarios tienen acceso a Kardex
+-- Ver que usuarios tienen acceso a Kardex
 -- SELECT u.username, u.full_name, r.name as rol 
 -- FROM users u 
 -- JOIN roles r ON u.role_id = r.id 
 -- WHERE JSON_CONTAINS(r.permissions, '"kardex"') OR JSON_CONTAINS(r.permissions, '"all"');
 
 -- =============================================
--- FIN DE MIGRACIÓN v2.3.5
+-- FIN DE MIGRACION v2.3.5
 -- =============================================
