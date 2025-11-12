@@ -1,9 +1,9 @@
 -- =============================================
--- Migracion v2.3.5 - Actualizacion Automatica
+-- Migracion v2.3.5 - Actualizacion Automatica (CORREGIDA)
 -- =============================================
 -- Descripcion: Sistema de commits automatico
---              Genera y guarda el hash correctamente
---              Compatible con instalaciones manuales y Git
+--              Genera hash completo Y version corta
+--              Compatible con columnas from_commit limitadas
 -- Fecha: 2025-11-12
 -- Autor: Cellcom Technology
 -- =============================================
@@ -13,8 +13,8 @@ START TRANSACTION;
 -- =============================================
 -- 1. FUNCION: Generar hash unico del sistema
 -- =============================================
--- Genera un hash basado en timestamp + version
-SET @new_commit_hash = SHA2(CONCAT(
+-- Genera un hash COMPLETO basado en timestamp + version
+SET @new_commit_hash_full = SHA2(CONCAT(
     '2.3.5',
     '_',
     NOW(),
@@ -23,6 +23,9 @@ SET @new_commit_hash = SHA2(CONCAT(
     '_',
     DATABASE()
 ), 256);
+
+-- Generar VERSION CORTA (primeros 8 caracteres)
+SET @new_commit_hash = SUBSTRING(@new_commit_hash_full, 1, 8);
 
 -- =============================================
 -- 2. Verificar y limpiar commits anteriores
@@ -37,17 +40,29 @@ AND (
 );
 
 -- =============================================
--- 3. GUARDAR: Nuevo commit hash automatico
+-- 3. GUARDAR: Nuevo commit hash (VERSION CORTA)
 -- =============================================
+-- Guardar VERSION CORTA para compatibilidad
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
 VALUES (
     'system_commit', 
     @new_commit_hash,
-    CONCAT('Hash SHA-256 del sistema - v2.3.5 - Generado: ', NOW())
+    CONCAT('Hash SHA-256 corto - v2.3.5 - Generado: ', NOW())
 )
 ON DUPLICATE KEY UPDATE 
     `setting_value` = @new_commit_hash,
-    `description` = CONCAT('Hash SHA-256 del sistema - v2.3.5 - Actualizado: ', NOW());
+    `description` = CONCAT('Hash SHA-256 corto - v2.3.5 - Actualizado: ', NOW());
+
+-- Guardar VERSION COMPLETA para referencia
+INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
+VALUES (
+    'system_commit_full', 
+    @new_commit_hash_full,
+    CONCAT('Hash SHA-256 completo - v2.3.5 - Generado: ', NOW())
+)
+ON DUPLICATE KEY UPDATE 
+    `setting_value` = @new_commit_hash_full,
+    `description` = CONCAT('Hash SHA-256 completo - v2.3.5 - Actualizado: ', NOW());
 
 -- =============================================
 -- 4. Guardar commit anterior como backup
@@ -84,7 +99,8 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
 VALUES 
     ('migration_v235_date', NOW(), 'Fecha de migracion a v2.3.5'),
     ('migration_v235_method', 'manual_sql', 'Metodo de instalacion: SQL manual'),
-    ('migration_v235_commit', @new_commit_hash, 'Hash del commit v2.3.5')
+    ('migration_v235_commit', @new_commit_hash, 'Hash CORTO del commit v2.3.5'),
+    ('migration_v235_commit_full', @new_commit_hash_full, 'Hash COMPLETO del commit v2.3.5')
 ON DUPLICATE KEY UPDATE 
     `setting_value` = VALUES(`setting_value`),
     `description` = VALUES(`description`);
@@ -206,7 +222,8 @@ VALUES (
         'Actualizacion de sistema v2.3.5 - ', NOW(), '\n\n',
         'CARACTERISTICAS NUEVAS:\n',
         '- Sistema de commits automatico\n',
-        '- Hash SHA-256 generado: ', SUBSTRING(@new_commit_hash, 1, 16), '...\n',
+        '- Hash SHA-256 corto generado: ', @new_commit_hash, '\n',
+        '- Hash SHA-256 completo: ', SUBSTRING(@new_commit_hash_full, 1, 16), '...\n',
         '- Permisos para Kardex (control de inventario)\n',
         '- Permisos para WhatsApp (atencion al cliente)\n',
         '- 2 nuevos roles opcionales: inventario y atencion_cliente\n\n',
@@ -221,7 +238,8 @@ VALUES (
         '- atencion_cliente (nuevo): WhatsApp y pedidos online\n\n',
         'CORRECCIONES:\n',
         '- Eliminados commits con prefijo MANUAL_\n',
-        '- Sistema genera hash automaticamente\n',
+        '- Sistema genera hash corto (8 chars) para compatibilidad\n',
+        '- Hash completo guardado por separado\n',
         '- Commit anterior guardado como backup\n\n',
         'METODO DE INSTALACION: SQL Manual\n',
         'BASE DE DATOS: ', DATABASE(), '\n',
@@ -250,8 +268,8 @@ SELECT
 SELECT 
     'VERSION DEL SISTEMA' AS 'INFORMACION',
     (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version') AS 'Version',
-    SUBSTRING(@new_commit_hash, 1, 7) AS 'Commit_Corto',
-    SUBSTRING(@new_commit_hash, 1, 16) AS 'Commit_Hash',
+    @new_commit_hash AS 'Commit_Corto',
+    SUBSTRING(@new_commit_hash_full, 1, 16) AS 'Commit_Preview',
     (SELECT setting_value FROM settings WHERE setting_key = 'migration_v235_date') AS 'Fecha_Instalacion'
 UNION ALL
 SELECT 
@@ -387,7 +405,7 @@ FROM users WHERE is_active = 1;
 SELECT 
     'ACTUALIZACION COMPLETADA' AS '',
     CONCAT('Version: ', (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version')) AS '',
-    CONCAT('Commit: ', SUBSTRING(@new_commit_hash, 1, 7)) AS '',
+    CONCAT('Commit: ', @new_commit_hash) AS '',
     CONCAT('Fecha: ', NOW()) AS '',
     'Sistema listo para usar' AS '',
     '' AS '';
@@ -398,27 +416,35 @@ COMMIT;
 -- NOTAS POST-INSTALACION
 -- =============================================
 /*
-INSTALACION COMPLETADA
+INSTALACION COMPLETADA - VERSION CORREGIDA
+
+CAMBIOS EN ESTA VERSION:
+- Hash SHA-256 CORTO (8 caracteres) guardado en 'system_commit'
+- Hash SHA-256 COMPLETO (64 caracteres) guardado en 'system_commit_full'
+- Compatible con columnas from_commit de longitud limitada
 
 QUE SE ACTUALIZO:
 1. Sistema de commits automatico (sin necesidad de Git)
 2. Permisos para Kardex en 6 roles
 3. Permisos para WhatsApp en 5 roles
 4. 2 nuevos roles opcionales creados
-5. Hash SHA-256 unico generado automaticamente
+5. Hash SHA-256 unico generado (corto y completo)
 6. Commit anterior guardado como backup
 
 VERIFICAR EN LA APLICACION:
 1. Ir a Configuracion -> Actualizar Sistema
-2. Verificar que "Commit" muestre primeros 7 caracteres del hash
+2. Verificar que "Commit" muestre 8 caracteres
 3. Verificar que "Version del Sistema" muestre: 2.3.5
 4. Los roles actualizados deberian tener acceso a Kardex/WhatsApp segun corresponda
 
 CONSULTAS UTILES POST-MIGRACION:
 */
 
--- Ver commit actual completo
+-- Ver commit actual CORTO
 -- SELECT setting_value FROM settings WHERE setting_key = 'system_commit';
+
+-- Ver commit COMPLETO
+-- SELECT setting_value FROM settings WHERE setting_key = 'system_commit_full';
 
 -- Ver commit anterior (backup)
 -- SELECT setting_value FROM settings WHERE setting_key = 'system_commit_previous';
@@ -433,5 +459,5 @@ CONSULTAS UTILES POST-MIGRACION:
 -- WHERE JSON_CONTAINS(r.permissions, '"kardex"') OR JSON_CONTAINS(r.permissions, '"all"');
 
 -- =============================================
--- FIN DE MIGRACION v2.3.5
+-- FIN DE MIGRACION v2.3.5 (CORREGIDA)
 -- =============================================
