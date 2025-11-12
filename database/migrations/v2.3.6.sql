@@ -300,13 +300,20 @@ CREATE TABLE IF NOT EXISTS `system_update_history` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Migrar datos de system_updates a system_update_history
+-- Migrar datos de system_updates a system_update_history (CORREGIDO)
 INSERT INTO `system_update_history` 
     (`update_id`, `update_version`, `from_commit`, `to_commit`, `status`, `started_at`, `completed_at`, 
      `user_id`, `files_added`, `files_updated`, `files_deleted`, `backup_path`, `update_details`, `error_message`)
 SELECT 
     id,
-    CONCAT('Sistema ', SUBSTRING(to_commit, 1, 7)) as update_version,
+    COALESCE(
+        CASE 
+            WHEN to_commit IS NOT NULL AND to_commit != '' THEN CONCAT('Sistema ', SUBSTRING(to_commit, 1, 7))
+            WHEN from_commit IS NOT NULL AND from_commit != '' THEN CONCAT('Sistema ', SUBSTRING(from_commit, 1, 7))
+            ELSE CONCAT('Update-', id)
+        END,
+        CONCAT('Update-', id)
+    ) as update_version,
     from_commit,
     to_commit,
     status,
