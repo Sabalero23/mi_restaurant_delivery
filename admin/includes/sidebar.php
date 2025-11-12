@@ -5,6 +5,25 @@
 
 // Determinar la página actual para marcar el enlace activo
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// Obtener productos con stock bajo para el badge
+$low_stock_count = 0;
+if ($auth->hasPermission('products') || $auth->hasPermission('kardex')) {
+    try {
+        $database = new Database();
+        $db = $database->getConnection();
+        $query_low = "SELECT COUNT(*) as count FROM products 
+                     WHERE track_inventory = 1 
+                     AND is_active = 1 
+                     AND stock_quantity <= low_stock_alert";
+        $stmt_low = $db->prepare($query_low);
+        $stmt_low->execute();
+        $result_low = $stmt_low->fetch(PDO::FETCH_ASSOC);
+        $low_stock_count = $result_low['count'];
+    } catch (Exception $e) {
+        // Silenciar errores de conexión
+    }
+}
 ?>
 
 <!-- Mobile Top Bar -->
@@ -49,8 +68,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <small>Sistema de Gestión</small>
     </div>
 
-
-
     <nav class="nav flex-column">
         <a class="nav-link fw-bold <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
             <i class="fas fa-tachometer-alt me-2"></i>
@@ -62,7 +79,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <i class="fas fa-receipt me-2"></i>
                 Órdenes
                 <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
-                    <span class="badge bg-danger ms-auto"><?php echo $stats['pending_orders']; ?></span>
+                    <span class="badge bg-danger ms-auto pulsing-badge"><?php echo $stats['pending_orders']; ?></span>
                 <?php endif; ?>
             </a>
         <?php endif; ?>
@@ -72,12 +89,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <i class="fas fa-globe me-2"></i>
                 Órdenes Online
                 <?php if (isset($online_stats['pending_online']) && $online_stats['pending_online'] > 0): ?>
-                    <span class="badge bg-warning ms-auto"><?php echo $online_stats['pending_online']; ?></span>
+                    <span class="badge bg-warning ms-auto pulsing-badge" id="online-orders-count">
+                        <?php echo $online_stats['pending_online']; ?>
+                    </span>
                 <?php endif; ?>
             </a>
         <?php endif; ?>
         
-        <?php if ($auth->hasPermission('all') || $auth->hasPermission('online_orders')): ?>
+        <?php if ($auth->hasPermission('whatsapp') || $auth->hasPermission('all') || $auth->hasPermission('online_orders')): ?>
             <a class="nav-link fw-bold <?php echo ($current_page == 'whatsapp-messages.php') ? 'active' : ''; ?>" href="whatsapp-messages.php">
                 <i class="fab fa-whatsapp me-2"></i>
                 WhatsApp
@@ -113,8 +132,20 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <?php if ($auth->hasPermission('products')): ?>
             <a class="nav-link fw-bold <?php echo ($current_page == 'products.php') ? 'active' : ''; ?>" href="products.php">
-                <i class="fas fa-utensils me-2"></i>
+                <i class="fas fa-box me-2"></i>
                 Productos
+            </a>
+        <?php endif; ?>
+
+        <?php if ($auth->hasPermission('kardex') || $auth->hasPermission('products')): ?>
+            <a class="nav-link fw-bold <?php echo ($current_page == 'kardex.php') ? 'active' : ''; ?>" href="kardex.php">
+                <i class="fas fa-boxes me-2"></i>
+                Kardex
+                <?php if ($low_stock_count > 0): ?>
+                    <span class="badge bg-danger ms-auto pulsing-badge" title="Productos con stock bajo">
+                        <?php echo $low_stock_count; ?>
+                    </span>
+                <?php endif; ?>
             </a>
         <?php endif; ?>
 
@@ -223,6 +254,4 @@ function closeSidebar() {
     if (sidebarBackdrop) sidebarBackdrop.classList.remove('show');
     document.body.style.overflow = '';
 }
-
-
 </script>
