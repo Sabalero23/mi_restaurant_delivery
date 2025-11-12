@@ -1510,15 +1510,15 @@ p {
                                 <div class="table-responsive">
                                     <table class="table table-sm">
                                         <thead>
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Usuario</th>
-                                                <th>Estado</th>
-                                                <th>Archivos</th>
-                                                <th>Commit</th>
-                                                <th>Acciones</th>
-                                            </tr>
-                                        </thead>
+    <tr>
+        <th>Fecha</th>
+        <th>Versión</th>
+        <th>Estado</th>
+        <th>Archivos</th>
+        <th>Duración</th>
+        <th>Acciones</th>
+    </tr>
+</thead>
                                         <tbody id="updates-history">
                                             <tr>
                                                 <td colspan="6" class="text-center text-muted">Cargando...</td>
@@ -2008,40 +2008,65 @@ p {
 
         // Cargar historial de actualizaciones
         function loadUpdateHistory() {
-            fetch('api/github-update.php?action=get_logs')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.logs.length > 0) {
-                        let html = '';
-                        data.logs.forEach(log => {
-                            const statusBadge = getStatusBadge(log.status);
-                            const date = new Date(log.started_at).toLocaleString('es-AR');
-                            const hasDetails = log.update_details && log.update_details !== 'null';
-                            
-                            html += `
-                                <tr>
-                                    <td>${date}</td>
-                                    <td>${log.username || 'Sistema'}</td>
-                                    <td>${statusBadge}</td>
-                                    <td>
-                                        <span class="badge bg-success">${log.files_added || 0} nuevos</span>
-                                        <span class="badge bg-warning">${log.files_updated || 0} modificados</span>
-                                        ${(log.files_deleted || 0) > 0 ? `<span class="badge bg-danger">${log.files_deleted} eliminados</span>` : ''}
-                                    </td>
-                                    <td><code>${log.commit_hash || 'N/A'}</code></td>
-                                    <td>
-                                        ${hasDetails ? `<button class="btn btn-sm btn-outline-info me-1" onclick="viewUpdateDetails(${log.id})"><i class="fas fa-info-circle me-1"></i>Ver detalles</button>` : ''}
-                                        ${log.backup_path ? `<button class="btn btn-sm btn-outline-primary" onclick="rollbackToBackup('${log.backup_path}')"><i class="fas fa-undo me-1"></i>Revertir</button>` : ''}
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                        document.getElementById('updates-history').innerHTML = html;
-                    } else {
-                        document.getElementById('updates-history').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay actualizaciones registradas</td></tr>';
+    fetch('api/github-update.php?action=get_logs')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.logs.length > 0) {
+                let html = '';
+                data.logs.forEach(log => {
+                    const statusBadge = getStatusBadge(log.status);
+                    const date = new Date(log.started_at).toLocaleString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    const hasDetails = log.update_details && log.update_details !== 'null';
+                    
+                    // Calcular duración
+                    let duration = '-';
+                    if (log.completed_at && log.started_at) {
+                        const start = new Date(log.started_at);
+                        const end = new Date(log.completed_at);
+                        const seconds = Math.round((end - start) / 1000);
+                        if (seconds < 60) {
+                            duration = seconds + 's';
+                        } else {
+                            const minutes = Math.floor(seconds / 60);
+                            const secs = seconds % 60;
+                            duration = `${minutes}m ${secs}s`;
+                        }
                     }
+                    
+                    html += `
+                        <tr>
+                            <td><small>${date}</small></td>
+                            <td><span class="badge bg-primary">${log.update_version || 'N/A'}</span></td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <span class="badge bg-success">${log.files_added || 0}</span>
+                                <span class="badge bg-warning">${log.files_updated || 0}</span>
+                                ${(log.files_deleted || 0) > 0 ? `<span class="badge bg-danger">${log.files_deleted}</span>` : ''}
+                            </td>
+                            <td><small>${duration}</small></td>
+                            <td>
+                                ${hasDetails ? `<button class="btn btn-sm btn-outline-info me-1" onclick="viewUpdateDetails(${log.id})" title="Ver detalles"><i class="fas fa-info-circle"></i></button>` : ''}
+                                ${log.backup_path ? `<button class="btn btn-sm btn-outline-primary" onclick="rollbackToBackup('${log.backup_path}')" title="Revertir"><i class="fas fa-undo"></i></button>` : ''}
+                            </td>
+                        </tr>
+                    `;
                 });
-        }
+                document.getElementById('updates-history').innerHTML = html;
+            } else {
+                document.getElementById('updates-history').innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay actualizaciones registradas</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar historial:', error);
+            document.getElementById('updates-history').innerHTML = '<tr><td colspan="6" class="text-center text-danger py-3">Error al cargar historial de actualizaciones</td></tr>';
+        });
+}
 
         // Ver detalles de una actualización
         function viewUpdateDetails(updateId) {

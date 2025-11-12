@@ -9,7 +9,7 @@ $auth = new Auth();
 $auth->requireLogin();
 
 // Verificar permisos
-if (!$auth->hasPermission('products')) {
+if (!$auth->hasPermission('kardex') && !$auth->hasPermission('products') && !$auth->hasPermission('all')) {
     header("Location: dashboard.php");
     exit;
 }
@@ -28,7 +28,7 @@ $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : date('Y-m-d');
 $movement_type = isset($_GET['movement_type']) ? $_GET['movement_type'] : '';
 
 // Obtener productos con inventario
-$query_products = "SELECT id, name FROM products WHERE track_inventory = 1 AND is_active = 1 ORDER BY name";
+$query_products = "SELECT id, name, stock_quantity, low_stock_alert, price, cost FROM products WHERE track_inventory = 1 AND is_active = 1 ORDER BY name";
 $stmt_products = $db->prepare($query_products);
 $stmt_products->execute();
 $products = $stmt_products->fetchAll(PDO::FETCH_ASSOC);
@@ -72,7 +72,7 @@ if ($movement_type) {
     $params[':movement_type'] = $movement_type;
 }
 
-$query .= " ORDER BY sm.created_at DESC, sm.id DESC";
+$query .= " ORDER BY sm.created_at DESC, sm.id DESC LIMIT 500";
 
 $stmt = $db->prepare($query);
 $stmt->execute($params);
@@ -131,20 +131,131 @@ if (file_exists($theme_file)) {
     <?php endif; ?>
 
     <style>
-        :root {
-            --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        }
+/* Extensiones específicas del dashboard */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        .page-header {
-            background: #ffffff;
-            border-radius: var(--border-radius-large);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-base);
-        }
+/* Mobile Top Bar */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
+
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--dashboard-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
+
+.sidebar .nav-link .badge {
+    margin-left: auto;
+}
+
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+/* Main content */
+.main-content {
+    margin-left: var(--dashboard-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
+
+        /* Cards con fondo claro */
         .card {
-            background: #ffffff;
+            background: #ffffff !important;
+            color: #212529 !important;
             border: none;
             border-radius: var(--border-radius-large);
             box-shadow: var(--shadow-base);
@@ -152,19 +263,42 @@ if (file_exists($theme_file)) {
         }
 
         .card-header {
-            background: #f8f9fa;
+            background: #f8f9fa !important;
+            color: #212529 !important;
             border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
             padding: 1rem 1.5rem;
         }
 
+        .card-body {
+            background: #ffffff !important;
+            color: #212529 !important;
+            padding: 1.5rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-radius: var(--border-radius-large);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-base);
+        }
+
+        /* Stats Cards con gradientes */
         .stats-card {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
+            color: white !important;
             border-radius: var(--border-radius-large);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             box-shadow: var(--shadow-base);
+            transition: transform var(--transition-base);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
         }
 
         .stats-card.entrada {
@@ -183,27 +317,36 @@ if (file_exists($theme_file)) {
             font-size: 2rem;
             margin: 0;
             font-weight: bold;
+            color: white !important;
         }
 
         .stats-card p {
             margin: 0;
             opacity: 0.9;
             font-size: 0.9rem;
+            color: white !important;
         }
 
+        /* Filter Card */
         .filter-card {
-            background: #f8f9fa;
+            background: #f8f9fa !important;
+            color: #212529 !important;
             border-radius: var(--border-radius-large);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-small);
         }
 
+        /* Table styles */
         .table {
             margin-bottom: 0;
+            background: #ffffff !important;
+            color: #212529 !important;
         }
 
         .table thead th {
-            background: #f8f9fa;
+            background: #f8f9fa !important;
+            color: #212529 !important;
             border-bottom: 2px solid #dee2e6;
             font-weight: 600;
             text-transform: uppercase;
@@ -214,8 +357,15 @@ if (file_exists($theme_file)) {
         .table tbody td {
             padding: 0.75rem;
             vertical-align: middle;
+            color: #212529 !important;
+            border-bottom: 1px solid #dee2e6;
         }
 
+        .table-hover tbody tr:hover {
+            background: rgba(0, 0, 0, 0.02) !important;
+        }
+
+        /* Badges */
         .badge-entrada {
             background: linear-gradient(45deg, var(--success-color), #20c997);
             color: white;
@@ -254,6 +404,7 @@ if (file_exists($theme_file)) {
             color: white;
         }
 
+        /* Stock Indicators */
         .stock-indicator {
             display: inline-block;
             padding: 0.25rem 0.75rem;
@@ -277,12 +428,14 @@ if (file_exists($theme_file)) {
             color: #721c24;
         }
 
+        /* Buttons */
         .btn-primary {
             background: var(--primary-gradient);
             border: none;
             padding: 0.5rem 1.5rem;
             border-radius: var(--border-radius-base);
             transition: var(--transition-base);
+            color: white !important;
         }
 
         .btn-primary:hover {
@@ -293,24 +446,56 @@ if (file_exists($theme_file)) {
         .btn-success {
             background: linear-gradient(45deg, var(--success-color), #20c997);
             border: none;
+            color: white !important;
         }
 
         .btn-danger {
             background: linear-gradient(45deg, var(--danger-color), #e83e8c);
             border: none;
+            color: white !important;
         }
 
         .btn-secondary {
             background: linear-gradient(45deg, #6c757d, #495057);
             border: none;
+            color: white !important;
+        }
+
+        /* Form controls */
+        .form-control,
+        .form-select {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #ced4da;
         }
 
         .form-control:focus,
         .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: #ffffff !important;
+            color: #212529 !important;
         }
 
+        .form-label {
+            color: #212529 !important;
+            font-weight: 500;
+        }
+
+        /* Text colors */
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: #212529 !important;
+        }
+
+        p {
+            color: #212529 !important;
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 3rem 1rem;
@@ -323,29 +508,29 @@ if (file_exists($theme_file)) {
             opacity: 0.5;
         }
 
-        @media (max-width: 768px) {
-            .stats-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .table {
-                font-size: 0.85rem;
-            }
-
-            .filter-card {
-                padding: 1rem;
-            }
+        /* Modal styles */
+        .modal-content {
+            background: #ffffff !important;
+            color: #212529 !important;
         }
 
-        /* Modal styles */
         .modal-header {
             background: var(--primary-gradient);
-            color: white;
+            color: white !important;
             border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+        }
+
+        .modal-header .modal-title {
+            color: white !important;
         }
 
         .modal-header .btn-close {
             filter: brightness(0) invert(1);
+        }
+
+        .modal-body {
+            background: #ffffff !important;
+            color: #212529 !important;
         }
 
         .product-info-box {
@@ -364,6 +549,68 @@ if (file_exists($theme_file)) {
         .product-info-box p {
             margin: 0.25rem 0;
             font-size: 0.9rem;
+        }
+
+        /* Responsive - IGUAL QUE DASHBOARD */
+        @media (max-width: 991.98px) {
+            .mobile-topbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-top: 5rem;
+            }
+
+            .stats-card {
+                padding: 1rem;
+            }
+
+            .stats-card h3 {
+                font-size: 1.5rem;
+            }
+
+            .page-header {
+                padding: 1rem;
+            }
+
+            .filter-card {
+                padding: 1rem;
+            }
+
+            .table {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.5rem;
+                padding-top: 4.5rem;
+            }
+
+            .stats-card {
+                padding: 0.75rem;
+            }
+
+            .stats-card h3 {
+                font-size: 1.25rem;
+            }
+
+            .page-header {
+                padding: 0.75rem;
+            }
+
+            .page-header h2 {
+                font-size: 1.25rem;
+            }
+
+            .filter-card {
+                padding: 0.75rem;
+            }
         }
     </style>
 </head>
@@ -385,15 +632,15 @@ if (file_exists($theme_file)) {
                 <div class="d-flex gap-2 mt-2 mt-md-0">
                     <button class="btn btn-success" onclick="openMovementModal('entrada')">
                         <i class="fas fa-plus me-1"></i>
-                        Entrada
+                        <span class="d-none d-md-inline">Entrada</span>
                     </button>
                     <button class="btn btn-danger" onclick="openMovementModal('salida')">
                         <i class="fas fa-minus me-1"></i>
-                        Salida
+                        <span class="d-none d-md-inline">Salida</span>
                     </button>
                     <button class="btn btn-secondary" onclick="exportKardex()">
                         <i class="fas fa-file-excel me-1"></i>
-                        Exportar
+                        <span class="d-none d-md-inline">Exportar</span>
                     </button>
                 </div>
             </div>
@@ -506,7 +753,7 @@ if (file_exists($theme_file)) {
                     </div>
                     <div class="col-md-1">
                         <label class="form-label">&nbsp;</label>
-                        <button type="button" class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <button type="button" class="btn btn-secondary w-100" onclick="clearFilters()" title="Limpiar filtros">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -537,13 +784,13 @@ if (file_exists($theme_file)) {
                                 <tr>
                                     <th>FECHA</th>
                                     <th>PRODUCTO</th>
-                                    <th>CATEGORÍA</th>
+                                    <th class="d-none d-md-table-cell">CATEGORÍA</th>
                                     <th>TIPO</th>
                                     <th class="text-center">CANTIDAD</th>
-                                    <th class="text-center">STOCK ANTERIOR</th>
+                                    <th class="text-center d-none d-lg-table-cell">STOCK ANTERIOR</th>
                                     <th class="text-center">STOCK NUEVO</th>
-                                    <th>MOTIVO</th>
-                                    <th>USUARIO</th>
+                                    <th class="d-none d-xl-table-cell">MOTIVO</th>
+                                    <th class="d-none d-lg-table-cell">USUARIO</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -551,12 +798,14 @@ if (file_exists($theme_file)) {
                                 <tr>
                                     <td>
                                         <i class="fas fa-calendar-alt text-muted me-1"></i>
-                                        <?php echo date('d/m/Y H:i', strtotime($mov['created_at'])); ?>
+                                        <span class="d-none d-md-inline"><?php echo date('d/m/Y', strtotime($mov['created_at'])); ?></span>
+                                        <br class="d-md-none">
+                                        <small><?php echo date('H:i', strtotime($mov['created_at'])); ?></small>
                                     </td>
                                     <td>
                                         <strong><?php echo htmlspecialchars($mov['product_name']); ?></strong>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-md-table-cell">
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($mov['category_name'] ?? 'Sin categoría'); ?>
                                         </span>
@@ -564,7 +813,7 @@ if (file_exists($theme_file)) {
                                     <td>
                                         <span class="badge-<?php echo $mov['movement_type']; ?>">
                                             <i class="fas fa-arrow-<?php echo $mov['movement_type'] === 'entrada' ? 'up' : 'down'; ?> me-1"></i>
-                                            <?php echo ucfirst($mov['movement_type']); ?>
+                                            <span class="d-none d-sm-inline"><?php echo ucfirst($mov['movement_type']); ?></span>
                                         </span>
                                     </td>
                                     <td class="text-center">
@@ -573,18 +822,18 @@ if (file_exists($theme_file)) {
                                         </span>
                                         <strong><?php echo $mov['quantity']; ?></strong>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center d-none d-lg-table-cell">
                                         <span class="text-muted"><?php echo $mov['old_stock']; ?></span>
                                     </td>
                                     <td class="text-center">
                                         <strong><?php echo $mov['new_stock']; ?></strong>
                                     </td>
-                                    <td>
-                                        <small><?php echo htmlspecialchars($mov['reason'] ?? '-'); ?></small>
+                                    <td class="d-none d-xl-table-cell">
+                                        <small><?php echo htmlspecialchars(substr($mov['reason'] ?? '-', 0, 30)); ?></small>
                                     </td>
-                                    <td>
+                                    <td class="d-none d-lg-table-cell">
                                         <i class="fas fa-user text-muted me-1"></i>
-                                        <?php echo htmlspecialchars($mov['user_name'] ?? 'Sistema'); ?>
+                                        <small><?php echo htmlspecialchars($mov['user_name'] ?? 'Sistema'); ?></small>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
