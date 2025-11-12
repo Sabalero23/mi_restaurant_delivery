@@ -64,23 +64,120 @@ WHERE NOT EXISTS (
 -- =============================================
 -- 3. ACTUALIZAR ESTRUCTURA DE STOCK_MOVEMENTS
 -- =============================================
--- Agregar nuevas columnas si no existen
-ALTER TABLE `stock_movements`
-    ADD COLUMN IF NOT EXISTS `reference_type` ENUM('order', 'manual', 'adjustment', 'purchase', 'return') DEFAULT 'manual' AFTER `reason`,
-    ADD COLUMN IF NOT EXISTS `reference_id` INT(11) DEFAULT NULL AFTER `reference_type`;
 
--- Actualizar ENUM de movement_type si es necesario
+-- Verificar y agregar columna reference_type
+SET @column_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND COLUMN_NAME = 'reference_type'
+);
+
+SET @sql = IF(@column_exists = 0,
+    "ALTER TABLE `stock_movements` ADD COLUMN `reference_type` ENUM('order', 'manual', 'adjustment', 'purchase', 'return') DEFAULT 'manual' AFTER `reason`",
+    'SELECT "Column reference_type already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Verificar y agregar columna reference_id
+SET @column_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND COLUMN_NAME = 'reference_id'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE `stock_movements` ADD COLUMN `reference_id` INT(11) DEFAULT NULL AFTER `reference_type`',
+    'SELECT "Column reference_id already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Actualizar ENUM de movement_type
 ALTER TABLE `stock_movements`
     MODIFY COLUMN `movement_type` ENUM('entrada', 'salida', 'ajuste', 'venta', 'compra', 'devolucion') NOT NULL;
 
--- Agregar índices si no existen
-ALTER TABLE `stock_movements`
-    ADD INDEX IF NOT EXISTS `idx_product_id` (`product_id`),
-    ADD INDEX IF NOT EXISTS `idx_user_id` (`user_id`),
-    ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`),
-    ADD INDEX IF NOT EXISTS `idx_movement_type` (`movement_type`);
+-- Verificar y agregar índice idx_product_id
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND INDEX_NAME = 'idx_product_id'
+);
 
--- Agregar claves foráneas si no existen
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `stock_movements` ADD INDEX `idx_product_id` (`product_id`)',
+    'SELECT "Index idx_product_id already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Verificar y agregar índice idx_user_id
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND INDEX_NAME = 'idx_user_id'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `stock_movements` ADD INDEX `idx_user_id` (`user_id`)',
+    'SELECT "Index idx_user_id already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Verificar y agregar índice idx_created_at
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND INDEX_NAME = 'idx_created_at'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `stock_movements` ADD INDEX `idx_created_at` (`created_at`)',
+    'SELECT "Index idx_created_at already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Verificar y agregar índice idx_movement_type
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND INDEX_NAME = 'idx_movement_type'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `stock_movements` ADD INDEX `idx_movement_type` (`movement_type`)',
+    'SELECT "Index idx_movement_type already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Agregar clave foránea fk_movement_product si no existe
 SET @fk_exists = (
     SELECT COUNT(*) 
     FROM information_schema.TABLE_CONSTRAINTS 
@@ -98,6 +195,7 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- Agregar clave foránea fk_movement_user si no existe
 SET @fk_exists = (
     SELECT COUNT(*) 
     FROM information_schema.TABLE_CONSTRAINTS 
