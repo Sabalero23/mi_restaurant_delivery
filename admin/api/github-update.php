@@ -1020,4 +1020,4 @@ function retryMigration($db) {
             'message' => 'Error: ' . $e->getMessage()
         ]);
     }
-}
+} 
