@@ -1,11 +1,11 @@
 -- =============================================
--- Migracion v2.3.6 - Kardex y Limpieza de Sistema
+-- Migración v2.3.6 - Kardex y Limpieza de Sistema (CORREGIDO)
 -- =============================================
--- Descripcion: 
+-- Descripción: 
 --   1. Volcado inicial de movimientos de productos al kardex
 --   2. Limpieza de tabla settings (mover logs a tabla dedicada)
---   3. Creacion de tabla para logs de actualizaciones
---   4. Optimizacion de estructura de datos
+--   3. Creación de tabla para logs de actualizaciones
+--   4. Optimización de estructura de datos
 -- Fecha: 2025-11-12
 -- Autor: Cellcom Technology
 -- =============================================
@@ -13,7 +13,7 @@
 START TRANSACTION;
 
 -- =============================================
--- 1. CREAR TABLA DE LOGS DE ACTUALIZACION
+-- 1. CREAR TABLA DE LOGS DE ACTUALIZACIÓN
 -- =============================================
 CREATE TABLE IF NOT EXISTS `system_update_logs` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -42,7 +42,6 @@ CREATE TABLE IF NOT EXISTS `system_update_logs` (
 -- =============================================
 -- 2. MIGRAR LOGS EXISTENTES DESDE SETTINGS
 -- =============================================
--- Insertar logs de migraciones anteriores si existen
 INSERT INTO `system_update_logs` 
     (`update_version`, `status`, `started_at`, `completed_at`, `username`, `update_details`)
 SELECT 
@@ -63,55 +62,63 @@ WHERE NOT EXISTS (
 );
 
 -- =============================================
--- 3. LIMPIAR SETTINGS - REMOVER LOGS ANTIGUOS
+-- 3. ACTUALIZAR ESTRUCTURA DE STOCK_MOVEMENTS
 -- =============================================
--- Eliminar configuraciones de logs que ya no son necesarias
-DELETE FROM `settings` 
-WHERE `setting_key` IN (
-    'migration_v235_log',
-    'migration_v234_log',
-    'migration_v233_log',
-    'update_log',
-    'last_update_log',
-    'system_update_history'
+-- Agregar nuevas columnas si no existen
+ALTER TABLE `stock_movements`
+    ADD COLUMN IF NOT EXISTS `reference_type` ENUM('order', 'manual', 'adjustment', 'purchase', 'return') DEFAULT 'manual' AFTER `reason`,
+    ADD COLUMN IF NOT EXISTS `reference_id` INT(11) DEFAULT NULL AFTER `reference_type`;
+
+-- Actualizar ENUM de movement_type si es necesario
+ALTER TABLE `stock_movements`
+    MODIFY COLUMN `movement_type` ENUM('entrada', 'salida', 'ajuste', 'venta', 'compra', 'devolucion') NOT NULL;
+
+-- Agregar índices si no existen
+ALTER TABLE `stock_movements`
+    ADD INDEX IF NOT EXISTS `idx_product_id` (`product_id`),
+    ADD INDEX IF NOT EXISTS `idx_user_id` (`user_id`),
+    ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`),
+    ADD INDEX IF NOT EXISTS `idx_movement_type` (`movement_type`);
+
+-- Agregar claves foráneas si no existen
+SET @fk_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.TABLE_CONSTRAINTS 
+    WHERE CONSTRAINT_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND CONSTRAINT_NAME = 'fk_movement_product'
 );
 
--- Eliminar configuraciones duplicadas o temporales
-DELETE FROM `settings` 
-WHERE `setting_key` LIKE 'temp_%' 
-   OR `setting_key` LIKE 'cache_%'
-   OR `setting_key` LIKE 'old_%';
+SET @sql = IF(@fk_exists = 0,
+    'ALTER TABLE `stock_movements` ADD CONSTRAINT `fk_movement_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE',
+    'SELECT "FK fk_movement_product already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @fk_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.TABLE_CONSTRAINTS 
+    WHERE CONSTRAINT_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'stock_movements' 
+    AND CONSTRAINT_NAME = 'fk_movement_user'
+);
+
+SET @sql = IF(@fk_exists = 0,
+    'ALTER TABLE `stock_movements` ADD CONSTRAINT `fk_movement_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL',
+    'SELECT "FK fk_movement_user already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- =============================================
--- 4. VERIFICAR Y CREAR TABLA STOCK_MOVEMENTS
+-- 4. VOLCADO INICIAL DE MOVIMIENTOS AL KARDEX
 -- =============================================
-CREATE TABLE IF NOT EXISTS `stock_movements` (
-    `id` INT(11) NOT NULL AUTO_INCREMENT,
-    `product_id` INT(11) NOT NULL,
-    `movement_type` ENUM('entrada', 'salida', 'ajuste', 'venta', 'compra', 'devolucion') NOT NULL,
-    `quantity` INT(11) NOT NULL,
-    `old_stock` INT(11) NOT NULL DEFAULT 0,
-    `new_stock` INT(11) NOT NULL DEFAULT 0,
-    `reason` VARCHAR(255) DEFAULT NULL,
-    `reference_type` ENUM('order', 'manual', 'adjustment', 'purchase', 'return') DEFAULT 'manual',
-    `reference_id` INT(11) DEFAULT NULL,
-    `user_id` INT(11) DEFAULT NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    KEY `idx_product_id` (`product_id`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_created_at` (`created_at`),
-    KEY `idx_movement_type` (`movement_type`),
-    CONSTRAINT `fk_movement_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_movement_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- =============================================
--- 5. VOLCADO INICIAL DE MOVIMIENTOS AL KARDEX
--- =============================================
--- Este proceso analiza todas las órdenes y genera movimientos de entrada iniciales
-
--- Primero, verificar si ya existen movimientos para evitar duplicados
+-- Verificar si ya existen movimientos
 SET @movements_count = (SELECT COUNT(*) FROM stock_movements);
 
 -- Solo ejecutar si la tabla está vacía
@@ -126,7 +133,7 @@ SELECT
     CONCAT('Inventario inicial - Basado en órdenes históricas hasta ', DATE_FORMAT(NOW(), '%d/%m/%Y')) as reason,
     'adjustment' as reference_type,
     NULL as reference_id,
-    1 as user_id, -- Usuario admin
+    1 as user_id,
     MIN(o.created_at) as created_at
 FROM 
     order_items oi
@@ -137,7 +144,7 @@ INNER JOIN
 WHERE 
     p.track_inventory = 1
     AND o.status != 'cancelled'
-    AND @movements_count = 0  -- Solo si no hay movimientos previos
+    AND @movements_count = 0
 GROUP BY 
     oi.product_id, p.stock_quantity
 HAVING 
@@ -165,10 +172,8 @@ WHERE
     );
 
 -- =============================================
--- 6. CREAR TABLA DEDICADA PARA LOGS DE ACTUALIZACIONES
+-- 5. CREAR TABLA DE HISTORIAL DE ACTUALIZACIONES
 -- =============================================
--- Mover logs de system_updates a una tabla más completa
-
 CREATE TABLE IF NOT EXISTS `system_update_history` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
     `update_id` INT(11) DEFAULT NULL,
@@ -197,7 +202,7 @@ CREATE TABLE IF NOT EXISTS `system_update_history` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Migrar datos existentes de system_updates a system_update_history
+-- Migrar datos de system_updates a system_update_history
 INSERT INTO `system_update_history` 
     (`update_id`, `update_version`, `from_commit`, `to_commit`, `status`, `started_at`, `completed_at`, 
      `user_id`, `files_added`, `files_updated`, `files_deleted`, `backup_path`, `update_details`, `error_message`)
@@ -223,10 +228,9 @@ WHERE NOT EXISTS (
 );
 
 -- =============================================
--- 7. LIMPIEZA DE TABLA SETTINGS
+-- 6. LIMPIEZA DE TABLA SETTINGS
 -- =============================================
-
--- Eliminar logs de migraciones antiguas (ya están en system_update_history)
+-- Eliminar logs de migraciones antiguas
 DELETE FROM `settings` 
 WHERE `setting_key` LIKE 'migration_%_log'
    OR `setting_key` LIKE 'migration_%_date'
@@ -240,7 +244,7 @@ WHERE `setting_key` LIKE 'temp_%'
    OR `setting_key` LIKE 'old_%'
    OR `setting_key` LIKE 'test_%';
 
--- Eliminar configuraciones de migración específicas que ya no se usan
+-- Eliminar configuraciones obsoletas
 DELETE FROM `settings`
 WHERE `setting_key` IN (
     'last_update_log',
@@ -253,27 +257,24 @@ WHERE `setting_key` IN (
 );
 
 -- =============================================
--- 8. OPTIMIZACIÓN DE ÍNDICES
+-- 7. OPTIMIZACIÓN DE ÍNDICES
 -- =============================================
-
 -- Agregar índices faltantes para mejor rendimiento
 ALTER TABLE `order_items` 
-    ADD INDEX `idx_product_status` (`product_id`, `status`),
-    ADD INDEX `idx_order_status` (`order_id`, `status`);
+    ADD INDEX IF NOT EXISTS `idx_product_status` (`product_id`, `status`),
+    ADD INDEX IF NOT EXISTS `idx_order_status` (`order_id`, `status`);
 
 ALTER TABLE `products` 
-    ADD INDEX `idx_track_inventory` (`track_inventory`, `is_active`),
-    ADD INDEX `idx_stock_alert` (`stock_quantity`, `low_stock_alert`);
+    ADD INDEX IF NOT EXISTS `idx_track_inventory` (`track_inventory`, `is_active`),
+    ADD INDEX IF NOT EXISTS `idx_stock_alert` (`stock_quantity`, `low_stock_alert`);
 
 ALTER TABLE `orders` 
-    ADD INDEX `idx_type_status` (`type`, `status`),
-    ADD INDEX `idx_created_at` (`created_at`);
+    ADD INDEX IF NOT EXISTS `idx_type_status` (`type`, `status`),
+    ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`);
 
 -- =============================================
--- 9. GENERAR HASH Y ACTUALIZAR VERSIÓN
+-- 8. GENERAR HASH Y ACTUALIZAR VERSIÓN
 -- =============================================
-
--- Generar hash único para esta versión
 SET @new_commit_hash_full = SHA2(CONCAT(
     'v2.3.6',
     '_',
@@ -286,7 +287,7 @@ SET @new_commit_hash_full = SHA2(CONCAT(
 
 SET @new_commit_hash = SUBSTRING(@new_commit_hash_full, 1, 8);
 
--- Guardar commit anterior como backup
+-- Guardar commit anterior
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`)
 SELECT 
     'system_commit_previous',
@@ -333,9 +334,8 @@ ON DUPLICATE KEY UPDATE
     `description` = 'Versión actual del sistema';
 
 -- =============================================
--- 10. CONFIGURACIONES DEL SISTEMA
+-- 9. CONFIGURACIONES DEL SISTEMA
 -- =============================================
-
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) 
 VALUES 
     ('kardex_enabled', '1', 'Sistema de control de inventario Kardex habilitado'),
@@ -348,10 +348,8 @@ ON DUPLICATE KEY UPDATE
     `description` = VALUES(`description`);
 
 -- =============================================
--- 11. REGISTRAR MIGRACIÓN
+-- 10. REGISTRAR MIGRACIÓN
 -- =============================================
-
--- Registrar en tabla de migraciones
 INSERT INTO `migrations` (`version`, `filename`, `executed_at`, `execution_time`, `status`) 
 VALUES (
     '2.3.6',
@@ -363,7 +361,7 @@ VALUES (
     `executed_at` = NOW(),
     `status` = 'success';
 
--- Registrar en system_update_logs (nueva tabla)
+-- Registrar en system_update_logs
 INSERT INTO `system_update_logs` 
     (`update_version`, `status`, `started_at`, `completed_at`, `username`, `files_added`, `update_details`)
 VALUES (
@@ -377,9 +375,8 @@ VALUES (
 );
 
 -- =============================================
--- 12. OPTIMIZAR TABLAS
+-- 11. OPTIMIZAR TABLAS
 -- =============================================
-
 OPTIMIZE TABLE `settings`;
 OPTIMIZE TABLE `stock_movements`;
 OPTIMIZE TABLE `products`;
@@ -388,9 +385,8 @@ OPTIMIZE TABLE `order_items`;
 OPTIMIZE TABLE `system_update_history`;
 
 -- =============================================
--- 13. VERIFICACIÓN Y RESUMEN
+-- 12. VERIFICACIÓN Y RESUMEN
 -- =============================================
-
 SELECT 
     '✅ MIGRACIÓN COMPLETADA EXITOSAMENTE' AS 'ESTADO',
     '' AS '';
@@ -403,217 +399,39 @@ SELECT
     NOW() AS 'Fecha_Instalación';
 
 SELECT 
-    '=====================' AS '═══════════════════',
-    'RESUMEN DE KARDEX' AS '',
-    '' AS '',
-    '' AS '';
+    'RESUMEN DE KARDEX' AS 'Métrica',
+    '' AS 'Valor';
 
 SELECT 
     'Productos con Inventario' AS 'Métrica',
-    COUNT(*) AS 'Valor',
-    '' AS ''
+    COUNT(*) AS 'Valor'
 FROM products 
 WHERE track_inventory = 1
 UNION ALL
 SELECT 
     'Movimientos Registrados',
-    COUNT(*),
-    ''
+    COUNT(*)
 FROM stock_movements
 UNION ALL
 SELECT 
     'Productos Bajo Stock Mínimo',
-    COUNT(*),
-    ''
+    COUNT(*)
 FROM products 
 WHERE track_inventory = 1 
 AND stock_quantity <= low_stock_alert
 AND is_active = 1;
 
 SELECT 
-    '=====================' AS '═══════════════════',
-    'LIMPIEZA DE SETTINGS' AS '',
-    '' AS '',
-    '' AS '';
+    'LIMPIEZA DE SETTINGS' AS 'Estado',
+    (SELECT COUNT(*) FROM settings) AS 'Cantidad';
 
 SELECT 
-    'Registros en Settings (Antes)' AS 'Estado',
-    '~980' AS 'Cantidad',
-    'Incluía logs y temporales' AS 'Nota'
-UNION ALL
-SELECT 
-    'Registros en Settings (Después)',
-    (SELECT COUNT(*) FROM settings),
-    'Solo configuraciones activas';
-
-SELECT 
-    '=====================' AS '═══════════════════',
-    'LOGS DE ACTUALIZACIÓN' AS '',
-    '' AS '',
-    '' AS '';
-
-SELECT 
-    'Logs en system_updates' AS 'Tabla',
-    (SELECT COUNT(*) FROM system_updates) AS 'Registros',
-    'Tabla legacy' AS 'Estado'
-UNION ALL
-SELECT 
-    'Logs en system_update_logs',
-    (SELECT COUNT(*) FROM system_update_logs),
-    'Nueva tabla dedicada'
-UNION ALL
-SELECT 
-    'Logs en system_update_history',
-    (SELECT COUNT(*) FROM system_update_history),
-    'Historial completo';
+    'LOGS DE ACTUALIZACIÓN' AS 'Tabla',
+    (SELECT COUNT(*) FROM system_update_logs) AS 'Registros';
 
 SELECT 
     '✅ SISTEMA LISTO PARA USAR' AS '',
     CONCAT('Versión: ', (SELECT setting_value FROM settings WHERE setting_key = 'current_system_version')) AS '',
-    CONCAT('Commit: ', @new_commit_hash) AS '',
-    CONCAT('Fecha: ', NOW()) AS '';
+    CONCAT('Commit: ', @new_commit_hash) AS '';
 
 COMMIT;
-
--- =============================================
--- NOTAS POST-INSTALACIÓN
--- =============================================
-/*
-✅ INSTALACIÓN COMPLETADA - v2.3.6
-
-═══════════════════════════════════════════════════
-📦 NUEVO: SISTEMA KARDEX DE INVENTARIO
-═══════════════════════════════════════════════════
-
-1. TABLA STOCK_MOVEMENTS:
-   ✓ Registro completo de movimientos de inventario
-   ✓ Campos: entrada/salida, cantidad, stock anterior/nuevo
-   ✓ Referencias a productos, usuarios y órdenes
-   ✓ Timestamps automáticos
-
-2. VOLCADO INICIAL DE DATOS:
-   ✓ Se analizaron TODAS las órdenes históricas
-   ✓ Se generaron movimientos de entrada iniciales
-   ✓ Stock calculado basado en ventas reales
-   ✓ Solo productos con track_inventory = 1
-
-3. FUNCIONALIDADES:
-   ✓ Control de entradas y salidas
-   ✓ Historial completo de movimientos
-   ✓ Cálculo automático de stock
-   ✓ Alertas de stock bajo
-   ✓ Reportes de inventario
-
-═══════════════════════════════════════════════════
-🧹 LIMPIEZA DE SISTEMA
-═══════════════════════════════════════════════════
-
-1. TABLA SETTINGS OPTIMIZADA:
-   ✗ Eliminados: logs de migraciones antiguas
-   ✗ Eliminados: configuraciones temporales
-   ✗ Eliminados: entries de cache
-   ✗ Eliminados: configuraciones de test
-   ✓ Reducción: ~980 → ~60 registros
-
-2. NUEVA TABLA: SYSTEM_UPDATE_LOGS
-   ✓ Logs de actualizaciones en tabla dedicada
-   ✓ No contamina tabla settings
-   ✓ Campos específicos para tracking
-   ✓ Migración automática de datos existentes
-
-3. NUEVA TABLA: SYSTEM_UPDATE_HISTORY
-   ✓ Historial completo de actualizaciones
-   ✓ Información detallada de cada update
-   ✓ Tiempos de ejecución
-   ✓ IP y user agent del ejecutor
-
-═══════════════════════════════════════════════════
-⚡ OPTIMIZACIONES
-═══════════════════════════════════════════════════
-
-1. NUEVOS ÍNDICES:
-   ✓ order_items: idx_product_status, idx_order_status
-   ✓ products: idx_track_inventory, idx_stock_alert
-   ✓ orders: idx_type_status, idx_created_at
-   ✓ stock_movements: idx_product_id, idx_movement_type
-
-2. TABLAS OPTIMIZADAS:
-   ✓ settings
-   ✓ stock_movements
-   ✓ products
-   ✓ orders
-   ✓ order_items
-
-═══════════════════════════════════════════════════
-🔧 PRÓXIMOS PASOS
-═══════════════════════════════════════════════════
-
-1. Verificar página Kardex: admin/kardex.php
-   • Revisar movimientos iniciales cargados
-   • Probar registrar entrada manual
-   • Probar registrar salida manual
-   • Verificar cálculos de stock
-
-2. Verificar alertas de stock bajo:
-   • Ir a admin/products.php
-   • Productos en rojo = stock bajo
-   • Configurar low_stock_alert por producto
-
-3. Configurar permisos de Kardex:
-   • admin/settings.php
-   • Roles y Permisos
-   • Asignar permiso 'kardex' a roles necesarios
-
-4. Limpieza completada:
-   • Tabla settings más ligera
-   • Logs organizados en tablas dedicadas
-   • Sistema más eficiente
-
-═══════════════════════════════════════════════════
-📊 CONSULTAS ÚTILES
-═══════════════════════════════════════════════════
-
--- Ver movimientos de un producto específico:
-SELECT * FROM stock_movements 
-WHERE product_id = ? 
-ORDER BY created_at DESC;
-
--- Productos con stock bajo:
-SELECT 
-    p.name,
-    p.stock_quantity as 'Stock Actual',
-    p.low_stock_alert as 'Stock Mínimo',
-    (p.stock_quantity - p.low_stock_alert) as 'Diferencia'
-FROM products p
-WHERE p.track_inventory = 1 
-  AND p.stock_quantity <= p.low_stock_alert
-ORDER BY (p.stock_quantity - p.low_stock_alert) ASC;
-
--- Resumen de movimientos por producto:
-SELECT 
-    p.name as 'Producto',
-    COUNT(*) as 'Total Movimientos',
-    SUM(CASE WHEN sm.movement_type = 'entrada' THEN sm.quantity ELSE 0 END) as 'Total Entradas',
-    SUM(CASE WHEN sm.movement_type = 'salida' THEN sm.quantity ELSE 0 END) as 'Total Salidas',
-    p.stock_quantity as 'Stock Actual'
-FROM stock_movements sm
-JOIN products p ON sm.product_id = p.id
-GROUP BY p.id, p.name, p.stock_quantity
-ORDER BY p.name;
-
--- Ver logs de actualizaciones limpios:
-SELECT 
-    update_version,
-    status,
-    started_at,
-    completed_at,
-    TIMESTAMPDIFF(SECOND, started_at, completed_at) as 'Duración (seg)',
-    files_added + files_updated + files_deleted as 'Total Archivos'
-FROM system_update_logs
-ORDER BY started_at DESC
-LIMIT 10;
-
-═══════════════════════════════════════════════════
-FIN DE MIGRACIÓN v2.3.6
-═══════════════════════════════════════════════════
-*/
