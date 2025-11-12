@@ -357,18 +357,111 @@ WHERE `setting_key` IN (
 -- =============================================
 -- 7. OPTIMIZACIÓN DE ÍNDICES
 -- =============================================
--- Agregar índices faltantes para mejor rendimiento
-ALTER TABLE `order_items` 
-    ADD INDEX IF NOT EXISTS `idx_product_status` (`product_id`, `status`),
-    ADD INDEX IF NOT EXISTS `idx_order_status` (`order_id`, `status`);
 
-ALTER TABLE `products` 
-    ADD INDEX IF NOT EXISTS `idx_track_inventory` (`track_inventory`, `is_active`),
-    ADD INDEX IF NOT EXISTS `idx_stock_alert` (`stock_quantity`, `low_stock_alert`);
+-- Índices para order_items
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'order_items' 
+    AND INDEX_NAME = 'idx_product_status'
+);
 
-ALTER TABLE `orders` 
-    ADD INDEX IF NOT EXISTS `idx_type_status` (`type`, `status`),
-    ADD INDEX IF NOT EXISTS `idx_created_at` (`created_at`);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `order_items` ADD INDEX `idx_product_status` (`product_id`, `status`)',
+    'SELECT "Index idx_product_status already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'order_items' 
+    AND INDEX_NAME = 'idx_order_status'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `order_items` ADD INDEX `idx_order_status` (`order_id`, `status`)',
+    'SELECT "Index idx_order_status already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Índices para products
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'products' 
+    AND INDEX_NAME = 'idx_track_inventory'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `products` ADD INDEX `idx_track_inventory` (`track_inventory`, `is_active`)',
+    'SELECT "Index idx_track_inventory already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'products' 
+    AND INDEX_NAME = 'idx_stock_alert'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `products` ADD INDEX `idx_stock_alert` (`stock_quantity`, `low_stock_alert`)',
+    'SELECT "Index idx_stock_alert already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Índices para orders
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'orders' 
+    AND INDEX_NAME = 'idx_type_status'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `orders` ADD INDEX `idx_type_status` (`type`, `status`)',
+    'SELECT "Index idx_type_status already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) 
+    FROM information_schema.STATISTICS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'orders' 
+    AND INDEX_NAME = 'idx_created_at'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE `orders` ADD INDEX `idx_created_at` (`created_at`)',
+    'SELECT "Index idx_created_at already exists"'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- =============================================
 -- 8. GENERAR HASH Y ACTUALIZAR VERSIÓN
