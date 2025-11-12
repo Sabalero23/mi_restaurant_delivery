@@ -136,7 +136,8 @@ if ($auth->hasPermission('products') || $auth->hasPermission('kardex')) {
                 Productos
             </a>
         <?php endif; ?>
-
+        
+                <!-- AQUÍ VA EL CÓDIGO NUEVO -->
         <?php if ($auth->hasPermission('kardex') || $auth->hasPermission('products')): ?>
             <a class="nav-link fw-bold <?php echo ($current_page == 'kardex.php') ? 'active' : ''; ?>" href="kardex.php">
                 <i class="fas fa-boxes me-2"></i>
@@ -146,6 +147,11 @@ if ($auth->hasPermission('products') || $auth->hasPermission('kardex')) {
                         <?php echo $low_stock_count; ?>
                     </span>
                 <?php endif; ?>
+            </a>
+            
+            <a class="nav-link fw-bold <?php echo ($current_page == 'compras.php') ? 'active' : ''; ?>" href="compras.php">
+                <i class="fas fa-shopping-cart me-2"></i>
+                Compras
             </a>
         <?php endif; ?>
 
