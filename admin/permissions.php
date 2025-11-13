@@ -152,7 +152,13 @@ function getDefaultPermissions() {
             'description' => 'Edición masiva de productos',
             'icon' => 'fas fa-edit',
             'category' => 'management'
-        ]
+        ],
+'whatsapp' => [
+    'name' => 'WhatsApp',
+    'description' => 'Gestión de mensajes de WhatsApp y atención al cliente',
+    'icon' => 'fab fa-whatsapp',
+    'category' => 'operations'
+]
     ];
 }
 
@@ -1026,14 +1032,147 @@ p {
             <div class="tab-content">
                 <!-- Roles Tab -->
                 <div class="tab-pane fade show active" id="roles" role="tabpanel">
-                    <!-- EL CONTENIDO DE ROLES SE MANTIENE IGUAL -->
-                    <!-- ... (copiar del archivo original) ... -->
+                    <div class="row">
+                        <?php foreach ($roles as $role): ?>
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card role-card h-100 <?php echo in_array($role['name'], ['administrador', 'gerente', 'mesero', 'cocina', 'delivery', 'mostrador']) ? 'system-role' : 'custom-role'; ?>">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0"><?php echo htmlspecialchars($role['name']); ?></h6>
+                                            <?php if (in_array($role['name'], ['administrador', 'gerente', 'mesero', 'cocina', 'delivery', 'mostrador'])): ?>
+                                                <small class="text-success"><i class="fas fa-shield-alt"></i> Sistema</small>
+                                            <?php else: ?>
+                                                <small class="text-warning"><i class="fas fa-user-cog"></i> Personalizado</small>
+                                            <?php endif; ?>
+                                        </div>
+                                        <span class="badge bg-primary"><?php echo $role['user_count']; ?> usuarios</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text small text-muted mb-3">
+                                            <?php echo htmlspecialchars($role['description'] ?? 'Sin descripción'); ?>
+                                        </p>
+
+                                        <h6>Permisos:</h6>
+                                        <div class="mb-3">
+                                            <?php 
+                                            $role_permissions = json_decode($role['permissions'] ?? '[]', true);
+                                            if (in_array('all', $role_permissions)): ?>
+                                                <span class="badge bg-danger permission-badge">
+                                                    <i class="fas fa-crown me-1"></i>Acceso Completo
+                                                </span>
+                                            <?php else: ?>
+                                                <?php foreach ($role_permissions as $perm): ?>
+                                                    <span class="badge bg-secondary permission-badge">
+                                                        <?php 
+                                                        $icons = [
+    'all' => 'fas fa-crown',
+    'settings' => 'fas fa-cog',
+    'orders' => 'fas fa-receipt',
+    'online_orders' => 'fas fa-globe',
+    'products' => 'fas fa-utensils',
+    'users' => 'fas fa-users',
+    'tables' => 'fas fa-table',
+    'reports' => 'fas fa-chart-bar',
+    'kitchen' => 'fas fa-fire',
+    'delivery' => 'fas fa-motorcycle',
+    'kardex' => 'fas fa-boxes',
+    'bulk_edit' => 'fas fa-edit',
+    'whatsapp' => 'fas fa-whatsapp'
+];
+                                                        $icon = $icons[$perm] ?? 'fas fa-key';
+                                                        ?>
+                                                        <i class="<?php echo $icon; ?> me-1"></i><?php echo $perm; ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-sm btn-primary" 
+                                                    onclick="editRolePermissions(<?php echo htmlspecialchars(json_encode($role)); ?>)">
+                                                <i class="fas fa-edit me-1"></i>Editar Permisos
+                                            </button>
+
+                                            <?php if (in_array($role['name'], array_keys($default_role_permissions))): ?>
+                                                <button class="btn btn-sm btn-outline-warning" 
+                                                        onclick="resetRolePermissions('<?php echo $role['name']; ?>')">
+                                                    <i class="fas fa-undo me-1"></i>Restablecer
+                                                </button>
+                                            <?php endif; ?>
+
+                                            <?php if (!in_array($role['name'], ['administrador', 'gerente', 'mesero', 'cocina', 'delivery', 'mostrador'])): ?>
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="deleteRole(<?php echo $role['id']; ?>, '<?php echo htmlspecialchars($role['name']); ?>')">
+                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <!-- Users Tab -->
                 <div class="tab-pane fade" id="users-permissions" role="tabpanel">
-                    <!-- EL CONTENIDO DE USERS SE MANTIENE IGUAL -->
-                    <!-- ... (copiar del archivo original) ... -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Nombre Completo</th>
+                                    <th>Rol Actual</th>
+                                    <th>Permisos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($users as $user): ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?php echo htmlspecialchars($user['username']); ?></strong>
+                                            <?php if ($user['id'] == $_SESSION['user_id']): ?>
+                                                <span class="badge bg-info ms-1">Tú</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($user['full_name']); ?></td>
+                                        <td>
+                                            <span class="badge bg-primary">
+                                                <?php echo htmlspecialchars($user['role_name']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                            $user_permissions = json_decode($user['permissions'] ?? '[]', true);
+                                            if (in_array('all', $user_permissions)): ?>
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-crown me-1"></i>Acceso Completo
+                                                </span>
+                                            <?php else: ?>
+                                                <small><?php echo implode(', ', array_slice($user_permissions, 0, 3)); ?>
+                                                <?php if (count($user_permissions) > 3): ?>
+                                                    <span class="text-muted">... (+<?php echo count($user_permissions) - 3; ?>)</span>
+                                                <?php endif; ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="changeUserRole(<?php echo htmlspecialchars(json_encode($user)); ?>)">
+                                                    <i class="fas fa-user-tag"></i>
+                                                    Cambiar Rol
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="text-muted">Tu cuenta</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Available Permissions - ACTUALIZADO CON CATEGORÍAS -->
@@ -1066,25 +1205,390 @@ p {
                     <?php endforeach; ?>
                     
                     <div class="alert alert-info mt-4">
-                        <h6><i class="fas fa-info-circle me-2"></i>Información sobre Permisos</h6>
-                        <ul class="mb-0">
-                            <li><strong>all:</strong> Otorga acceso completo al sistema. No debe combinarse con otros permisos.</li>
-                            <li><strong>online_orders:</strong> Permite gestionar pedidos del sitio web público.</li>
-                            <li><strong>orders:</strong> Permite gestionar órdenes tradicionales (mesa, delivery, takeout).</li>
-                            <li><strong>kitchen:</strong> Acceso al panel de cocina para ver y actualizar estado de preparación.</li>
-                            <li><strong>delivery:</strong> Gestión específica de entregas a domicilio.</li>
-                            <li><strong>kardex:</strong> Control completo de inventario y movimientos de stock.</li>
-                            <li><strong>bulk_edit:</strong> Permite editar múltiples productos simultáneamente.</li>
-                        </ul>
-                    </div>
+    <h6><i class="fas fa-info-circle me-2"></i>Información sobre Permisos</h6>
+    <ul class="mb-0">
+        <li><strong>all:</strong> Otorga acceso completo al sistema. No debe combinarse con otros permisos.</li>
+        <li><strong>settings:</strong> Permite configurar el sistema y gestionar ajustes globales.</li>
+        <li><strong>orders:</strong> Gestión de órdenes tradicionales (mesa, delivery, takeout).</li>
+        <li><strong>online_orders:</strong> Gestión de pedidos del sitio web público.</li>
+        <li><strong>products:</strong> CRUD completo de productos y categorías.</li>
+        <li><strong>users:</strong> Gestión de usuarios y asignación de roles.</li>
+        <li><strong>tables:</strong> Administración de mesas y reservas.</li>
+        <li><strong>reports:</strong> Acceso a reportes y estadísticas del sistema.</li>
+        <li><strong>kitchen:</strong> Panel de cocina para visualizar y actualizar órdenes.</li>
+        <li><strong>delivery:</strong> Gestión específica de entregas a domicilio.</li>
+        <li><strong>kardex:</strong> Control completo de inventario y movimientos de stock.</li>
+        <li><strong>bulk_edit:</strong> Edición masiva de múltiples productos.</li>
+        <li><strong>whatsapp:</strong> Gestión de mensajes WhatsApp y atención al cliente.</li>
+    </ul>
+</div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Modals y Scripts se mantienen igual -->
-    <!-- ... (copiar del archivo original) ... -->
+<!-- Edit Role Permissions Modal -->
+<div class="modal fade" id="editRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" id="editRoleForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Permisos del Rol
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update_role_permissions">
+                    <input type="hidden" name="role_id" id="editRoleId">
+                    
+                    <div class="mb-3">
+                        <h6 id="editRoleName"></h6>
+                        <p class="text-muted" id="editRoleDescription"></p>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> El permiso "all" otorga acceso completo y no debe combinarse con otros permisos.
+                    </div>
+                    
+                    <h6 class="mb-3">Seleccionar Permisos:</h6>
+                    
+                    <?php foreach ($permissions_by_category as $category => $perms): ?>
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 text-uppercase text-muted">
+                                <i class="fas fa-folder me-2"></i>
+                                <?php echo $category_names[$category] ?? ucfirst($category); ?>
+                            </h6>
+                            <div class="row">
+                                <?php foreach ($perms as $perm_key => $perm): ?>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input permission-checkbox" 
+                                                   type="checkbox" 
+                                                   name="permissions[]" 
+                                                   value="<?php echo $perm_key; ?>" 
+                                                   id="perm_<?php echo $perm_key; ?>"
+                                                   <?php echo $perm_key === 'all' ? 'onchange="handleAllPermission(this)"' : ''; ?>>
+                                            <label class="form-check-label" for="perm_<?php echo $perm_key; ?>">
+                                                <strong>
+                                                    <i class="<?php echo $perm['icon']; ?> me-1"></i>
+                                                    <?php echo $perm['name']; ?>
+                                                </strong>
+                                                <?php if ($perm_key === 'all'): ?>
+                                                    <span class="badge bg-danger ms-1">ADMIN</span>
+                                                <?php endif; ?>
+                                                <br>
+                                                <small class="text-muted"><?php echo $perm['description']; ?></small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div> <!-- Cierre de modal-body -->
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <!-- Change User Role Modal -->
+    <div class="modal fade" id="changeRoleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="changeRoleForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-tag me-2"></i>
+                            Cambiar Rol de Usuario
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="update_user_permissions">
+                        <input type="hidden" name="user_id" id="changeUserId">
+                        
+                        <div class="mb-3">
+                            <strong>Usuario:</strong> <span id="changeUserName"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nuevo Rol:</label>
+                            <select class="form-select" name="new_role_id" id="newRoleSelect" required>
+                                <option value="">Seleccionar rol...</option>
+                                <?php foreach ($roles as $role): ?>
+                                    <option value="<?php echo $role['id']; ?>">
+                                        <?php echo htmlspecialchars($role['name']); ?>
+                                        <?php if ($role['description']): ?>
+                                            - <?php echo htmlspecialchars($role['description']); ?>
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            El cambio de rol afectará inmediatamente los permisos del usuario.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-user-tag me-1"></i>
+                            Cambiar Rol
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     
+    <!-- Create Role Modal -->
+    <div class="modal fade" id="createRoleModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" id="createRoleForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-plus me-2"></i>
+                            Crear Nuevo Rol
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="create_role">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Rol *</label>
+                            <input type="text" class="form-control" name="role_name" required>
+                            <div class="form-text">Use nombres descriptivos como "cajero", "supervisor", etc.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea class="form-control" name="role_description" rows="2" 
+                                      placeholder="Descripción opcional del rol y sus responsabilidades"></textarea>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Importante:</strong> Seleccione cuidadosamente los permisos. El permiso "all" otorga acceso completo.
+                        </div>
+                        
+                        <h6 class="mb-3">Permisos:</h6>
+
+<?php foreach ($permissions_by_category as $category => $perms): ?>
+    <div class="mb-4">
+        <h6 class="border-bottom pb-2 text-uppercase text-muted">
+            <i class="fas fa-folder me-2"></i>
+            <?php echo $category_names[$category] ?? ucfirst($category); ?>
+        </h6>
+        <div class="row">
+            <?php foreach ($perms as $perm_key => $perm): ?>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input create-permission-checkbox" 
+                               type="checkbox" 
+                               name="role_permissions[]" 
+                               value="<?php echo $perm_key; ?>" 
+                               id="create_perm_<?php echo $perm_key; ?>"
+                               <?php echo $perm_key === 'all' ? 'onchange="handleCreateAllPermission(this)"' : ''; ?>>
+                        <label class="form-check-label" for="create_perm_<?php echo $perm_key; ?>">
+                            <strong>
+                                <i class="<?php echo $perm['icon']; ?> me-1"></i>
+                                <?php echo $perm['name']; ?>
+                            </strong>
+                            <?php if ($perm_key === 'all'): ?>
+                                <span class="badge bg-danger ms-1">ADMIN</span>
+                            <?php endif; ?>
+                            <br>
+                            <small class="text-muted"><?php echo $perm['description']; ?></small>
+                        </label>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+<?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Crear Rol
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden Forms -->
+    <form id="deleteRoleForm" method="POST" style="display: none;">
+        <input type="hidden" name="action" value="delete_role">
+        <input type="hidden" name="role_id" id="deleteRoleId">
+    </form>
+    
+    <form id="resetRoleForm" method="POST" style="display: none;">
+        <input type="hidden" name="action" value="reset_role_permissions">
+        <input type="hidden" name="role_name" id="resetRoleName">
+    </form>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mobile menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+            const sidebarClose = document.getElementById('sidebarClose');
+
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    sidebarBackdrop.classList.toggle('show');
+                });
+            }
+
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarBackdrop.classList.remove('show');
+                });
+            }
+
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarBackdrop.classList.remove('show');
+                });
+            }
+        });
+
+        function editRolePermissions(role) {
+            document.getElementById('editRoleId').value = role.id;
+            document.getElementById('editRoleName').textContent = role.name;
+            document.getElementById('editRoleDescription').textContent = role.description || 'Sin descripción';
+            
+            // Clear all checkboxes
+            document.querySelectorAll('#editRoleModal input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            // Check current permissions
+            const permissions = JSON.parse(role.permissions || '[]');
+            permissions.forEach(perm => {
+                const checkbox = document.getElementById('perm_' + perm);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            });
+            
+            new bootstrap.Modal(document.getElementById('editRoleModal')).show();
+        }
+        
+        function changeUserRole(user) {
+            document.getElementById('changeUserId').value = user.id;
+            document.getElementById('changeUserName').textContent = user.full_name;
+            document.getElementById('newRoleSelect').value = user.role_id;
+            
+            new bootstrap.Modal(document.getElementById('changeRoleModal')).show();
+        }
+        
+        function deleteRole(roleId, roleName) {
+            if (confirm(`¿Está seguro de eliminar el rol "${roleName}"?\n\nEsta acción no se puede deshacer.`)) {
+                document.getElementById('deleteRoleId').value = roleId;
+                document.getElementById('deleteRoleForm').submit();
+            }
+        }
+        
+        function resetRolePermissions(roleName) {
+            if (confirm(`¿Restablecer los permisos del rol "${roleName}" a los valores por defecto?`)) {
+                document.getElementById('resetRoleName').value = roleName;
+                document.getElementById('resetRoleForm').submit();
+            }
+        }
+        
+        // Handle "all" permission logic for edit modal
+        function handleAllPermission(allCheckbox) {
+            const checkboxes = document.querySelectorAll('#editRoleModal .permission-checkbox');
+            
+            if (allCheckbox.checked) {
+                // If "all" is checked, uncheck all others
+                checkboxes.forEach(cb => {
+                    if (cb !== allCheckbox) {
+                        cb.checked = false;
+                    }
+                });
+            }
+        }
+        
+        // Handle "all" permission logic for create modal
+        function handleCreateAllPermission(allCheckbox) {
+            const checkboxes = document.querySelectorAll('#createRoleModal .create-permission-checkbox');
+            
+            if (allCheckbox.checked) {
+                // If "all" is checked, uncheck all others
+                checkboxes.forEach(cb => {
+                    if (cb !== allCheckbox) {
+                        cb.checked = false;
+                    }
+                });
+            }
+        }
+        
+        // Prevent "all" from being combined with other permissions
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('permission-checkbox') && e.target.value !== 'all') {
+                const allCheckbox = document.querySelector('#editRoleModal input[value="all"]');
+                if (allCheckbox && allCheckbox.checked) {
+                    allCheckbox.checked = false;
+                }
+            }
+            
+            if (e.target.classList.contains('create-permission-checkbox') && e.target.value !== 'all') {
+                const allCheckbox = document.querySelector('#createRoleModal input[value="all"]');
+                if (allCheckbox && allCheckbox.checked) {
+                    allCheckbox.checked = false;
+                }
+            }
+        });
+        
+        // Auto-dismiss alerts
+        setTimeout(() => {
+            document.querySelectorAll('.alert').forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Reset forms when modals close
+        document.getElementById('createRoleModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('createRoleForm').reset();
+        });
+        
+        document.getElementById('editRoleModal').addEventListener('hidden.bs.modal', function() {
+            document.querySelectorAll('#editRoleModal input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+        });
+    </script>
+
     <?php include 'footer.php'; ?>
 </body>
 </html>
