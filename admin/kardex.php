@@ -1,5 +1,5 @@
 <?php
-// admin/kardex.php
+// admin/kardex.php - VERSIÓN MEJORADA
 require_once '../config/config.php';
 require_once '../config/database.php';
 require_once '../config/auth.php';
@@ -37,6 +37,7 @@ $products = $stmt_products->fetchAll(PDO::FETCH_ASSOC);
 $query = "SELECT 
     sm.*,
     p.name as product_name,
+    p.stock_quantity as current_stock,
     p.category_id,
     c.name as category_name,
     u.full_name as user_name,
@@ -78,9 +79,12 @@ $stmt = $db->prepare($query);
 $stmt->execute($params);
 $movements = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Calcular totales
+// Calcular totales y stock actual
 $total_entradas = 0;
 $total_salidas = 0;
+$stock_inicial = 0;
+$stock_actual = 0;
+
 foreach ($movements as $mov) {
     if ($mov['movement_type'] === 'entrada') {
         $total_entradas += $mov['quantity'];
@@ -89,13 +93,26 @@ foreach ($movements as $mov) {
     }
 }
 
-// Obtener información del producto seleccionado si hay filtro
+// Obtener información del producto seleccionado
 $selected_product = null;
 if ($product_filter > 0) {
-    $query_product = "SELECT * FROM products WHERE id = :id";
+    $query_product = "SELECT 
+        p.*,
+        COALESCE(SUM(CASE WHEN sm.movement_type = 'entrada' THEN sm.quantity ELSE 0 END), 0) as total_entradas_historico,
+        COALESCE(SUM(CASE WHEN sm.movement_type = 'salida' THEN sm.quantity ELSE 0 END), 0) as total_salidas_historico
+        FROM products p
+        LEFT JOIN stock_movements sm ON p.id = sm.product_id
+        WHERE p.id = :id
+        GROUP BY p.id";
     $stmt_product = $db->prepare($query_product);
     $stmt_product->execute([':id' => $product_filter]);
     $selected_product = $stmt_product->fetch(PDO::FETCH_ASSOC);
+    
+    if ($selected_product) {
+        $stock_actual = $selected_product['stock_quantity'];
+        // Calcular stock inicial (stock actual + salidas históricas - entradas históricas)
+        $stock_inicial = $stock_actual - $selected_product['total_entradas_historico'] + $selected_product['total_salidas_historico'];
+    }
 }
 
 // Incluir sistema de temas
@@ -125,168 +142,58 @@ if (file_exists($theme_file)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Tema dinámico -->
     <?php if (file_exists('../assets/css/generate-theme.php')): ?>
         <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
     <?php endif; ?>
 
     <style>
-/* Extensiones específicas del dashboard */
-:root {
-    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
-    --sidebar-mobile-width: 100%;
-}
+        /* Estilos del kardex original mantenidos */
+        :root {
+            --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+        }
 
-/* Mobile Top Bar */
-.mobile-topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 1040;
-    background: var(--primary-gradient);
-    color: var(--text-white) !important;
-    padding: 1rem;
-    display: none;
-}
+        .mobile-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1040;
+            background: var(--primary-gradient);
+            color: var(--text-white) !important;
+            padding: 1rem;
+            display: none;
+        }
 
-.mobile-topbar h5 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: var(--text-white) !important;
-}
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--dashboard-sidebar-width);
+            height: 100vh;
+            background: var(--primary-gradient);
+            color: var(--text-white) !important;
+            z-index: 1030;
+            transition: transform var(--transition-base);
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
 
-.menu-toggle {
-    background: none;
-    border: none;
-    color: var(--text-white) !important;
-    font-size: 1.2rem;
-    padding: 0.5rem;
-    border-radius: var(--border-radius-base);
-    transition: var(--transition-base);
-}
+        .main-content {
+            margin-left: var(--dashboard-sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+            background: #f8f9fa !important;
+        }
 
-.menu-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* Sidebar */
-.sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: var(--dashboard-sidebar-width);
-    height: 100vh;
-    background: var(--primary-gradient);
-    color: var(--text-white) !important;
-    z-index: 1030;
-    transition: transform var(--transition-base);
-    overflow-y: auto;
-    padding: 1.5rem;
-}
-
-
-.sidebar-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1020;
-    display: none;
-    opacity: 0;
-    transition: opacity var(--transition-base);
-}
-
-.sidebar-backdrop.show {
-    display: block;
-    opacity: 1;
-}
-
-.sidebar .nav-link {
-    color: rgba(255, 255, 255, 0.8) !important;
-    padding: 0.75rem 1rem;
-    border-radius: var(--border-radius-base);
-    margin-bottom: 0.25rem;
-    transition: var(--transition-base);
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-}
-
-.sidebar .nav-link:hover,
-.sidebar .nav-link.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-white) !important;
-}
-
-.sidebar .nav-link .badge {
-    margin-left: auto;
-}
-
-.sidebar-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    color: var(--text-white) !important;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-}
-
-/* Main content */
-.main-content {
-    margin-left: var(--dashboard-sidebar-width);
-    padding: 2rem;
-    min-height: 100vh;
-    transition: margin-left var(--transition-base);
-    background: #f8f9fa !important;
-    color: #212529 !important;
-}
-
-        /* Cards con fondo claro */
         .card {
             background: #ffffff !important;
-            color: #212529 !important;
             border: none;
             border-radius: var(--border-radius-large);
             box-shadow: var(--shadow-base);
             margin-bottom: 1.5rem;
         }
 
-        .card-header {
-            background: #f8f9fa !important;
-            color: #212529 !important;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
-            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0 !important;
-            padding: 1rem 1.5rem;
-        }
-
-        .card-body {
-            background: #ffffff !important;
-            color: #212529 !important;
-            padding: 1.5rem;
-        }
-
-        /* Page Header */
-        .page-header {
-            background: #ffffff !important;
-            color: #212529 !important;
-            border-radius: var(--border-radius-large);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-base);
-        }
-
-        /* Stats Cards con gradientes */
         .stats-card {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white !important;
@@ -309,8 +216,12 @@ if (file_exists($theme_file)) {
             background: linear-gradient(135deg, var(--danger-color), #e83e8c);
         }
 
-        .stats-card.saldo {
+        .stats-card.stock {
             background: linear-gradient(135deg, var(--info-color), var(--secondary-color));
+        }
+
+        .stats-card.inicial {
+            background: linear-gradient(135deg, #6c757d, #495057);
         }
 
         .stats-card h3 {
@@ -327,45 +238,63 @@ if (file_exists($theme_file)) {
             color: white !important;
         }
 
-        /* Filter Card */
-        .filter-card {
-            background: #f8f9fa !important;
-            color: #212529 !important;
-            border-radius: var(--border-radius-large);
+        .product-info-box {
+            background: #f8f9fa;
+            border-radius: var(--border-radius-base);
             padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-small);
+            margin-bottom: 1rem;
         }
 
-        /* Table styles */
-        .table {
-            margin-bottom: 0;
-            background: #ffffff !important;
-            color: #212529 !important;
-        }
-
-        .table thead th {
-            background: #f8f9fa !important;
-            color: #212529 !important;
-            border-bottom: 2px solid #dee2e6;
+        .product-info-box h6 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
             font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            padding: 1rem 0.75rem;
         }
 
-        .table tbody td {
-            padding: 0.75rem;
-            vertical-align: middle;
-            color: #212529 !important;
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
             border-bottom: 1px solid #dee2e6;
         }
 
-        .table-hover tbody tr:hover {
-            background: rgba(0, 0, 0, 0.02) !important;
+        .info-item:last-child {
+            border-bottom: none;
         }
 
-        /* Badges */
+        .info-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .stock-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .stock-indicator.high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .stock-indicator.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .stock-indicator.low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         .badge-entrada {
             background: linear-gradient(45deg, var(--success-color), #20c997);
             color: white;
@@ -404,154 +333,30 @@ if (file_exists($theme_file)) {
             color: white;
         }
 
-        /* Stock Indicators */
-        .stock-indicator {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
+        .table {
+            margin-bottom: 0;
+            background: #ffffff !important;
+        }
+
+        .table thead th {
+            background: #f8f9fa !important;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            text-transform: uppercase;
             font-size: 0.85rem;
-            font-weight: 600;
+            padding: 1rem 0.75rem;
         }
 
-        .stock-indicator.high {
-            background: #d4edda;
-            color: #155724;
+        .table tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #dee2e6;
         }
 
-        .stock-indicator.medium {
-            background: #fff3cd;
-            color: #856404;
+        .table-hover tbody tr:hover {
+            background: rgba(0, 0, 0, 0.02) !important;
         }
 
-        .stock-indicator.low {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Buttons */
-        .btn-primary {
-            background: var(--primary-gradient);
-            border: none;
-            padding: 0.5rem 1.5rem;
-            border-radius: var(--border-radius-base);
-            transition: var(--transition-base);
-            color: white !important;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-base);
-        }
-
-        .btn-success {
-            background: linear-gradient(45deg, var(--success-color), #20c997);
-            border: none;
-            color: white !important;
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, var(--danger-color), #e83e8c);
-            border: none;
-            color: white !important;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #6c757d, #495057);
-            border: none;
-            color: white !important;
-        }
-
-        /* Form controls */
-        .form-control,
-        .form-select {
-            background: #ffffff !important;
-            color: #212529 !important;
-            border: 1px solid #ced4da;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-            background: #ffffff !important;
-            color: #212529 !important;
-        }
-
-        .form-label {
-            color: #212529 !important;
-            font-weight: 500;
-        }
-
-        /* Text colors */
-        .text-muted {
-            color: #6c757d !important;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            color: #212529 !important;
-        }
-
-        p {
-            color: #212529 !important;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #6c757d;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        /* Modal styles */
-        .modal-content {
-            background: #ffffff !important;
-            color: #212529 !important;
-        }
-
-        .modal-header {
-            background: var(--primary-gradient);
-            color: white !important;
-            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
-        }
-
-        .modal-header .modal-title {
-            color: white !important;
-        }
-
-        .modal-header .btn-close {
-            filter: brightness(0) invert(1);
-        }
-
-        .modal-body {
-            background: #ffffff !important;
-            color: #212529 !important;
-        }
-
-        .product-info-box {
-            background: #f8f9fa;
-            border-radius: var(--border-radius-base);
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .product-info-box h6 {
-            margin-bottom: 0.5rem;
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-
-        .product-info-box p {
-            margin: 0.25rem 0;
-            font-size: 0.9rem;
-        }
-
-        /* Responsive - IGUAL QUE DASHBOARD */
         @media (max-width: 991.98px) {
             .mobile-topbar {
                 display: flex;
@@ -564,53 +369,6 @@ if (file_exists($theme_file)) {
                 padding: 1rem;
                 padding-top: 5rem;
             }
-
-            .stats-card {
-                padding: 1rem;
-            }
-
-            .stats-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .page-header {
-                padding: 1rem;
-            }
-
-            .filter-card {
-                padding: 1rem;
-            }
-
-            .table {
-                font-size: 0.85rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .main-content {
-                padding: 0.5rem;
-                padding-top: 4.5rem;
-            }
-
-            .stats-card {
-                padding: 0.75rem;
-            }
-
-            .stats-card h3 {
-                font-size: 1.25rem;
-            }
-
-            .page-header {
-                padding: 0.75rem;
-            }
-
-            .page-header h2 {
-                font-size: 1.25rem;
-            }
-
-            .filter-card {
-                padding: 0.75rem;
-            }
         }
     </style>
 </head>
@@ -620,33 +378,144 @@ if (file_exists($theme_file)) {
 
     <div class="main-content">
         <!-- Page Header -->
-        <div class="page-header">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <h2 class="mb-0">
-                        <i class="fas fa-boxes me-2"></i>
-                        Kardex de Inventario
-                    </h2>
-                    <p class="text-muted mb-0">Control de entradas y salidas de productos</p>
-                </div>
-                <div class="d-flex gap-2 mt-2 mt-md-0">
-                    <button class="btn btn-success" onclick="openMovementModal('entrada')">
-                        <i class="fas fa-plus me-1"></i>
-                        <span class="d-none d-md-inline">Entrada</span>
-                    </button>
-                    <button class="btn btn-danger" onclick="openMovementModal('salida')">
-                        <i class="fas fa-minus me-1"></i>
-                        <span class="d-none d-md-inline">Salida</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="exportKardex()">
-                        <i class="fas fa-file-excel me-1"></i>
-                        <span class="d-none d-md-inline">Exportar</span>
-                    </button>
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h2 class="mb-0">
+                            <i class="fas fa-boxes me-2"></i>
+                            Kardex de Inventario
+                        </h2>
+                        <p class="text-muted mb-0">Control de entradas y salidas de productos</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-2 mt-md-0">
+                        <button class="btn btn-success" onclick="openMovementModal('entrada')">
+                            <i class="fas fa-plus me-1"></i>
+                            <span class="d-none d-md-inline">Entrada</span>
+                        </button>
+                        <button class="btn btn-danger" onclick="openMovementModal('salida')">
+                            <i class="fas fa-minus me-1"></i>
+                            <span class="d-none d-md-inline">Salida</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportKardex()">
+                            <i class="fas fa-file-excel me-1"></i>
+                            <span class="d-none d-md-inline">Exportar</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Estadísticas -->
+        <!-- Información del producto seleccionado -->
+        <?php if ($selected_product): ?>
+        <div class="card">
+            <div class="card-body">
+                <div class="product-info-box">
+                    <h6><i class="fas fa-box me-2"></i><?php echo htmlspecialchars($selected_product['name']); ?></h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">Stock Inicial:</span>
+                                <span class="info-value"><?php echo number_format($stock_inicial, 0, ',', '.'); ?> unidades</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Total Entradas:</span>
+                                <span class="info-value text-success">+<?php echo number_format($selected_product['total_entradas_historico'], 0, ',', '.'); ?> unidades</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Total Salidas:</span>
+                                <span class="info-value text-danger">-<?php echo number_format($selected_product['total_salidas_historico'], 0, ',', '.'); ?> unidades</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Stock Actual:</span>
+                                <span class="info-value">
+                                    <span class="stock-indicator <?php 
+                                        echo $stock_actual <= $selected_product['low_stock_alert'] ? 'low' : 
+                                            ($stock_actual <= $selected_product['low_stock_alert'] * 2 ? 'medium' : 'high'); 
+                                    ?>">
+                                        <?php echo number_format($stock_actual, 0, ',', '.'); ?> unidades
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <span class="info-label">Precio de Venta:</span>
+                                <span class="info-value">$<?php echo number_format($selected_product['price'], 2, ',', '.'); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Costo:</span>
+                                <span class="info-value">$<?php echo number_format($selected_product['cost'], 2, ',', '.'); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Margen:</span>
+                                <span class="info-value">
+                                    <?php 
+                                    $margen = $selected_product['cost'] > 0 ? 
+                                        (($selected_product['price'] - $selected_product['cost']) / $selected_product['cost']) * 100 : 0;
+                                    echo number_format($margen, 1, ',', '.'); 
+                                    ?>%
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Alerta de Stock Bajo:</span>
+                                <span class="info-value"><?php echo $selected_product['low_stock_alert']; ?> unidades</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas del producto -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stats-card inicial">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>STOCK INICIAL</p>
+                            <h3><?php echo number_format($stock_inicial, 0, ',', '.'); ?></h3>
+                        </div>
+                        <i class="fas fa-warehouse fa-3x" style="opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card entrada">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>ENTRADAS</p>
+                            <h3>+<?php echo number_format($total_entradas, 0, ',', '.'); ?></h3>
+                        </div>
+                        <i class="fas fa-arrow-up fa-3x" style="opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card salida">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>SALIDAS</p>
+                            <h3>-<?php echo number_format($total_salidas, 0, ',', '.'); ?></h3>
+                        </div>
+                        <i class="fas fa-arrow-down fa-3x" style="opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card stock">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p>STOCK ACTUAL</p>
+                            <h3><?php echo number_format($stock_actual, 0, ',', '.'); ?></h3>
+                        </div>
+                        <i class="fas fa-boxes fa-3x" style="opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <!-- Estadísticas generales -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="stats-card entrada">
@@ -671,7 +540,7 @@ if (file_exists($theme_file)) {
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="stats-card saldo">
+                <div class="stats-card stock">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p>SALDO NETO</p>
@@ -682,83 +551,54 @@ if (file_exists($theme_file)) {
                 </div>
             </div>
         </div>
-
-        <!-- Información del producto seleccionado -->
-        <?php if ($selected_product): ?>
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="product-info-box">
-                    <h6><i class="fas fa-box me-2"></i>Información del Producto</h6>
-                    <div class="row">
-                        <div class="col-md-3">
-                            <p><strong>Producto:</strong> <?php echo htmlspecialchars($selected_product['name']); ?></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Stock Actual:</strong> 
-                                <span class="stock-indicator <?php 
-                                    echo $selected_product['stock_quantity'] <= $selected_product['low_stock_alert'] ? 'low' : 
-                                        ($selected_product['stock_quantity'] <= $selected_product['low_stock_alert'] * 2 ? 'medium' : 'high'); 
-                                ?>">
-                                    <?php echo $selected_product['stock_quantity']; ?> unidades
-                                </span>
-                            </p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Precio:</strong> $<?php echo number_format($selected_product['price'], 2, ',', '.'); ?></p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Costo:</strong> $<?php echo number_format($selected_product['cost'], 2, ',', '.'); ?></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         <?php endif; ?>
 
         <!-- Filtros -->
-        <div class="filter-card">
-            <form method="GET" action="" id="filterForm">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Producto</label>
-                        <select name="product_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
-                            <option value="0">Todos los productos</option>
-                            <?php foreach ($products as $prod): ?>
-                                <option value="<?php echo $prod['id']; ?>" 
-                                    <?php echo $product_filter == $prod['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($prod['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="" id="filterForm">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Producto</label>
+                            <select name="product_id" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                                <option value="0">Todos los productos</option>
+                                <?php foreach ($products as $prod): ?>
+                                    <option value="<?php echo $prod['id']; ?>" 
+                                        <?php echo $product_filter == $prod['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($prod['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Tipo de Movimiento</label>
+                            <select name="movement_type" class="form-select" onchange="document.getElementById('filterForm').submit()">
+                                <option value="">Todos</option>
+                                <option value="entrada" <?php echo $movement_type === 'entrada' ? 'selected' : ''; ?>>Entradas</option>
+                                <option value="salida" <?php echo $movement_type === 'salida' ? 'selected' : ''; ?>>Salidas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Desde</label>
+                            <input type="date" name="date_from" class="form-control" 
+                                value="<?php echo $date_from; ?>" 
+                                onchange="document.getElementById('filterForm').submit()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Hasta</label>
+                            <input type="date" name="date_to" class="form-control" 
+                                value="<?php echo $date_to; ?>"
+                                onchange="document.getElementById('filterForm').submit()">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-secondary w-100" onclick="clearFilters()" title="Limpiar filtros">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Tipo de Movimiento</label>
-                        <select name="movement_type" class="form-select" onchange="document.getElementById('filterForm').submit()">
-                            <option value="">Todos</option>
-                            <option value="entrada" <?php echo $movement_type === 'entrada' ? 'selected' : ''; ?>>Entradas</option>
-                            <option value="salida" <?php echo $movement_type === 'salida' ? 'selected' : ''; ?>>Salidas</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Desde</label>
-                        <input type="date" name="date_from" class="form-control" 
-                            value="<?php echo $date_from; ?>" 
-                            onchange="document.getElementById('filterForm').submit()">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Hasta</label>
-                        <input type="date" name="date_to" class="form-control" 
-                            value="<?php echo $date_to; ?>"
-                            onchange="document.getElementById('filterForm').submit()">
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label">&nbsp;</label>
-                        <button type="button" class="btn btn-secondary w-100" onclick="clearFilters()" title="Limpiar filtros">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
 
         <!-- Tabla de movimientos -->
@@ -772,10 +612,10 @@ if (file_exists($theme_file)) {
             </div>
             <div class="card-body p-0">
                 <?php if (empty($movements)): ?>
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
                         <h5>No hay movimientos registrados</h5>
-                        <p>No se encontraron movimientos con los filtros seleccionados.</p>
+                        <p class="text-muted">No se encontraron movimientos con los filtros seleccionados.</p>
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">
@@ -789,6 +629,7 @@ if (file_exists($theme_file)) {
                                     <th class="text-center">CANTIDAD</th>
                                     <th class="text-center d-none d-lg-table-cell">STOCK ANTERIOR</th>
                                     <th class="text-center">STOCK NUEVO</th>
+                                    <th class="text-center d-none d-xl-table-cell">STOCK ACTUAL</th>
                                     <th class="d-none d-xl-table-cell">MOTIVO</th>
                                     <th class="d-none d-lg-table-cell">USUARIO</th>
                                 </tr>
@@ -828,6 +669,15 @@ if (file_exists($theme_file)) {
                                     <td class="text-center">
                                         <strong><?php echo $mov['new_stock']; ?></strong>
                                     </td>
+                                    <td class="text-center d-none d-xl-table-cell">
+                                        <span class="stock-indicator <?php 
+                                            $current = $mov['current_stock'];
+                                            $alert = 10; // valor por defecto
+                                            echo $current <= $alert ? 'low' : ($current <= $alert * 2 ? 'medium' : 'high'); 
+                                        ?>">
+                                            <?php echo $mov['current_stock']; ?>
+                                        </span>
+                                    </td>
                                     <td class="d-none d-xl-table-cell">
                                         <small><?php echo htmlspecialchars(substr($mov['reason'] ?? '-', 0, 30)); ?></small>
                                     </td>
@@ -866,7 +716,8 @@ if (file_exists($theme_file)) {
                                 <option value="">Seleccione un producto...</option>
                                 <?php foreach ($products as $prod): ?>
                                     <option value="<?php echo $prod['id']; ?>" 
-                                        data-stock="<?php echo $prod['stock_quantity'] ?? 0; ?>">
+                                        data-stock="<?php echo $prod['stock_quantity'] ?? 0; ?>"
+                                        data-alert="<?php echo $prod['low_stock_alert'] ?? 10; ?>">
                                         <?php echo htmlspecialchars($prod['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -878,6 +729,10 @@ if (file_exists($theme_file)) {
                             <label class="form-label">Cantidad *</label>
                             <input type="number" name="quantity" id="quantity" class="form-control" 
                                 min="1" required>
+                            <small class="text-danger" id="quantity_warning" style="display: none;">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                Advertencia: Esta operación dejará el stock en negativo
+                            </small>
                         </div>
 
                         <div class="mb-3">
@@ -912,6 +767,11 @@ if (file_exists($theme_file)) {
                 e.preventDefault();
                 saveMovement();
             });
+
+            // Validar cantidad en tiempo real
+            document.getElementById('quantity').addEventListener('input', function() {
+                validateQuantity();
+            });
         });
 
         function openMovementModal(type) {
@@ -934,19 +794,51 @@ if (file_exists($theme_file)) {
             
             document.getElementById('movementForm').reset();
             document.getElementById('current_stock_info').textContent = '';
+            document.getElementById('quantity_warning').style.display = 'none';
             movementModal.show();
         }
 
         function updateProductInfo() {
             const select = document.getElementById('product_id');
             const option = select.options[select.selectedIndex];
-            const stock = option.dataset.stock || 0;
+            const stock = parseInt(option.dataset.stock || 0);
+            const alert = parseInt(option.dataset.alert || 10);
             const info = document.getElementById('current_stock_info');
             
             if (select.value) {
-                info.textContent = `Stock actual: ${stock} unidades`;
+                let stockClass = stock <= alert ? 'danger' : (stock <= alert * 2 ? 'warning' : 'success');
+                info.innerHTML = `Stock actual: <strong class="text-${stockClass}">${stock} unidades</strong>`;
+                
+                // Validar cantidad si ya está ingresada
+                validateQuantity();
             } else {
                 info.textContent = '';
+            }
+        }
+
+        function validateQuantity() {
+            const select = document.getElementById('product_id');
+            const option = select.options[select.selectedIndex];
+            const stock = parseInt(option.dataset.stock || 0);
+            const quantity = parseInt(document.getElementById('quantity').value || 0);
+            const type = document.getElementById('movement_type').value;
+            const warning = document.getElementById('quantity_warning');
+            
+            if (type === 'salida' && quantity > 0 && select.value) {
+                if (stock - quantity < 0) {
+                    warning.style.display = 'block';
+                    warning.innerHTML = `<i class="fas fa-exclamation-triangle"></i> 
+                        Advertencia: Esta operación dejará el stock en ${stock - quantity} unidades (negativo)`;
+                } else if (stock - quantity === 0) {
+                    warning.style.display = 'block';
+                    warning.className = 'text-warning';
+                    warning.innerHTML = `<i class="fas fa-info-circle"></i> 
+                        El stock quedará en 0 unidades`;
+                } else {
+                    warning.style.display = 'none';
+                }
+            } else {
+                warning.style.display = 'none';
             }
         }
 
@@ -978,6 +870,7 @@ if (file_exists($theme_file)) {
             })
             .finally(() => {
                 submitBtn.disabled = false;
+                const type = document.getElementById('movement_type').value;
                 submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Movimiento';
             });
         }
