@@ -50,25 +50,49 @@ $totales = [
 try {
     switch ($active_tab) {
         case 'stock-actual':
-            // Stock actual = Stock inicial + entradas - salidas
+            // Stock actual = Stock inicial (products.stock_quantity) + compras - salidas de órdenes
             $query = "
                 SELECT 
                     p.id,
                     p.name,
-                    p.initial_stock,
-                    p.stock_quantity as current_stock,
+                    p.stock_quantity as initial_stock,
                     p.low_stock_alert,
                     p.price,
                     p.cost,
                     c.name as category_name,
                     c.id as category_id,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('entrada', 'compra') THEN sm.quantity ELSE 0 END), 0) as total_entradas,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('salida', 'venta') THEN sm.quantity ELSE 0 END), 0) as total_salidas,
-                    (p.initial_stock + COALESCE(SUM(CASE WHEN sm.movement_type IN ('entrada', 'compra') THEN sm.quantity ELSE 0 END), 0) - 
-                     COALESCE(SUM(CASE WHEN sm.movement_type IN ('salida', 'venta') THEN sm.quantity ELSE 0 END), 0)) as stock_calculado
+                    -- Total de compras (purchases)
+                    COALESCE((
+                        SELECT SUM(pi.quantity)
+                        FROM purchase_items pi
+                        INNER JOIN purchases pur ON pi.purchase_id = pur.id
+                        WHERE pi.product_id = p.id
+                    ), 0) as total_compras,
+                    -- Total de salidas por órdenes (order_items)
+                    COALESCE((
+                        SELECT SUM(oi.quantity)
+                        FROM order_items oi
+                        INNER JOIN orders o ON oi.order_id = o.id
+                        WHERE oi.product_id = p.id
+                        AND o.status != 'cancelled'
+                    ), 0) as total_salidas,
+                    -- Stock calculado = stock inicial + compras - salidas
+                    (p.stock_quantity + 
+                     COALESCE((
+                        SELECT SUM(pi.quantity)
+                        FROM purchase_items pi
+                        INNER JOIN purchases pur ON pi.purchase_id = pur.id
+                        WHERE pi.product_id = p.id
+                    ), 0) -
+                     COALESCE((
+                        SELECT SUM(oi.quantity)
+                        FROM order_items oi
+                        INNER JOIN orders o ON oi.order_id = o.id
+                        WHERE oi.product_id = p.id
+                        AND o.status != 'cancelled'
+                    ), 0)) as stock_calculado
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                LEFT JOIN stock_movements sm ON p.id = sm.product_id
                 WHERE p.track_inventory = 1 AND p.is_active = 1
             ";
             
@@ -76,7 +100,7 @@ try {
                 $query .= " AND p.category_id = :category_id";
             }
             
-            $query .= " GROUP BY p.id, p.name, p.initial_stock, p.stock_quantity, p.low_stock_alert, p.price, p.cost, c.name, c.id ORDER BY p.name";
+            $query .= " ORDER BY p.name";
             
             $stmt = $db->prepare($query);
             if ($category_filter > 0) {
@@ -94,18 +118,32 @@ try {
             break;
 
         case 'stock-inicial':
-            // Stock inicial de la tabla products
+            // Stock inicial = products.stock_quantity
             $query = "
                 SELECT 
                     p.id,
                     p.name,
-                    p.initial_stock,
-                    p.stock_quantity as current_stock,
+                    p.stock_quantity as initial_stock,
                     p.low_stock_alert,
                     p.price,
                     p.cost,
                     c.name as category_name,
-                    c.id as category_id
+                    c.id as category_id,
+                    -- Stock actual para comparación
+                    (p.stock_quantity + 
+                     COALESCE((
+                        SELECT SUM(pi.quantity)
+                        FROM purchase_items pi
+                        INNER JOIN purchases pur ON pi.purchase_id = pur.id
+                        WHERE pi.product_id = p.id
+                    ), 0) -
+                     COALESCE((
+                        SELECT SUM(oi.quantity)
+                        FROM order_items oi
+                        INNER JOIN orders o ON oi.order_id = o.id
+                        WHERE oi.product_id = p.id
+                        AND o.status != 'cancelled'
+                    ), 0)) as current_stock
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 WHERE p.track_inventory = 1 AND p.is_active = 1
@@ -133,23 +171,22 @@ try {
             break;
 
         case 'ingresos':
-            // Ingresos por compras (entradas y compras del sistema)
+            // Ingresos = solo compras (purchases)
             $query = "
                 SELECT 
                     p.id,
                     p.name,
                     p.cost,
                     c.name as category_name,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('entrada', 'compra') 
-                        AND DATE(sm.created_at) BETWEEN :date_from AND :date_to 
-                        THEN sm.quantity ELSE 0 END), 0) as total_ingresos,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('entrada', 'compra') 
-                        AND DATE(sm.created_at) BETWEEN :date_from AND :date_to 
-                        THEN sm.quantity * p.cost ELSE 0 END), 0) as valor_ingresos
+                    COALESCE(SUM(pi.quantity), 0) as total_ingresos,
+                    COALESCE(SUM(pi.quantity * pi.unit_cost), 0) as valor_ingresos
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                LEFT JOIN stock_movements sm ON p.id = sm.product_id
-                WHERE p.track_inventory = 1 AND p.is_active = 1
+                INNER JOIN purchase_items pi ON p.id = pi.product_id
+                INNER JOIN purchases pur ON pi.purchase_id = pur.id
+                WHERE p.track_inventory = 1 
+                AND p.is_active = 1
+                AND DATE(pur.purchase_date) BETWEEN :date_from AND :date_to
             ";
             
             if ($category_filter > 0) {
@@ -174,30 +211,31 @@ try {
             break;
 
         case 'egresos':
-            // Egresos por órdenes (salidas y ventas)
+            // Egresos = salidas de órdenes (todos los tipos)
             $query = "
                 SELECT 
                     p.id,
                     p.name,
                     p.price,
+                    p.cost,
                     c.name as category_name,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('salida', 'venta') 
-                        AND DATE(sm.created_at) BETWEEN :date_from AND :date_to 
-                        THEN sm.quantity ELSE 0 END), 0) as total_egresos,
-                    COALESCE(SUM(CASE WHEN sm.movement_type IN ('salida', 'venta') 
-                        AND DATE(sm.created_at) BETWEEN :date_from AND :date_to 
-                        THEN sm.quantity * p.price ELSE 0 END), 0) as valor_egresos
+                    COALESCE(SUM(oi.quantity), 0) as total_egresos,
+                    COALESCE(SUM(oi.quantity * oi.unit_price), 0) as valor_egresos
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                LEFT JOIN stock_movements sm ON p.id = sm.product_id
-                WHERE p.track_inventory = 1 AND p.is_active = 1
+                INNER JOIN order_items oi ON p.id = oi.product_id
+                INNER JOIN orders o ON oi.order_id = o.id
+                WHERE p.track_inventory = 1 
+                AND p.is_active = 1
+                AND o.status != 'cancelled'
+                AND DATE(o.created_at) BETWEEN :date_from AND :date_to
             ";
             
             if ($category_filter > 0) {
                 $query .= " AND p.category_id = :category_id";
             }
             
-            $query .= " GROUP BY p.id, p.name, p.price, c.name HAVING total_egresos > 0 ORDER BY total_egresos DESC";
+            $query .= " GROUP BY p.id, p.name, p.price, p.cost, c.name HAVING total_egresos > 0 ORDER BY total_egresos DESC";
             
             $stmt = $db->prepare($query);
             $params = [':date_from' => $date_from, ':date_to' => $date_to];
@@ -218,7 +256,6 @@ try {
     $data = [];
     error_log("Error en kardex.php: " . $e->getMessage());
 }
-
 
 // Obtener productos para el modal
 $products = [];
