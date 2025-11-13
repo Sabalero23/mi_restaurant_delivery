@@ -262,7 +262,7 @@ SET @index_exists = (
 
 SET @sql = IF(@index_exists = 0,
     'ALTER TABLE `stock_movements` ADD INDEX `idx_reference` (`reference_type`, `reference_id`)',
-    'SELECT "Index idx_reference already exists"'
+    'SELECT "Index idx_reference already exists" AS result'
 );
 
 PREPARE stmt FROM @sql;
@@ -434,7 +434,7 @@ SET @sql = IF(@table_exists > 0,
     ) ON DUPLICATE KEY UPDATE 
         `completed_at` = NOW(),
         `status` = 'completed'",
-    'SELECT "Table system_update_logs does not exist, skipping log"'
+    'SELECT "Table system_update_logs does not exist, skipping log" AS result'
 );
 
 PREPARE stmt FROM @sql;
@@ -450,6 +450,31 @@ OPTIMIZE TABLE `orders`;
 OPTIMIZE TABLE `order_items`;
 OPTIMIZE TABLE `settings`;
 
+COMMIT;
+
+-- =============================================
+-- VERIFICACIÓN FINAL
+-- =============================================
+SELECT '✅ INSTALACIÓN COMPLETADA - v2.3.8' AS Status;
+
+SELECT 
+    'Productos con Inventario' AS Metrica,
+    COUNT(*) AS Valor
+FROM products 
+WHERE track_inventory = 1 AND is_active = 1
+UNION ALL
+SELECT 
+    'Movimientos Totales Registrados',
+    COUNT(*)
+FROM stock_movements
+UNION ALL
+SELECT 
+    'Productos Bajo Stock Minimo',
+    COUNT(*)
+FROM products 
+WHERE track_inventory = 1 
+AND stock_quantity <= low_stock_alert
+AND is_active = 1;
 
 -- =============================================
 -- NOTAS POST-INSTALACIÓN
@@ -457,9 +482,9 @@ OPTIMIZE TABLE `settings`;
 /*
 ✅ INSTALACIÓN COMPLETADA - v2.3.8
 
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 📦 SISTEMA DE COMPRAS Y STOCK AUTOMÁTICO
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 
 1. NUEVAS TABLAS:
    ✓ purchases - Registro de compras
@@ -481,16 +506,16 @@ OPTIMIZE TABLE `settings`;
    ✓ Órdenes existentes migradas a movimientos
    ✓ Stock actualizado correctamente
 
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 📋 PRÓXIMOS PASOS
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 
 1. Crear archivo admin/compras.php
 2. Crear archivo admin/api/purchases.php
 3. Actualizar admin/kardex.php para mostrar stock real
 4. Agregar enlace en sidebar
 
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 FIN DE MIGRACIÓN v2.3.8
-═══════════════════════════════════════════════════
+═══════════════════════════════════════════════
 */
