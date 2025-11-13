@@ -764,7 +764,7 @@ if (file_exists($theme_file)) {
                                                 $<?php echo number_format($item['cost'], 2, ',', '.'); ?>
                                             </td>
                                             <td class="text-end d-none d-lg-table-cell">
-                                                <strong>$<?php echo number_format($item['current_stock'] * $item['cost'], 2, ',', '.'); ?></strong>
+                                                <strong>$<?php echo number_format($item['stock_calculado'] * $item['cost'], 2, ',', '.'); ?></strong>
                                             </td>
                                             <td class="text-center">
                                                 <span class="stock-indicator <?php 
