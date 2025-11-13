@@ -382,6 +382,16 @@ try {
                 background: #5568d3;
             }
             
+            .btn-secondary {
+    background: var(--text-secondary) !important;
+    color: var(--text-white) !important;
+    border-color: var(--text-secondary) !important;
+}
+            
+            .btn-secundary:hover {
+                background: #5568d3;
+            }
+            
             .btn-success {
                 background: #28a745;
                 color: white;
@@ -584,6 +594,10 @@ try {
 
             <div class="actions no-print">
                 <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+                                   <a href="../kardex.php" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Volver
+                    </a>
                 <a href="?<?php echo http_build_query(array_merge($_GET, ['format' => 'csv'])); ?>" class="btn btn-success">
                     📊 Descargar Excel
                 </a>
