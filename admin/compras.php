@@ -100,40 +100,122 @@ if (file_exists($theme_file)) {
         <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
     <?php endif; ?>
 
-    <style>
-        /* Usar los mismos estilos de kardex.php */
-        :root {
-            --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            --dashboard-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
-        }
+   <style>
+/* Extensiones específicas de cocina usando variables del tema */
+:root {
+    --primary-gradient: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --kitchen-sidebar-width: <?php echo $current_theme['sidebar_width'] ?? '280px'; ?>;
+    --sidebar-mobile-width: 100%;
+}
 
-        .mobile-topbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1040;
-            background: var(--primary-gradient);
-            color: var(--text-white) !important;
-            padding: 1rem;
-            display: none;
-        }
+/* Mobile Top Bar para cocina */
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    background: linear-gradient(135deg, var(--warning-color), var(--accent-color));
+    color: var(--text-white) !important;
+    padding: 1rem;
+    display: none;
+}
 
-        @media (max-width: 991.98px) {
-            .mobile-topbar { display: flex; }
-            .main-content {
-                margin-left: 0;
-                padding-top: 5rem;
-            }
-        }
+.mobile-topbar h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-white) !important;
+}
 
-        .main-content {
-            margin-left: var(--dashboard-sidebar-width);
-            padding: 2rem;
-            min-height: 100vh;
-            background: #f8f9fa !important;
-        }
+.menu-toggle {
+    background: none;
+    border: none;
+    color: var(--text-white) !important;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-base);
+}
 
+.menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--kitchen-sidebar-width);
+    height: 100vh;
+    background: var(--primary-gradient);
+    color: var(--text-white) !important;
+    z-index: 1030;
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1020;
+    display: none;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius-base);
+    margin-bottom: 0.25rem;
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white) !important;
+}
+
+.sidebar-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--text-white) !important;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+/* Main content forzado a colores claros */
+.main-content {
+    margin-left: var(--kitchen-sidebar-width);
+    padding: 2rem;
+    min-height: 100vh;
+    transition: margin-left var(--transition-base);
+    background: #f8f9fa !important;
+    color: #212529 !important;
+}
         .card {
             background: #ffffff !important;
             border: none;
