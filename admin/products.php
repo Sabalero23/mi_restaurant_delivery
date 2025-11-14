@@ -353,8 +353,24 @@ function adjustStock() {
         return ['success' => false, 'message' => 'No se puede reducir el stock por debajo de 0'];
     }
     
-    // Actualizar stock
-    $result = $productModel->update($id, ['stock_quantity' => $new_stock]);
+    // ===== CORRECCIÓN: Mantener todos los campos del producto =====
+    $data = [
+        'category_id' => $product['category_id'],
+        'name' => $product['name'],
+        'description' => $product['description'],
+        'price' => $product['price'],
+        'cost' => $product['cost'],
+        'stock_quantity' => $new_stock,  // Solo cambiar el stock
+        'low_stock_alert' => $product['low_stock_alert'],
+        'track_inventory' => $product['track_inventory'],
+        'image' => $product['image'],
+        'preparation_time' => $product['preparation_time'],
+        'is_available' => $product['is_available'],
+        'is_active' => $product['is_active']
+    ];
+    
+    // Actualizar producto completo
+    $result = $productModel->update($id, $data);
     
     if ($result) {
         // Opcional: Registrar el movimiento en un log de inventario
