@@ -330,7 +330,7 @@ if (file_exists($theme_file)) {
 /* Notification styles */
 .notification-alert {
     position: fixed;
-    top: 20px;
+    top: 210px;
     right: 20px;
     z-index: 9999;
     max-width: 400px;
