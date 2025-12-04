@@ -494,6 +494,9 @@ $low_stock_products = getLowStockProducts();
     <?php if (file_exists('../assets/css/generate-theme.php')): ?>
         <link rel="stylesheet" href="../assets/css/generate-theme.php?v=<?php echo time(); ?>">
     <?php endif; ?>
+    
+    <!-- CSS del Autocompletado de Productos -->
+    <link rel="stylesheet" href="css/product-autocomplete.css">
 
     <?php
     // Incluir sistema de temas
@@ -1739,7 +1742,15 @@ $low_stock_products = getLowStockProducts();
                                     <div class="card-body">
                                         <div class="mb-3">
                                             <label class="form-label">Nombre *</label>
-                                            <input type="text" class="form-control" name="name" id="productName" required>
+                                            <div class="autocomplete-container">
+                                                <input type="text" class="form-control" name="name" id="productName" required autocomplete="off" placeholder="Escribe el nombre del producto...">
+                                                <!-- Contenedor para las sugerencias de autocompletado -->
+                                                <div id="product-suggestions" class="autocomplete-suggestions"></div>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                <i class="fas fa-info-circle"></i>
+                                                Mientras escribes, verás productos existentes para evitar duplicados
+                                            </small>
                                         </div>
                                         
                                         <div class="mb-3">
@@ -2105,6 +2116,10 @@ $low_stock_products = getLowStockProducts();
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript del Autocompletado de Productos -->
+    <script src="js/product-autocomplete.js"></script>
+    
     <script>
         // JavaScript completo para products.php con gestión de stock
 document.addEventListener('DOMContentLoaded', function() {
