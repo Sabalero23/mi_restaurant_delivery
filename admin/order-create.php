@@ -956,20 +956,48 @@ if (file_exists($theme_file)) {
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="quantity-control">
-                                                    <form method="POST" class="d-flex align-items-center gap-2">
-                                                        <input type="hidden" name="action" value="update_quantity">
-                                                        <input type="hidden" name="item_id" value="<?php echo $current_order ? $item['id'] : $item_id; ?>">
-                                                        <?php if ($current_order): ?>
-                                                            <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
-                                                        <?php endif; ?>
-                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] - 1; ?>" class="btn btn-sm btn-outline-secondary" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
-                                                            <i class="fas fa-minus"></i>
-                                                        </button>
-                                                        <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>" class="form-control form-control-sm" min="1" readonly>
-                                                        <button type="submit" name="quantity" value="<?php echo $item['quantity'] + 1; ?>" class="btn btn-sm btn-outline-secondary">
-                                                            <i class="fas fa-plus"></i>
-                                                        </button>
-                                                    </form>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <!-- Botón decrementar -->
+                                                        <form method="POST" class="d-inline">
+                                                            <input type="hidden" name="action" value="update_quantity">
+                                                            <input type="hidden" name="item_id" value="<?php echo $current_order ? $item['id'] : $item_id; ?>">
+                                                            <input type="hidden" name="quantity" value="<?php echo $item['quantity'] - 1; ?>">
+                                                            <?php if ($current_order): ?>
+                                                                <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                                            <?php endif; ?>
+                                                            <button type="submit" class="btn btn-sm btn-outline-secondary" <?php echo $item['quantity'] <= 1 ? 'disabled' : ''; ?>>
+                                                                <i class="fas fa-minus"></i>
+                                                            </button>
+                                                        </form>
+                                                        
+                                                        <!-- Input editable con formulario -->
+                                                        <form method="POST" class="d-inline quantity-form" data-original="<?php echo $item['quantity']; ?>">
+                                                            <input type="hidden" name="action" value="update_quantity">
+                                                            <input type="hidden" name="item_id" value="<?php echo $current_order ? $item['id'] : $item_id; ?>">
+                                                            <?php if ($current_order): ?>
+                                                                <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                                            <?php endif; ?>
+                                                            <input type="number" 
+                                                                   name="quantity" 
+                                                                   value="<?php echo $item['quantity']; ?>" 
+                                                                   class="form-control form-control-sm quantity-input" 
+                                                                   min="1" 
+                                                                   style="width: 60px; text-align: center;">
+                                                        </form>
+                                                        
+                                                        <!-- Botón incrementar -->
+                                                        <form method="POST" class="d-inline">
+                                                            <input type="hidden" name="action" value="update_quantity">
+                                                            <input type="hidden" name="item_id" value="<?php echo $current_order ? $item['id'] : $item_id; ?>">
+                                                            <input type="hidden" name="quantity" value="<?php echo $item['quantity'] + 1; ?>">
+                                                            <?php if ($current_order): ?>
+                                                                <input type="hidden" name="order_id" value="<?php echo $current_order['id']; ?>">
+                                                            <?php endif; ?>
+                                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                                <i class="fas fa-plus"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                                 <strong><?php echo formatPrice($item['subtotal']); ?></strong>
                                             </div>
@@ -1067,6 +1095,7 @@ if (file_exists($theme_file)) {
             initializeMobileMenu();
             initializeCategoryFilter();
             initializeDataTable();
+            initializeQuantityInputs();
         });
 
         function initializeMobileMenu() {
@@ -1157,6 +1186,48 @@ if (file_exists($theme_file)) {
                         // Get category name from the pill text
                         const categoryName = this.textContent.trim();
                         table.column(2).search(categoryName).draw();
+                    }
+                });
+            });
+        }
+
+        // Initialize quantity inputs to submit on change/blur
+        function initializeQuantityInputs() {
+            const quantityInputs = document.querySelectorAll('.quantity-input');
+            
+            quantityInputs.forEach(input => {
+                const form = input.closest('.quantity-form');
+                const originalValue = form.dataset.original;
+                
+                // Submit on Enter key
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const newValue = parseInt(this.value);
+                        
+                        if (newValue && newValue > 0 && newValue != originalValue) {
+                            form.submit();
+                        }
+                    }
+                });
+                
+                // Submit on blur (when user clicks outside)
+                input.addEventListener('blur', function() {
+                    const newValue = parseInt(this.value);
+                    
+                    // If value changed and is valid, submit
+                    if (newValue && newValue > 0 && newValue != originalValue) {
+                        form.submit();
+                    } else if (!newValue || newValue <= 0) {
+                        // If invalid, restore original value
+                        this.value = originalValue;
+                    }
+                });
+                
+                // Prevent invalid values
+                input.addEventListener('input', function() {
+                    if (this.value < 1) {
+                        this.value = 1;
                     }
                 });
             });
